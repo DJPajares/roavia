@@ -1,0 +1,9 @@
+{
+  "name": "@roavia/offline",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline manifest, serialization, cache, and sync contracts.",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

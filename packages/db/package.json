@@ -1,0 +1,9 @@
+{
+  "name": "@roavia/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PostgreSQL schema, migration, seed, and repository boundary.",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

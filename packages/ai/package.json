@@ -1,0 +1,9 @@
+{
+  "name": "@roavia/ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-neutral AI orchestration, validation, repair, and evaluation boundaries.",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}
