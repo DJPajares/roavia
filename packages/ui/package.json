@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "description": "Roavia-owned accessible web components, patterns, and design tokens.",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "typecheck": "tsc --noEmit" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
+    "lint": "oxlint src --deny-warnings",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  }
 }

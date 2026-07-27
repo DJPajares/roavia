@@ -5,11 +5,4 @@ node_modules/
 dist/
 coverage/
 .husky/_/
-
-.env
-.env.*
-!.env.example
-
-*.log
-*.tsbuildinfo
-.DS_Store
+pnpm-lock.yaml

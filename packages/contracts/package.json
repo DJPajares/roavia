@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "description": "Shared validation schemas and transport-safe API contracts.",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "typecheck": "tsc --noEmit" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
+    "lint": "oxlint src test --deny-warnings",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
 }
