@@ -1,0 +1,9 @@
+{
+  "name": "@roavia/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared validation schemas and transport-safe API contracts.",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

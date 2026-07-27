@@ -1,0 +1,9 @@
+{
+  "name": "@roavia/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Roavia-owned accessible web components, patterns, and design tokens.",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

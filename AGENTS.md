@@ -24,9 +24,17 @@ Guide coding agents working on Roavia.
 3. Move the issue to `In Progress` and verify the mutation before editing code.
 4. Implement only the issue scope.
 5. Run the required verification.
-6. Post a Linear completion comment with changes, commands/results, risks, next issue, and suggested commit.
+6. Suggest a commit message using `type(WDL-<issue>): imperative summary` and include it in the Linear completion comment with changes, commands/results, risks, and next issue.
 7. Move no-review work to `Done`; move PR-based work to `In Review` and let Git automation mark it `Done` after merge.
 8. If the status mutation fails, stop. If verification fails, remain `In Progress` and comment with evidence.
+
+### Commit Message Workflow
+
+- Use the format `type(WDL-<issue>): imperative summary`.
+- Choose the type by change: `feat` for user-visible functionality, `fix` for defects, `chore` for tooling or scaffolding, `docs` for documentation-only work, and `refactor` for behavior-preserving code changes.
+- Keep the summary concise, imperative, and scoped to the issue.
+- Include the suggested commit in the Linear completion comment before creating the commit or pull request.
+- Example for the first task: `chore(WDL-19): scaffold Roavia monorepo`.
 
 ## Project Rules
 

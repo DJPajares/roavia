@@ -1,0 +1,9 @@
+{
+  "name": "@roavia/travel-data",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Normalized destination and live travel-data provider boundaries.",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

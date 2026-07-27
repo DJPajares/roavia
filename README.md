@@ -34,17 +34,32 @@ packages/
   ui/
 ```
 
+### Workspace Responsibilities
+
+| Workspace | Responsibility |
+| --- | --- |
+| `apps/web` | Next.js responsive web application and future PWA client |
+| `apps/api` | Hono API runtime and server-only integration boundary |
+| `packages/ai` | Provider-neutral AI orchestration, validation, repair, and evaluation |
+| `packages/api-client` | Typed client boundary for the Roavia API |
+| `packages/config` | Shared TypeScript and future repository-tool configuration |
+| `packages/contracts` | Shared validation schemas and transport-safe contracts |
+| `packages/db` | PostgreSQL schema, migrations, seeds, and repositories |
+| `packages/offline` | Offline manifests, serialization, caching, and sync contracts |
+| `packages/travel-data` | Normalized destination and live travel-data provider boundaries |
+| `packages/ui` | Roavia-owned accessible components, patterns, and design tokens |
+
 ## Requirements
 
-- A currently supported Node.js LTS release
-- pnpm
+- Node.js 24 LTS
+- pnpm 11 (the exact version is pinned in `package.json`)
 - PostgreSQL
 - Credentials for the selected auth, AI, map, weather, and destination-data providers
 - Linear access for task execution
 
 ## Environment Variables
 
-Exact names are finalized by the relevant Linear setup issues. Expected groups include:
+The root `.env.example` documents the expected groups without containing secret values. Provider-specific names and validation are finalized by their relevant Linear issues.
 
 ```text
 DATABASE_URL
@@ -64,26 +79,23 @@ Never expose secret values through client-prefixed environment variables.
 
 ## Local Setup
 
-The scaffold issue will establish final commands. Expected flow:
-
 ```bash
 pnpm install
-pnpm db:migrate
-pnpm db:seed
 pnpm dev
 ```
+
+The combined development command starts the web application at `http://localhost:3000` and the API at `http://localhost:8787`. Neither app requires credentials for the scaffold startup path.
 
 ## Common Commands
 
 ```bash
-pnpm dev
-pnpm lint
+pnpm dev       # Start web and API together
+pnpm dev:web   # Start only the Next.js application
+pnpm dev:api   # Start only the Hono API
 pnpm typecheck
-pnpm test
-pnpm build
 ```
 
-Package-filtered commands should be preferred during implementation.
+Lint, test, build, database migration, and seed commands are intentionally added by their dedicated Linear issues. Package-filtered commands should be preferred during implementation.
 
 ## Development Notes
 
