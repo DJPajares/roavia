@@ -135,7 +135,9 @@ Use Vitest for domain, package, API, and integration tests where appropriate. Ad
 
 ## Build and Deployment
 
-Deployment selection is intentionally deferred to a Linear research/architecture issue. The chosen platform must support:
+The MVP deployment and integration choices are recorded in [the architecture decision register](./docs/architecture/README.md). The selected baseline uses separate Render services for Next.js, Hono, and background work; paid Render PostgreSQL stores product and `pg-boss` job state.
+
+The architecture supports:
 
 - Next.js web hosting
 - Hono API hosting
@@ -144,6 +146,8 @@ Deployment selection is intentionally deferred to a Linear research/architecture
 - secrets
 - logs, metrics, and alerting
 - safe database migrations and rollback
+
+Production provisioning, concrete provider selection, and job-runtime implementation remain scoped to their dedicated Linear issues.
 
 ## Linear Workflow
 
