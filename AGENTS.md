@@ -25,8 +25,9 @@ Guide coding agents working on Roavia.
 4. Implement only the issue scope.
 5. Run the required verification.
 6. Suggest a commit message using `type(WDL-<issue>): imperative summary` and include it in the Linear completion comment with changes, commands/results, risks, and next issue.
-7. Move no-review work to `Done`; move PR-based work to `In Review` and let Git automation mark it `Done` after merge.
-8. If the status mutation fails, stop. If verification fails, remain `In Progress` and comment with evidence.
+7. After finishing the issue, identify the next ready or newly unblocked task and recommend both a Codex model/reasoning pair and a Claude model/reasoning pair based on its complexity, area, and focus.
+8. Move no-review work to `Done`; move PR-based work to `In Review` and let Git automation mark it `Done` after merge.
+9. If the status mutation fails, stop. If verification fails, remain `In Progress` and comment with evidence.
 
 ### Commit Message Workflow
 
@@ -35,6 +36,28 @@ Guide coding agents working on Roavia.
 - Keep the summary concise, imperative, and scoped to the issue.
 - Include the suggested commit in the Linear completion comment before creating the commit or pull request.
 - Example for the first task: `chore(WDL-19): scaffold Roavia monorepo`.
+
+### Next Task and Model Recommendation Workflow
+
+- After completing an issue, inspect Linear for the next ready or newly unblocked task; do not invent a task when no suitable next issue exists.
+- Include the next issue identifier, title, status, and blocker state in the completion comment.
+- Recommend both providers in this format:
+
+  ```text
+  Next task: WDL-20 — Establish code quality and CI baseline
+  Codex: gpt-5.6-sol, high reasoning
+  Claude: sonnet 5, high reasoning
+  Rationale: Integration-heavy platform work needs strong repository implementation and iterative verification.
+  ```
+
+- Use `gpt-5.6-luna` with low or medium reasoning for simple documentation, configuration, inspection, or narrowly scoped edits.
+- Use `gpt-5.6-terra` with medium or high reasoning for routine implementation, package work, and moderate integration tasks.
+- Use `gpt-5.6-sol` with high, xhigh, or max reasoning for complex architecture, cross-cutting changes, high-risk debugging, or extensive verification.
+- Use Claude `haiku 4.5` with low or medium reasoning for simple documentation, configuration, inspection, or narrowly scoped edits.
+- Use Claude `sonnet 5` with medium or high reasoning for routine implementation, package work, and moderate integration tasks.
+- Use Claude `opus 5` with high or max reasoning for complex architecture, cross-cutting changes, high-risk debugging, or extensive verification.
+- Use Claude `fable 5` when the task is primarily product ideation, UX/content exploration, or creative framing; select reasoning according to scope, normally medium or high.
+- If a task spans multiple profiles, choose the higher profile and explain the tradeoff briefly.
 
 ## Project Rules
 
