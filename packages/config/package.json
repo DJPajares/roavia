@@ -12,6 +12,9 @@
     "./tsconfig/node.json": "./tsconfig/node.json"
   },
   "scripts": {
+    "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
+    "lint": "oxlint src --deny-warnings",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   }
 }

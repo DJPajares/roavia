@@ -36,18 +36,18 @@ packages/
 
 ### Workspace Responsibilities
 
-| Workspace | Responsibility |
-| --- | --- |
-| `apps/web` | Next.js responsive web application and future PWA client |
-| `apps/api` | Hono API runtime and server-only integration boundary |
-| `packages/ai` | Provider-neutral AI orchestration, validation, repair, and evaluation |
-| `packages/api-client` | Typed client boundary for the Roavia API |
-| `packages/config` | Shared TypeScript and future repository-tool configuration |
-| `packages/contracts` | Shared validation schemas and transport-safe contracts |
-| `packages/db` | PostgreSQL schema, migrations, seeds, and repositories |
-| `packages/offline` | Offline manifests, serialization, caching, and sync contracts |
-| `packages/travel-data` | Normalized destination and live travel-data provider boundaries |
-| `packages/ui` | Roavia-owned accessible components, patterns, and design tokens |
+| Workspace              | Responsibility                                                        |
+| ---------------------- | --------------------------------------------------------------------- |
+| `apps/web`             | Next.js responsive web application and future PWA client              |
+| `apps/api`             | Hono API runtime and server-only integration boundary                 |
+| `packages/ai`          | Provider-neutral AI orchestration, validation, repair, and evaluation |
+| `packages/api-client`  | Typed client boundary for the Roavia API                              |
+| `packages/config`      | Shared TypeScript and future repository-tool configuration            |
+| `packages/contracts`   | Shared validation schemas and transport-safe contracts                |
+| `packages/db`          | PostgreSQL schema, migrations, seeds, and repositories                |
+| `packages/offline`     | Offline manifests, serialization, caching, and sync contracts         |
+| `packages/travel-data` | Normalized destination and live travel-data provider boundaries       |
+| `packages/ui`          | Roavia-owned accessible components, patterns, and design tokens       |
 
 ## Requirements
 
@@ -89,13 +89,20 @@ The combined development command starts the web application at `http://localhost
 ## Common Commands
 
 ```bash
-pnpm dev       # Start web and API together
-pnpm dev:web   # Start only the Next.js application
-pnpm dev:api   # Start only the Hono API
-pnpm typecheck
+pnpm dev              # Start web and API together
+pnpm dev:web          # Start only the Next.js application
+pnpm dev:api          # Start only the Hono API
+pnpm format:check     # Verify repository formatting
+pnpm lint             # Lint all workspaces
+pnpm typecheck        # Type-check all workspaces
+pnpm test             # Test all workspaces
+pnpm build            # Build all workspaces
+pnpm check:affected   # Check changed workspaces and their dependents
 ```
 
-Lint, test, build, database migration, and seed commands are intentionally added by their dedicated Linear issues. Package-filtered commands should be preferred during implementation.
+Use the `:affected` variants of lint, typecheck, test, and build while iterating on a branch. Pre-commit checks run formatting and lint fixes only against staged files. Database migration and seed commands are added by their dedicated Linear issues.
+
+GitHub Actions runs formatting, lint, typecheck, test, and build checks with the package-manager version locked by the root `package.json`.
 
 ## Development Notes
 
