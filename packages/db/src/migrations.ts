@@ -85,6 +85,7 @@ export async function resetAndMigrateTestDatabase(
 
     await client.query("begin");
     try {
+      await client.query("drop schema if exists jobs cascade");
       await client.query("drop schema if exists drizzle cascade");
       await client.query("drop schema if exists public cascade");
       await client.query("create schema public");

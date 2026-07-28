@@ -1,0 +1,28 @@
+{
+  "name": "@roavia/jobs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-neutral job contracts, reliability controls, and PostgreSQL runtime adapter.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pg-boss": "./src/pg-boss.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "oxlint scripts src test --deny-warnings",
+    "schema:generate": "node scripts/generate-pg-boss-migration.mjs",
+    "test": "vitest run",
+    "test:db": "vitest run test/pg-boss.integration.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@roavia/db": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "pg-boss": "12.26.3",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2"
+  }
+}

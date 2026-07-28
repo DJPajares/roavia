@@ -8,6 +8,20 @@
       "when": 1785170695458,
       "tag": "0000_initial_schema",
       "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785206198463,
+      "tag": "0001_job_runtime_records",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785206209714,
+      "tag": "0002_pg_boss_schema",
+      "breakpoints": false
     }
   ]
 }
