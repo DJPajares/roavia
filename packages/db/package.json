@@ -8,9 +8,23 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
-    "lint": "oxlint src --deny-warnings",
-    "test": "vitest run --passWithNoTests",
+    "build": "tsc -p tsconfig.build.json",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "node --import tsx scripts/migrate.ts",
+    "db:reset:test": "node --import tsx scripts/reset-test.ts",
+    "lint": "oxlint drizzle.config.ts scripts src test --deny-warnings",
+    "test": "vitest run",
+    "test:db": "vitest run test/database.integration.test.ts",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "pg": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2",
+    "@types/pg": "8.20.0",
+    "drizzle-kit": "0.31.10",
+    "tsx": "4.20.6"
   }
 }

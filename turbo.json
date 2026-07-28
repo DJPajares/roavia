@@ -13,6 +13,8 @@
       "outputs": []
     },
     "test": {
+      "cache": false,
+      "env": ["TEST_DATABASE_URL"],
       "outputs": []
     },
     "typecheck": {
