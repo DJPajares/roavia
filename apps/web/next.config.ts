@@ -11,6 +11,7 @@ try {
 }
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   experimental: {
     useTypeScriptCli: true,
   },
