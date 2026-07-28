@@ -1,4 +1,6 @@
 import {
+  itineraryItemSourceSnapshotSchema,
+  itineraryRouteSnapshotSchema,
   tripCreateInputSchema,
   tripDayCreateInputSchema,
   tripItemCreateInputSchema,
@@ -54,6 +56,48 @@ describe("trip domain contracts", () => {
         itineraryDayId: "11111111-1111-4111-8111-111111111111",
         itemType: "activity",
         startTime: "09:00",
+      }).success,
+    ).toBe(false);
+  });
+
+  test("validates provider-neutral itinerary presentation snapshots", () => {
+    const coordinates = [
+      { latitude: 35.6764, longitude: 139.65 },
+      { latitude: 35.6812, longitude: 139.7671 },
+    ];
+
+    expect(
+      itineraryItemSourceSnapshotSchema.parse({
+        place: { coordinates: coordinates[1], name: "Tokyo Station" },
+        source: {
+          freshness: "fresh",
+          label: "Place details",
+          retrievedAt: "2026-07-28T10:00:00.000Z",
+          url: "https://example.com/tokyo-station",
+        },
+      }),
+    ).toMatchObject({ place: { name: "Tokyo Station" } });
+
+    expect(
+      itineraryRouteSnapshotSchema.parse({
+        availability: "available",
+        confidence: {
+          explanation: "Estimated from the normalized route response.",
+          level: "provider_estimate",
+        },
+        distanceMeters: 4_200,
+        durationSeconds: 900,
+        mode: "driving",
+        retrievedAt: "2026-07-28T10:00:00.000Z",
+        trafficBasis: "none",
+        waypoints: coordinates,
+      }),
+    ).toMatchObject({ availability: "available", freshness: "fresh" });
+
+    expect(
+      itineraryRouteSnapshotSchema.safeParse({
+        availability: "available",
+        provider: "maps-vendor",
       }).success,
     ).toBe(false);
   });
