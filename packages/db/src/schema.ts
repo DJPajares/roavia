@@ -469,6 +469,79 @@ export const destinationContentSources = pgTable(
   ],
 );
 
+export const destinationIngestionQuarantine = pgTable(
+  "destination_ingestion_quarantine",
+  {
+    id: uuidPrimaryKey(),
+    provider: text("provider").notNull(),
+    providerRecordId: text("provider_record_id").notNull(),
+    payload: jsonb("payload_json").$type<JsonObject>().notNull(),
+    errors: jsonb("errors_json").$type<JsonArray>().notNull(),
+    status: text("status", { enum: ["pending", "resolved", "discarded"] })
+      .notNull()
+      .default("pending"),
+    occurrenceCount: integer("occurrence_count").notNull().default(1),
+    firstSeenAt: timestamp("first_seen_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    resolvedAt: timestamp("resolved_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("destination_ingestion_quarantine_provider_record_unique").on(
+      table.provider,
+      table.providerRecordId,
+    ),
+    index("destination_ingestion_quarantine_pending_seen_idx")
+      .on(table.lastSeenAt.desc())
+      .where(sql`${table.status} = 'pending'`),
+    check(
+      "destination_ingestion_quarantine_provider_length_chk",
+      sql`char_length(${table.provider}) between 1 and 100`,
+    ),
+    check(
+      "destination_ingestion_quarantine_record_length_chk",
+      sql`char_length(${table.providerRecordId}) between 1 and 500`,
+    ),
+    check(
+      "destination_ingestion_quarantine_payload_object_chk",
+      sql`jsonb_typeof(${table.payload}) = 'object'`,
+    ),
+    check(
+      "destination_ingestion_quarantine_errors_array_chk",
+      sql`jsonb_typeof(${table.errors}) = 'array' and jsonb_array_length(${table.errors}) > 0`,
+    ),
+    check(
+      "destination_ingestion_quarantine_status_chk",
+      sql`${table.status} in ('pending', 'resolved', 'discarded')`,
+    ),
+    check(
+      "destination_ingestion_quarantine_occurrence_positive_chk",
+      sql`${table.occurrenceCount} > 0`,
+    ),
+    check(
+      "destination_ingestion_quarantine_resolution_chk",
+      sql`(${table.status} = 'resolved' and ${table.resolvedAt} is not null) or (${table.status} <> 'resolved' and ${table.resolvedAt} is null)`,
+    ),
+  ],
+);
+
 export const trips = pgTable(
   "trips",
   {
@@ -842,6 +915,7 @@ export const coreTables = {
   applicationJobs,
   destinationContent,
   destinationContentSources,
+  destinationIngestionQuarantine,
   freshnessPolicies,
   itineraryDays,
   itineraryItems,

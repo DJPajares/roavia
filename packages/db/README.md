@@ -26,6 +26,34 @@ The first command starts PostgreSQL 17 on port `55432`, destroys and recreates t
 
 The reset command reads only `TEST_DATABASE_URL`. It refuses remote hosts and database names that do not end in `_test`, then confirms the connected database name before dropping the `public` and `drizzle` schemas.
 
+## Curated destination ingestion
+
+After applying migrations, run the reviewed deterministic catalog fixture with:
+
+```bash
+pnpm db:seed:destinations
+```
+
+The command reads `DATABASE_URL`, upserts the `mvp-launch-v1` fixture, and prints a
+structured summary. Running it repeatedly does not create duplicate places,
+sources, content, or policies. The fixture exercises a country → region → city →
+point-of-interest hierarchy, localized names, source/freshness tracing, and media
+rights metadata. It is representative non-production data, not a claim that the
+seven-city launch catalog has passed every WDL-57 release gate.
+
+`ingestDestinationCatalog` is also the persistence boundary used by the versioned
+`destination.catalog-ingest.v1` background job. Unreviewed records are refreshed;
+content carrying both `reviewed_at` and `reviewed_by` is preserved so ingestion
+cannot silently overwrite editorial decisions.
+
+Records that fail the normalized catalog schema or reference a missing parent,
+source, or freshness policy are upserted into
+`destination_ingestion_quarantine`. The table exposes bounded record identity,
+sanitized payload, validation errors, occurrence count, and resolution status for
+operators. A later valid record with the same identity marks the quarantine row
+resolved. Provider adapters must remove credentials and sensitive request context
+before handing a candidate payload to ingestion.
+
 ## Schema decisions
 
 - All primary keys are database-generated UUIDv4 values. They are opaque at API boundaries and portable across the supported PostgreSQL baseline. Revisit time-ordered UUIDs if measured write volume makes B-tree locality material.

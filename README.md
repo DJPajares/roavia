@@ -113,6 +113,8 @@ pnpm dev              # Start web and API together
 pnpm dev:web          # Start only the Next.js application
 pnpm dev:api          # Start only the Hono API
 pnpm dev:worker       # Start the PostgreSQL-backed background worker
+pnpm db:migrate       # Apply reviewed PostgreSQL migrations
+pnpm db:seed:destinations # Idempotently import the curated destination fixture
 pnpm format:check     # Verify repository formatting
 pnpm lint             # Lint all workspaces
 pnpm typecheck        # Type-check all workspaces
@@ -121,7 +123,7 @@ pnpm build            # Build all workspaces
 pnpm check:affected   # Check changed workspaces and their dependents
 ```
 
-Use the `:affected` variants of lint, typecheck, test, and build while iterating on a branch. Pre-commit checks run formatting and lint fixes only against staged files. Database migration and seed commands are added by their dedicated Linear issues.
+Use the `:affected` variants of lint, typecheck, test, and build while iterating on a branch. Pre-commit checks run formatting and lint fixes only against staged files.
 
 GitHub Actions runs formatting, lint, typecheck, test, and build checks with the package-manager version locked by the root `package.json`.
 
