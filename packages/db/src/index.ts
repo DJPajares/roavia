@@ -1,5 +1,25 @@
 export { createDatabaseClient, type Database, type DatabaseClient } from "./client.js";
 export {
+  AuthorizedResourceNotFoundError,
+  authorizeTripAccess,
+  createShareLink,
+  createShareToken,
+  findOwnedTrip,
+  getOwnedTravelProfile,
+  hashShareToken,
+  recordAuditEvent,
+  requireOwnedTrip,
+  revokeShareLink,
+  type AuditAction,
+  type AuditEventInput,
+  type AuditOutcome,
+  type AuditSubjectType,
+  type CreateShareLinkOptions,
+  type RevokeShareLinkOptions,
+  type TripAccess,
+  type TripPrincipal,
+} from "./authorization.js";
+export {
   getDestinationContentProvenance,
   listDestinationContentByState,
   searchDestinations,

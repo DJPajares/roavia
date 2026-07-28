@@ -777,6 +777,52 @@ export const shareLinks = pgTable(
   ],
 );
 
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuidPrimaryKey(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    action: text("action", {
+      enum: ["share_link_created", "share_link_revoked", "resource_deleted", "ai_action_applied"],
+    }).notNull(),
+    outcome: text("outcome", { enum: ["succeeded", "denied", "failed"] }).notNull(),
+    subjectType: text("subject_type", {
+      enum: ["account", "trip", "share_link", "itinerary_item", "assistant_action"],
+    }).notNull(),
+    subjectId: uuid("subject_id").notNull(),
+    correlationId: uuid("correlation_id").notNull(),
+    occurredAt: timestamp("occurred_at", { mode: "date", precision: 3, withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp("expires_at", { mode: "date", precision: 3, withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '12 months'`),
+  },
+  (table) => [
+    index("audit_events_actor_occurred_id_idx").on(
+      table.actorUserId,
+      table.occurredAt.desc(),
+      table.id.desc(),
+    ),
+    index("audit_events_subject_occurred_idx").on(
+      table.subjectType,
+      table.subjectId,
+      table.occurredAt.desc(),
+    ),
+    index("audit_events_expires_at_idx").on(table.expiresAt),
+    check(
+      "audit_events_action_chk",
+      sql`${table.action} in ('share_link_created', 'share_link_revoked', 'resource_deleted', 'ai_action_applied')`,
+    ),
+    check("audit_events_outcome_chk", sql`${table.outcome} in ('succeeded', 'denied', 'failed')`),
+    check(
+      "audit_events_subject_type_chk",
+      sql`${table.subjectType} in ('account', 'trip', 'share_link', 'itinerary_item', 'assistant_action')`,
+    ),
+    check("audit_events_expiry_order_chk", sql`${table.expiresAt} > ${table.occurredAt}`),
+  ],
+);
+
 export const offlinePackages = pgTable(
   "offline_packages",
   {
@@ -913,6 +959,7 @@ export const jobOperatorActions = pgTable(
 
 export const coreTables = {
   applicationJobs,
+  auditEvents,
   destinationContent,
   destinationContentSources,
   destinationIngestionQuarantine,
