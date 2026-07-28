@@ -12,6 +12,10 @@ This directory records consequential platform decisions for Roavia. Linear remai
 | [0004](./decisions/0004-supabase-auth.md)                   | Use Supabase Auth with SSR cookies and asymmetric JWT verification                           | Accepted for MVP | Product owner        | Residency requirements change or provider reliability, cost, or identity features no longer fit     |
 | [0005](./decisions/0005-sensitive-data-lifecycle.md)        | Minimize sensitive data and apply explicit export, deletion, audit, and retention lifecycles | Accepted for MVP | Darwin Jason Pajares | Launch jurisdiction or legal requirements change, or a new purpose needs longer retention           |
 
+## Research records
+
+- [Travel-data provider and licensing matrix](../research/travel-data-provider-matrix.md) — candidate source coverage, licensing, caching, offline, cost, privacy, and approval gates; not a provider or contract decision.
+
 ## MVP topology
 
 ```mermaid
