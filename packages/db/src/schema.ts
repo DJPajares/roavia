@@ -3,6 +3,7 @@ import type { Buffer } from "node:buffer";
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   customType,
   date,
@@ -147,10 +148,6 @@ export const places = pgTable(
     longitude: numeric("longitude", { mode: "number", precision: 10, scale: 6 }),
     timezone: text("timezone"),
     countryCode: text("country_code"),
-    providerIds: jsonb("provider_ids_json")
-      .$type<JsonObject>()
-      .notNull()
-      .default(sql`'{}'::jsonb`),
     summary: text("summary"),
     status: text("status", { enum: ["active", "deprecated"] })
       .notNull()
@@ -165,6 +162,14 @@ export const places = pgTable(
       table.placeType,
       table.canonicalName,
     ),
+    index("places_parent_type_name_idx").on(
+      table.parentPlaceId,
+      table.placeType,
+      table.canonicalName,
+    ),
+    index("places_active_updated_idx")
+      .on(table.updatedAt)
+      .where(sql`${table.status} = 'active'`),
     check(
       "places_type_chk",
       sql`${table.placeType} in ('country', 'region', 'city', 'district', 'poi', 'transit_hub')`,
@@ -174,7 +179,10 @@ export const places = pgTable(
       "places_localized_names_object_chk",
       sql`jsonb_typeof(${table.localizedNames}) = 'object'`,
     ),
-    check("places_provider_ids_object_chk", sql`jsonb_typeof(${table.providerIds}) = 'object'`),
+    check(
+      "places_parent_not_self_chk",
+      sql`${table.parentPlaceId} is null or ${table.parentPlaceId} <> ${table.id}`,
+    ),
     check(
       "places_coordinate_pair_chk",
       sql`(${table.latitude} is null) = (${table.longitude} is null)`,
@@ -195,13 +203,64 @@ export const places = pgTable(
   ],
 );
 
+export const placeProviderIds = pgTable(
+  "place_provider_ids",
+  {
+    id: uuidPrimaryKey(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => places.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerPlaceId: text("provider_place_id").notNull(),
+    retrievedAt: timestamp("retrieved_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    metadata: jsonb("metadata_json")
+      .$type<JsonObject>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("place_provider_ids_provider_record_unique").on(table.provider, table.providerPlaceId),
+    index("place_provider_ids_place_provider_idx").on(table.placeId, table.provider),
+    check(
+      "place_provider_ids_provider_length_chk",
+      sql`char_length(${table.provider}) between 1 and 100`,
+    ),
+    check(
+      "place_provider_ids_record_length_chk",
+      sql`char_length(${table.providerPlaceId}) between 1 and 500`,
+    ),
+    check(
+      "place_provider_ids_metadata_object_chk",
+      sql`jsonb_typeof(${table.metadata}) = 'object'`,
+    ),
+  ],
+);
+
 export const sources = pgTable(
   "sources",
   {
     id: uuidPrimaryKey(),
     provider: text("provider").notNull(),
     sourceUrl: text("source_url").notNull(),
+    title: text("title"),
+    sourceKind: text("source_kind", {
+      enum: ["official_authority", "official_operator", "licensed_provider", "reviewed_editorial"],
+    })
+      .notNull()
+      .default("licensed_provider"),
     license: text("license"),
+    licenseUrl: text("license_url"),
+    attributionText: text("attribution_text"),
+    offlineUseAllowed: boolean("offline_use_allowed").notNull().default(false),
+    redistributionAllowed: boolean("redistribution_allowed").notNull().default(false),
     retrievedAt: timestamp("retrieved_at", {
       mode: "date",
       precision: 3,
@@ -214,21 +273,199 @@ export const sources = pgTable(
       precision: 3,
       withTimezone: true,
     }),
-    trustTier: text("trust_tier", { enum: ["low", "medium", "high"] })
+    validFrom: timestamp("valid_from", { mode: "date", precision: 3, withTimezone: true }),
+    validUntil: timestamp("valid_until", { mode: "date", precision: 3, withTimezone: true }),
+    trustTier: text("trust_tier", { enum: ["tier_1", "tier_2", "tier_3", "tier_4"] })
       .notNull()
-      .default("medium"),
+      .default("tier_3"),
     metadata: jsonb("metadata_json")
       .$type<JsonObject>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
   },
   (table) => [
     unique("sources_provider_url_unique").on(table.provider, table.sourceUrl),
     index("sources_provider_retrieved_at_idx").on(table.provider, table.retrievedAt.desc()),
+    index("sources_kind_valid_until_idx").on(table.sourceKind, table.validUntil),
     check("sources_provider_length_chk", sql`char_length(${table.provider}) between 1 and 100`),
     check("sources_url_length_chk", sql`char_length(${table.sourceUrl}) between 1 and 2048`),
-    check("sources_trust_tier_chk", sql`${table.trustTier} in ('low', 'medium', 'high')`),
+    check(
+      "sources_title_length_chk",
+      sql`${table.title} is null or char_length(${table.title}) between 1 and 300`,
+    ),
+    check(
+      "sources_kind_chk",
+      sql`${table.sourceKind} in ('official_authority', 'official_operator', 'licensed_provider', 'reviewed_editorial')`,
+    ),
+    check(
+      "sources_license_url_length_chk",
+      sql`${table.licenseUrl} is null or char_length(${table.licenseUrl}) between 1 and 2048`,
+    ),
+    check(
+      "sources_validity_order_chk",
+      sql`${table.validFrom} is null or ${table.validUntil} is null or ${table.validUntil} > ${table.validFrom}`,
+    ),
+    check(
+      "sources_trust_tier_chk",
+      sql`${table.trustTier} in ('tier_1', 'tier_2', 'tier_3', 'tier_4')`,
+    ),
     check("sources_metadata_object_chk", sql`jsonb_typeof(${table.metadata}) = 'object'`),
+  ],
+);
+
+export const freshnessPolicies = pgTable(
+  "freshness_policies",
+  {
+    id: uuidPrimaryKey(),
+    policyKey: text("policy_key").notNull(),
+    version: integer("version").notNull(),
+    freshForSeconds: integer("fresh_for_seconds").notNull(),
+    expireAfterSeconds: integer("expire_after_seconds").notNull(),
+    manualReviewAfterSeconds: integer("manual_review_after_seconds"),
+    description: text("description").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("freshness_policies_key_version_unique").on(table.policyKey, table.version),
+    check(
+      "freshness_policies_key_format_chk",
+      sql`${table.policyKey} ~ '^[a-z][a-z0-9_.-]+$' and char_length(${table.policyKey}) <= 100`,
+    ),
+    check("freshness_policies_version_positive_chk", sql`${table.version} > 0`),
+    check("freshness_policies_fresh_positive_chk", sql`${table.freshForSeconds} > 0`),
+    check(
+      "freshness_policies_expiry_after_fresh_chk",
+      sql`${table.expireAfterSeconds} > ${table.freshForSeconds}`,
+    ),
+    check(
+      "freshness_policies_review_positive_chk",
+      sql`${table.manualReviewAfterSeconds} is null or ${table.manualReviewAfterSeconds} > 0`,
+    ),
+    check(
+      "freshness_policies_description_length_chk",
+      sql`char_length(${table.description}) between 1 and 500`,
+    ),
+  ],
+);
+
+export const destinationContent = pgTable(
+  "destination_content",
+  {
+    id: uuidPrimaryKey(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => places.id, { onDelete: "cascade" }),
+    freshnessPolicyId: uuid("freshness_policy_id")
+      .notNull()
+      .references(() => freshnessPolicies.id, { onDelete: "restrict" }),
+    contentType: text("content_type").notNull(),
+    locale: text("locale").notNull().default("en"),
+    content: jsonb("content_json").$type<JsonObject>().notNull(),
+    qualityState: text("quality_state", {
+      enum: ["draft", "in_review", "approved", "rejected"],
+    })
+      .notNull()
+      .default("draft"),
+    refreshedAt: timestamp("refreshed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    staleAt: timestamp("stale_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    reviewedAt: timestamp("reviewed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }),
+    reviewedBy: text("reviewed_by"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("destination_content_place_type_locale_unique").on(
+      table.placeId,
+      table.contentType,
+      table.locale,
+    ),
+    index("destination_content_policy_id_idx").on(table.freshnessPolicyId),
+    index("destination_content_quality_stale_idx").on(table.qualityState, table.staleAt),
+    index("destination_content_expires_at_idx").on(table.expiresAt),
+    index("destination_content_manually_reviewed_idx")
+      .on(table.reviewedAt)
+      .where(sql`${table.qualityState} = 'approved' and ${table.reviewedAt} is not null`),
+    check(
+      "destination_content_type_format_chk",
+      sql`${table.contentType} ~ '^[a-z][a-z0-9_.-]+$' and char_length(${table.contentType}) <= 100`,
+    ),
+    check(
+      "destination_content_locale_length_chk",
+      sql`char_length(${table.locale}) between 2 and 35`,
+    ),
+    check("destination_content_json_object_chk", sql`jsonb_typeof(${table.content}) = 'object'`),
+    check(
+      "destination_content_quality_state_chk",
+      sql`${table.qualityState} in ('draft', 'in_review', 'approved', 'rejected')`,
+    ),
+    check(
+      "destination_content_stale_after_refresh_chk",
+      sql`${table.staleAt} > ${table.refreshedAt}`,
+    ),
+    check("destination_content_expiry_after_stale_chk", sql`${table.expiresAt} > ${table.staleAt}`),
+    check(
+      "destination_content_review_metadata_chk",
+      sql`(${table.reviewedAt} is null and ${table.reviewedBy} is null) or (${table.reviewedAt} is not null and ${table.reviewedBy} is not null)`,
+    ),
+  ],
+);
+
+export const destinationContentSources = pgTable(
+  "destination_content_sources",
+  {
+    id: uuidPrimaryKey(),
+    destinationContentId: uuid("destination_content_id")
+      .notNull()
+      .references(() => destinationContent.id, { onDelete: "cascade" }),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => sources.id, { onDelete: "restrict" }),
+    sourceRole: text("source_role", { enum: ["primary", "supporting"] })
+      .notNull()
+      .default("supporting"),
+    retrievedAt: timestamp("retrieved_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("destination_content_sources_content_source_unique").on(
+      table.destinationContentId,
+      table.sourceId,
+    ),
+    index("destination_content_sources_source_id_idx").on(table.sourceId),
+    index("destination_content_sources_content_retrieved_idx").on(
+      table.destinationContentId,
+      table.retrievedAt.desc(),
+    ),
+    check(
+      "destination_content_sources_role_chk",
+      sql`${table.sourceRole} in ('primary', 'supporting')`,
+    ),
   ],
 );
 
@@ -603,10 +840,14 @@ export const jobOperatorActions = pgTable(
 
 export const coreTables = {
   applicationJobs,
+  destinationContent,
+  destinationContentSources,
+  freshnessPolicies,
   itineraryDays,
   itineraryItems,
   jobOperatorActions,
   offlinePackages,
+  placeProviderIds,
   places,
   shareLinks,
   sources,

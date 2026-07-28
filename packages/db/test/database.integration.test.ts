@@ -1,7 +1,13 @@
+import { drizzle } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
+import {
+  getDestinationContentProvenance,
+  listDestinationContentByState,
+} from "../src/destination-repository.js";
 import { assertSafeTestDatabaseUrl, migrateDatabase } from "../src/migrations.js";
+import * as schema from "../src/schema.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
@@ -42,10 +48,14 @@ describeDatabase("database migration baseline", () => {
 
     expect(tables.rows.map(({ table_name }) => table_name)).toEqual([
       "application_jobs",
+      "destination_content",
+      "destination_content_sources",
+      "freshness_policies",
       "itinerary_days",
       "itinerary_items",
       "job_operator_actions",
       "offline_packages",
+      "place_provider_ids",
       "places",
       "share_links",
       "sources",
@@ -62,7 +72,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(12);
+    expect(idDefaults.rows).toHaveLength(16);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -91,6 +101,12 @@ describeDatabase("database migration baseline", () => {
       "itinerary_items_place_id_idx",
       "offline_packages_trip_id_idx",
       "offline_packages_user_generated_idx",
+      "destination_content_expires_at_idx",
+      "destination_content_policy_id_idx",
+      "destination_content_quality_stale_idx",
+      "destination_content_sources_source_id_idx",
+      "place_provider_ids_place_provider_idx",
+      "places_parent_type_name_idx",
       "places_parent_place_id_idx",
       "share_links_active_trip_idx",
       "share_links_trip_id_idx",
@@ -101,6 +117,176 @@ describeDatabase("database migration baseline", () => {
       "trips_owner_updated_id_idx",
     ]) {
       expect(names.has(expected), `missing index ${expected}`).toBe(true);
+    }
+  });
+
+  test("traces destination content through normalized place, provider, and source records", async () => {
+    await client.query("begin");
+    try {
+      const country = await client.query<{ id: string }>(`
+        insert into places (place_type, canonical_name, country_code)
+        values ('country', 'Singapore', 'SG')
+        returning id
+      `);
+      const countryId = country.rows[0]!.id;
+
+      const region = await client.query<{ id: string }>(
+        `insert into places (parent_place_id, place_type, canonical_name, country_code)
+         values ($1, 'region', 'Central Region', 'SG')
+         returning id`,
+        [countryId],
+      );
+      const regionId = region.rows[0]!.id;
+
+      const city = await client.query<{ id: string }>(
+        `insert into places (
+          parent_place_id, place_type, canonical_name, localized_names_json,
+          latitude, longitude, timezone, country_code
+        ) values ($1, 'city', 'Singapore', '{"zh":"新加坡"}', 1.3521, 103.8198, 'Asia/Singapore', 'SG')
+        returning id`,
+        [regionId],
+      );
+      const cityId = city.rows[0]!.id;
+
+      const poi = await client.query<{ id: string }>(
+        `insert into places (
+          parent_place_id, place_type, canonical_name, latitude, longitude,
+          timezone, country_code
+        ) values ($1, 'poi', 'Gardens by the Bay', 1.2816, 103.8636,
+          'Asia/Singapore', 'SG')
+        returning id`,
+        [cityId],
+      );
+      const poiId = poi.rows[0]!.id;
+
+      const hierarchy = await client.query<{ place_type: string }>(
+        `with recursive place_ancestors as (
+          select id, parent_place_id, place_type, 0 as depth
+          from places
+          where id = $1
+          union all
+          select parent.id, parent.parent_place_id, parent.place_type, child.depth + 1
+          from places parent
+          join place_ancestors child on child.parent_place_id = parent.id
+        )
+        select place_type from place_ancestors order by depth`,
+        [poiId],
+      );
+      expect(hierarchy.rows.map(({ place_type }) => place_type)).toEqual([
+        "poi",
+        "city",
+        "region",
+        "country",
+      ]);
+
+      await client.query(
+        `insert into place_provider_ids (place_id, provider, provider_place_id)
+         values ($1, 'fsq-os-places', 'fsq-singapore-city')`,
+        [cityId],
+      );
+
+      const policy = await client.query<{ id: string }>(`
+        insert into freshness_policies (
+          policy_key, version, fresh_for_seconds, expire_after_seconds,
+          manual_review_after_seconds, description
+        ) values ('destination.editorial', 1, 86400, 604800, 31536000,
+          'Editorial content is fresh for one day and expires after seven days in this fixture.')
+        returning id
+      `);
+      const policyId = policy.rows[0]!.id;
+
+      const source = await client.query<{ id: string }>(`
+        insert into sources (
+          provider, source_url, title, source_kind, license, license_url,
+          attribution_text, offline_use_allowed, redistribution_allowed,
+          retrieved_at, trust_tier
+        ) values (
+          'visitsingapore', 'https://www.visitsingapore.com/', 'Visit Singapore',
+          'official_authority', 'official-site-terms', 'https://www.visitsingapore.com/terms-of-use/',
+          'Source: Visit Singapore', false, false,
+          '2026-07-28T00:00:00Z', 'tier_1'
+        ) returning id
+      `);
+      const sourceId = source.rows[0]!.id;
+
+      const contentRows = await client.query<{ content_type: string; id: string }>(
+        `insert into destination_content (
+          place_id, freshness_policy_id, content_type, locale, content_json,
+          quality_state, refreshed_at, stale_at, expires_at, reviewed_at, reviewed_by
+        ) values
+          ($1, $2, 'overview', 'en', '{"summary":"A source-aware city overview."}',
+            'approved', '2026-07-28T00:00:00Z', '2026-07-29T00:00:00Z',
+            '2026-08-04T00:00:00Z', '2026-07-28T01:00:00Z', 'editor@example.test'),
+          ($1, $2, 'transport', 'en', '{"summary":"A stale transport fixture."}',
+            'draft', '2026-07-20T00:00:00Z', '2026-07-21T00:00:00Z',
+            '2026-08-01T00:00:00Z', null, null),
+          ($1, $2, 'events', 'en', '{"summary":"An expired event fixture."}',
+            'draft', '2026-07-01T00:00:00Z', '2026-07-02T00:00:00Z',
+            '2026-07-03T00:00:00Z', null, null)
+        returning id, content_type`,
+        [cityId, policyId],
+      );
+      const contentByType = new Map(
+        contentRows.rows.map(({ content_type, id }) => [content_type, id]),
+      );
+      const overviewId = contentByType.get("overview")!;
+
+      await client.query(
+        `insert into destination_content_sources (
+          destination_content_id, source_id, source_role, retrieved_at
+        ) values ($1, $2, 'primary', '2026-07-28T00:00:00Z')`,
+        [overviewId, sourceId],
+      );
+
+      const db = drizzle({ client, schema });
+      const now = new Date("2026-07-28T12:00:00Z");
+      const provenance = await getDestinationContentProvenance(db, overviewId, now);
+
+      expect(provenance).toMatchObject({
+        id: overviewId,
+        place: { id: cityId, canonicalName: "Singapore", type: "city" },
+        contentType: "overview",
+        qualityState: "approved",
+        freshnessState: "fresh",
+        reviewedBy: "editor@example.test",
+        sources: [
+          {
+            id: sourceId,
+            role: "primary",
+            provider: "visitsingapore",
+            kind: "official_authority",
+            trustTier: "tier_1",
+            url: "https://www.visitsingapore.com/",
+          },
+        ],
+      });
+
+      const providerIdentity = await client.query<{
+        place_id: string;
+        provider_place_id: string;
+      }>(
+        `select place_id, provider_place_id
+         from place_provider_ids
+         where provider = 'fsq-os-places' and provider_place_id = 'fsq-singapore-city'`,
+      );
+      expect(providerIdentity.rows).toEqual([
+        { place_id: cityId, provider_place_id: "fsq-singapore-city" },
+      ]);
+      expect(providerIdentity.rows[0]?.provider_place_id).not.toBe(cityId);
+
+      const fresh = await listDestinationContentByState(db, "fresh", { now });
+      const stale = await listDestinationContentByState(db, "stale", { now });
+      const expired = await listDestinationContentByState(db, "expired", { now });
+      const manuallyReviewed = await listDestinationContentByState(db, "manually_reviewed", {
+        now,
+      });
+
+      expect(fresh.map(({ contentType }) => contentType)).toContain("overview");
+      expect(stale.map(({ contentType }) => contentType)).toContain("transport");
+      expect(expired.map(({ contentType }) => contentType)).toContain("events");
+      expect(manuallyReviewed.map(({ contentType }) => contentType)).toContain("overview");
+    } finally {
+      await client.query("rollback");
     }
   });
 
