@@ -63,11 +63,14 @@ packages/
 
 ## Environment Variables
 
-The root `.env.example` documents the expected groups without containing secret values. Provider-specific names and validation are finalized by their relevant Linear issues.
+The root `.env.example` documents the expected groups without containing secret values. Provider-specific names and validation are finalized by their relevant Linear issues. Authentication uses Supabase Auth as recorded in [ADR 0004](./docs/architecture/decisions/0004-supabase-auth.md).
 
 ```text
 DATABASE_URL
-AUTH_* or SUPABASE_*
+AUTH_PROVIDER
+SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 AI_PROVIDER
 AI_API_KEY
 MAPS_PROVIDER
@@ -81,6 +84,8 @@ API_BASE_URL
 
 Never expose secret values through client-prefixed environment variables.
 
+For authentication, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is intentionally public project configuration. Never place a Supabase secret key, service-role key, or shared JWT secret in a `NEXT_PUBLIC_*` variable. The Hono API verifies asymmetric access tokens with `SUPABASE_URL` and the provider's public JWKS; it does not need an auth-admin secret.
+
 ## Local Setup
 
 ```bash
@@ -89,6 +94,17 @@ pnpm dev
 ```
 
 The combined development command starts the web application at `http://localhost:3000` and the API at `http://localhost:8787`. Neither app requires credentials for the scaffold startup path.
+
+To exercise authentication without a live Supabase project, run the test-only fixture and web app in separate terminals:
+
+```bash
+pnpm --filter @roavia/web dev:auth-fixture
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_roavia_browser_smoke \
+pnpm --filter @roavia/web dev
+```
+
+The fixture stores disposable users only in memory. Use `http://localhost:3000` for the browser flow.
 
 ## Common Commands
 

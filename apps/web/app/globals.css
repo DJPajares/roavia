@@ -74,14 +74,16 @@ body {
   line-height: 1.5;
 }
 button,
-a {
+a,
+input {
   font: inherit;
 }
 a {
   color: inherit;
 }
 button:focus-visible,
-a:focus-visible {
+a:focus-visible,
+input:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
@@ -236,11 +238,15 @@ a:focus-visible {
   margin-top: 2rem;
 }
 .roavia-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 2.9rem;
   padding: 0.7rem 1rem;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
   font-weight: 750;
+  text-decoration: none;
   cursor: pointer;
   transition:
     background var(--ease-calm),
@@ -415,6 +421,116 @@ a:focus-visible {
   margin-top: 3rem;
 }
 
+.auth-layout {
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+  min-height: min(42rem, calc(100dvh - 12rem));
+}
+.auth-layout__intro {
+  max-width: 44rem;
+}
+.auth-layout__intro h1,
+.profile-session h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 8vw, 5.5rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+}
+.auth-layout__intro > p:last-child {
+  max-width: 38rem;
+  margin: 1.4rem 0 0;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+}
+.auth-panel {
+  padding: clamp(1.4rem, 4vw, 2.25rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+.auth-panel h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.auth-panel__notice {
+  display: block;
+  margin: 0.75rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.auth-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.auth-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+.auth-form input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.auth-form__message {
+  min-height: 1.4rem;
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.88rem;
+}
+.auth-form__message.is-error {
+  color: var(--danger);
+}
+.auth-form__switch {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.auth-form__switch a {
+  color: var(--accent-strong);
+  font-weight: 750;
+}
+.profile-session {
+  max-width: 58rem;
+}
+.profile-session__details {
+  display: grid;
+  gap: 0.8rem;
+  margin: 2.5rem 0 1.5rem;
+}
+.profile-session__details > div {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+.profile-session__details span {
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.profile-session__details strong {
+  overflow-wrap: anywhere;
+}
+
 @keyframes orbit {
   to {
     transform: rotate(360deg);
@@ -429,6 +545,12 @@ a:focus-visible {
   }
   .state-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .auth-layout {
+    grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.8fr);
+  }
+  .profile-session__details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (min-width: 68rem) {

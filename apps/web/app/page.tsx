@@ -1,4 +1,5 @@
 import { Button, ExperienceState, TrustNotice } from "@roavia/ui";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -12,7 +13,9 @@ export default function HomePage() {
             choice feels considered, not crowded.
           </p>
           <div className="welcome-copy__actions">
-            <Button>Start with an intention</Button>
+            <Link className="roavia-button roavia-button--accent" href="/auth/sign-up?next=%2Fplan">
+              Start with an intention
+            </Link>
             <Button tone="quiet">See how Roavia works</Button>
           </div>
         </div>

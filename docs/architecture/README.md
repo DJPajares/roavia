@@ -9,6 +9,7 @@ This directory records consequential platform decisions for Roavia. Linear remai
 | [0001](./decisions/0001-mvp-deployment-topology.md)         | Use Render for the MVP web, API, worker, and PostgreSQL topology   | Accepted for MVP | Roavia product owner | Production provisioning, a material pricing change, or a required region Render does not support    |
 | [0002](./decisions/0002-postgres-background-jobs.md)        | Use `pg-boss` on PostgreSQL behind an internal job contract        | Accepted for MVP | Platform owner       | Queue load materially harms transactional traffic or workflow requirements exceed job semantics     |
 | [0003](./decisions/0003-provider-integration-boundaries.md) | Isolate external providers behind normalized server-side contracts | Accepted for MVP | Platform owner       | A provider cannot satisfy the normalized contract without leaking vendor behavior into product code |
+| [0004](./decisions/0004-supabase-auth.md)                   | Use Supabase Auth with SSR cookies and asymmetric JWT verification | Accepted for MVP | Product owner        | Residency requirements change or provider reliability, cost, or identity features no longer fit     |
 
 ## MVP topology
 
@@ -54,7 +55,7 @@ The architecture is implementable without deciding these inputs, but production 
 | Log, metric, and audit retention requirements                                      | Privacy and platform owner | Connecting an external observability sink | Use platform retention and redact sensitive fields                       |
 | Launch destinations, languages, and provider budget                                | Product owner              | Selecting concrete travel-data providers  | Curated fixtures and provider fakes only                                 |
 | Offline map/media licensing requirements                                           | Product and legal owner    | Shipping downloadable map or media assets | Exclude unlicensed provider assets from offline packages                 |
-| Authentication provider and account-data residency                                 | Product and privacy owner  | Implementing production authentication    | Keep the identity contract provider-neutral                              |
+| Supabase project region for account data                                           | Product and privacy owner  | Provisioning production authentication    | Stop; do not provision until the approved residency region is recorded   |
 | Assistant and precise trip-history retention                                       | Product and privacy owner  | Persisting production assistant content   | Store the minimum operational metadata only                              |
 
 ## Architecture review against the PRD
