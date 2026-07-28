@@ -28,6 +28,7 @@ Guide coding agents working on Roavia.
 7. After finishing the issue, identify the next ready or newly unblocked task and recommend both a Codex model/reasoning pair and a Claude model/reasoning pair based on its complexity, area, and focus.
 8. Move no-review work to `Done`; move PR-based work to `In Review` and let Git automation mark it `Done` after merge.
 9. If the status mutation fails, stop. If verification fails, remain `In Progress` and comment with evidence.
+10. In the final handoff, always include the direct Linear issue URL, current Linear status, linked PR (when applicable), verification results, and the recommended next task with both model/reasoning pairs.
 
 ### Commit Message Workflow
 
@@ -35,6 +36,7 @@ Guide coding agents working on Roavia.
 - Choose the type by change: `feat` for user-visible functionality, `fix` for defects, `chore` for tooling or scaffolding, `docs` for documentation-only work, and `refactor` for behavior-preserving code changes.
 - Keep the summary concise, imperative, and scoped to the issue.
 - Include the suggested commit in the Linear completion comment before creating the commit or pull request.
+- Include the direct Linear issue URL in the final response so the completed task can be opened immediately.
 - Example for the first task: `chore(WDL-19): scaffold Roavia monorepo`.
 
 ### Next Task and Model Recommendation Workflow
