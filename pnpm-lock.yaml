@@ -131,12 +131,19 @@ importers:
 
   packages/ai:
     dependencies:
+      '@roavia/db':
+        specifier: workspace:*
+        version: link:../db
       ai:
         specifier: 7.0.37
         version: 7.0.37(zod@4.4.3)
       zod:
         specifier: 4.4.3
         version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.2
+        version: 24.13.2
 
   packages/api-client:
     dependencies:
