@@ -5,12 +5,18 @@
   "type": "module",
   "description": "Provider-neutral AI orchestration, validation, repair, and evaluation boundaries.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./server": "./src/server/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
-    "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
-    "lint": "oxlint src --deny-warnings",
-    "test": "vitest run --passWithNoTests",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "oxlint src test --deny-warnings",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ai": "7.0.37",
+    "zod": "4.4.3"
   }
 }

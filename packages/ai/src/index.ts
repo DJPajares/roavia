@@ -1,2 +1,4 @@
-/** Provider-neutral AI boundaries. Concrete providers are intentionally out of scope. */
-export {};
+/** Provider-neutral AI contracts. Concrete providers live in server-only exports. */
+export * from "./contracts.js";
+export * from "./gateway.js";
+export * from "./schemas.js";
