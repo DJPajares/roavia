@@ -4,6 +4,9 @@ import {
   destinationSearchResponseSchema,
   healthResponseSchema,
   profileResponseSchema,
+  tripDeleteResponseSchema,
+  tripListResponseSchema,
+  tripResponseSchema,
   type ApiErrorCode,
   type AuthSessionResponse,
   type DestinationSearchQuery,
@@ -11,6 +14,11 @@ import {
   type HealthResponse,
   type ProfileResponse,
   type ProfileUpdateInput,
+  type TripDeleteInput,
+  type TripDeleteResponse,
+  type TripListQuery,
+  type TripListResponse,
+  type TripResponse,
 } from "@roavia/contracts";
 
 export type {
@@ -21,6 +29,11 @@ export type {
   Profile,
   ProfileResponse,
   ProfileUpdateInput,
+  TripDeleteInput,
+  TripDeleteResponse,
+  TripListQuery,
+  TripListResponse,
+  TripResponse,
 } from "@roavia/contracts";
 
 export interface ApiClientOptions {
@@ -48,6 +61,9 @@ export interface RoaviaApiClient {
   health(): Promise<HealthResponse>;
   session(): Promise<AuthSessionResponse>;
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
+  listTrips(query: TripListQuery): Promise<TripListResponse>;
+  getTrip(tripId: string): Promise<TripResponse>;
+  deleteTrip(tripId: string, input: TripDeleteInput): Promise<TripDeleteResponse>;
   getProfile(): Promise<ProfileResponse>;
   updateProfile(input: ProfileUpdateInput): Promise<ProfileResponse>;
 }
@@ -60,7 +76,11 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
   async function request<T>(
     path: string,
     schema: { parse(value: unknown): T },
-    requestOptions: { authenticated?: boolean; body?: unknown; method?: "GET" | "PATCH" } = {},
+    requestOptions: {
+      authenticated?: boolean;
+      body?: unknown;
+      method?: "DELETE" | "GET" | "PATCH";
+    } = {},
   ): Promise<T> {
     const requestId = createRequestId();
     const accessToken = requestOptions.authenticated ? await options.accessToken?.() : null;
@@ -123,6 +143,30 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       }
 
       return request(`/destinations/search?${params.toString()}`, destinationSearchResponseSchema);
+    },
+    async listTrips(query: TripListQuery): Promise<TripListResponse> {
+      const params = new URLSearchParams({ limit: String(query.limit) });
+      if (query.cursor) {
+        params.set("cursor", query.cursor);
+      }
+      if (query.status) {
+        params.set("status", query.status);
+      }
+      return request(`/trips?${params.toString()}`, tripListResponseSchema, {
+        authenticated: true,
+      });
+    },
+    async getTrip(tripId) {
+      return request(`/trips/${encodeURIComponent(tripId)}`, tripResponseSchema, {
+        authenticated: true,
+      });
+    },
+    async deleteTrip(tripId, input) {
+      return request(`/trips/${encodeURIComponent(tripId)}`, tripDeleteResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "DELETE",
+      });
     },
     async getProfile(): Promise<ProfileResponse> {
       return request("/me", profileResponseSchema, { authenticated: true });

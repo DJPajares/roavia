@@ -1,5 +1,15 @@
-import { WorkspacePlaceholder } from "../../components/workspace-placeholder";
+import { redirect } from "next/navigation";
 
-export default function TripsPage() {
-  return <WorkspacePlaceholder eyebrow="Your journeys" title="Trips, held together." />;
+import { TripsDashboard } from "../../components/trips-dashboard";
+import { getAuthSession } from "../../lib/auth/session";
+
+export const dynamic = "force-dynamic";
+
+export default async function TripsPage() {
+  const session = await getAuthSession();
+  if (!session) {
+    redirect("/auth/sign-in?next=%2Ftrips&reason=missing");
+  }
+
+  return <TripsDashboard email={session.identity.email} />;
 }

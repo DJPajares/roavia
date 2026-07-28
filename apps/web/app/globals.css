@@ -852,6 +852,256 @@ input:focus-visible {
 .profile-page__sign-out {
   margin-top: 1.5rem;
 }
+.trips-dashboard {
+  max-width: 70rem;
+}
+.trips-dashboard__intro {
+  max-width: 46rem;
+}
+.trips-dashboard__intro h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 9vw, 6rem);
+  font-weight: 500;
+  letter-spacing: -0.065em;
+  line-height: 0.92;
+}
+.trips-dashboard__intro > p:not(.eyebrow) {
+  max-width: 42rem;
+  margin: 1.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: clamp(1rem, 2.5vw, 1.15rem);
+}
+.trips-dashboard__identity {
+  font-size: 0.88rem !important;
+}
+.trips-dashboard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 2rem;
+}
+.trips-dashboard__notice,
+.trips-dashboard__message {
+  display: block;
+  margin: 1rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.trips-dashboard__notice {
+  color: var(--warning);
+}
+.trips-dashboard__message {
+  color: var(--moss);
+}
+.trips-dashboard__filters {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  margin-top: 2rem;
+  padding-bottom: 0.35rem;
+}
+.trips-dashboard__filters button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 750;
+  cursor: pointer;
+}
+.trips-dashboard__filters button span,
+.trip-group__heading span {
+  display: inline-grid;
+  min-width: 1.3rem;
+  min-height: 1.3rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-size: 0.72rem;
+}
+.trips-dashboard__filters button:hover,
+.trips-dashboard__filters button.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink);
+}
+.trips-dashboard__groups {
+  display: grid;
+  gap: 2.75rem;
+  margin-top: 2.25rem;
+}
+.trip-group__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+.trip-group__heading h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 4vw, 2.25rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.trip-group__list {
+  display: grid;
+  gap: 0.75rem;
+}
+.trip-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgb(22 54 49 / 4%);
+}
+.trip-card::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0.3rem;
+  background: var(--accent);
+  content: "";
+}
+.trip-card__open {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 1.15rem 1.25rem 1.15rem 1.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.trip-card__open:hover {
+  background: color-mix(in srgb, var(--surface-muted) 65%, transparent);
+}
+.trip-card__open strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4vw, 1.85rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.trip-card__open > span:not(.trip-card__state) {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+.trip-card__state {
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.trip-card__privacy {
+  align-self: start;
+  margin: 1.15rem 1.1rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.trips-dashboard__more {
+  margin-top: 1.5rem;
+}
+.trip-preview {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  background: rgb(10 23 20 / 45%);
+}
+.trip-preview__sheet {
+  position: relative;
+  max-height: min(48rem, 92dvh);
+  overflow-y: auto;
+  padding: 2.5rem 1.25rem calc(2rem + env(safe-area-inset-bottom));
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+.trip-preview__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.trip-preview h2 {
+  max-width: 15ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 8vw, 4rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+}
+.trip-preview__details {
+  display: grid;
+  gap: 0.75rem;
+  margin: 2rem 0;
+}
+.trip-preview__details > div {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+}
+.trip-preview dt {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.trip-preview dd {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+}
+.trip-preview__sharing {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.trip-preview__sharing h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.trip-preview__sharing p {
+  margin: 0.4rem 0 0;
+  color: var(--ink-soft);
+}
+.trip-preview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1.5rem;
+}
+.trip-preview__error {
+  margin: 0.9rem 0 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
 
 @keyframes orbit {
   to {
@@ -879,6 +1129,22 @@ input:focus-visible {
   }
   .profile-preferences__form > fieldset:first-child legend {
     grid-column: 1 / -1;
+  }
+  .trip-group__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .trip-preview {
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .trip-preview__sheet {
+    width: min(100%, 42rem);
+    border-radius: var(--radius-sheet);
+    padding: 3rem;
+  }
+  .trip-preview__details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (min-width: 68rem) {
