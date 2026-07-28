@@ -6,6 +6,7 @@
   "description": "Normalized destination and live travel-data provider boundaries.",
   "exports": {
     ".": "./src/index.ts",
+    "./server": "./src/server/index.ts",
     "./testing": "./src/testing.ts"
   },
   "scripts": {

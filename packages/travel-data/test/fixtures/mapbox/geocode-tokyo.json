@@ -1,0 +1,37 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "dXJuOm1ieHBsYzpUb2t5bw",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [139.6917, 35.6895]
+      },
+      "properties": {
+        "mapbox_id": "dXJuOm1ieHBsYzpUb2t5bw",
+        "feature_type": "place",
+        "name": "東京",
+        "name_preferred": "Tokyo",
+        "full_address": "Tokyo, Japan",
+        "coordinates": {
+          "longitude": 139.6917,
+          "latitude": 35.6895
+        },
+        "match_code": {
+          "confidence": "high"
+        },
+        "context": {
+          "region": {
+            "name": "Tokyo"
+          },
+          "country": {
+            "name": "Japan",
+            "country_code": "jp"
+          }
+        }
+      }
+    }
+  ],
+  "attribution": "NOTICE: © Mapbox and its suppliers."
+}

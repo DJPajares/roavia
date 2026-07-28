@@ -1,0 +1,28 @@
+{
+  "code": "Ok",
+  "routes": [
+    {
+      "distance": 9410.2,
+      "duration": 1565.1,
+      "weight_name": "auto",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-74.006, 40.7128],
+          [-73.9855, 40.758],
+          [-73.9442, 40.6782]
+        ]
+      }
+    }
+  ],
+  "waypoints": [
+    {
+      "name": "Lower Manhattan",
+      "location": [-74.006, 40.7128]
+    },
+    {
+      "name": "Brooklyn",
+      "location": [-73.9442, 40.6782]
+    }
+  ]
+}
