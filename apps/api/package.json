@@ -5,15 +5,16 @@
   "type": "module",
   "description": "Roavia Hono API runtime and server-side integration boundary.",
   "scripts": {
-    "build": "tsc --noEmit false --outDir dist --rootDir src",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch src/index.ts",
-    "lint": "oxlint src --deny-warnings",
+    "lint": "oxlint src test --deny-warnings",
     "start": "tsx src/index.ts",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "2.0.12",
+    "@roavia/contracts": "workspace:*",
     "hono": "4.12.32"
   },
   "devDependencies": {

@@ -35,6 +35,9 @@ importers:
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.32)
+      '@roavia/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       hono:
         specifier: 4.12.32
         version: 4.12.32
@@ -48,6 +51,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@roavia/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@roavia/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       next:
         specifier: 16.2.12
         version: 16.2.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -70,11 +79,19 @@ importers:
 
   packages/ai: {}
 
-  packages/api-client: {}
+  packages/api-client:
+    dependencies:
+      '@roavia/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/config: {}
 
-  packages/contracts: {}
+  packages/contracts:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/db:
     dependencies:
@@ -1902,6 +1919,9 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
@@ -3173,3 +3193,5 @@ snapshots:
 
   yaml@2.9.0:
     optional: true
+
+  zod@4.4.3: {}
