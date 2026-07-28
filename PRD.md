@@ -566,6 +566,7 @@ Live weather, closures, prices, booking availability, and assistant responses mu
 - Rate-limit generation and assistant endpoints.
 - Maintain audit events for share-link, destructive, and AI-applied actions.
 - Provide account deletion and data export pathways.
+- Apply the explicit retention, export, deletion, backup, audit, and minimization lifecycle in [ADR 0005](./docs/architecture/decisions/0005-sensitive-data-lifecycle.md).
 
 ## 20. Reliability and Observability
 
@@ -608,7 +609,7 @@ All background jobs require idempotency keys, retries with backoff, dead-letter 
 - Which deployment provider should host web, API, jobs, and PostgreSQL?
 - Which travel-data providers meet licensing, cost, and coverage requirements?
 - Should shared links support comments before full collaboration is implemented?
-- What retention policy should apply to assistant conversations and precise trip history?
+- Which launch jurisdictions and data regions must the accepted privacy lifecycle satisfy before public launch?
 
 ## 24. Definition of Done
 
