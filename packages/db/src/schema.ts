@@ -756,7 +756,11 @@ export const shareLinks = pgTable(
     permission: text("permission", { enum: ["view"] })
       .notNull()
       .default("view"),
-    expiresAt: timestamp("expires_at", { mode: "date", precision: 3, withTimezone: true }),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
     revokedAt: timestamp("revoked_at", { mode: "date", precision: 3, withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -770,7 +774,7 @@ export const shareLinks = pgTable(
     check("share_links_permission_chk", sql`${table.permission} in ('view')`),
     check(
       "share_links_expiry_order_chk",
-      sql`${table.expiresAt} is null or ${table.expiresAt} > ${table.createdAt}`,
+      sql`${table.expiresAt} > ${table.createdAt} and ${table.expiresAt} <= ${table.createdAt} + interval '180 days'`,
     ),
     check(
       "share_links_revocation_order_chk",

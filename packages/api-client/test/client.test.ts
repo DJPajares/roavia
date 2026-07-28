@@ -319,4 +319,55 @@ describe("Roavia API client", () => {
       }),
     ).resolves.toMatchObject({ data: { query: "Singapore" } });
   });
+
+  test("uses authenticated owner sharing endpoints and an anonymous read endpoint", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const token = "A".repeat(43);
+    const requests: Request[] = [];
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request.clone());
+        if (request.url.includes("/shared-trips/")) {
+          return Response.json({
+            data: {
+              title: "Singapore escape",
+              startDate: "2026-08-01",
+              endDate: "2026-08-06",
+              updatedAt: "2026-07-28T10:00:00.000Z",
+              expiresAt: "2026-08-27T10:00:00.000Z",
+              days: [],
+            },
+            meta: { requestId },
+          });
+        }
+        return Response.json({
+          data: {
+            link: {
+              id: "22222222-2222-4222-8222-222222222222",
+              permission: "view",
+              status: "active",
+              createdAt: "2026-07-28T10:00:00.000Z",
+              expiresAt: "2026-08-27T10:00:00.000Z",
+              revokedAt: null,
+            },
+            token,
+          },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    await client.createShareLink(trip.id, { expiresInDays: 30 });
+    await client.getSharedTrip(token);
+    expect(requests[0]?.headers.get("authorization")).toBe("Bearer valid-access-token");
+    expect(requests[1]?.headers.get("authorization")).toBeNull();
+    expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([
+      { method: "POST", url: `https://api.roavia.test/trips/${trip.id}/share-links` },
+      { method: "GET", url: `https://api.roavia.test/shared-trips/${token}` },
+    ]);
+  });
 });

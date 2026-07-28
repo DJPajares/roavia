@@ -428,7 +428,8 @@ describeDatabase("database migration baseline", () => {
       );
 
       await client.query(
-        "insert into share_links (trip_id, token_hash) values ($1, decode(repeat('aa', 32), 'hex'))",
+        `insert into share_links (trip_id, token_hash, expires_at)
+         values ($1, decode(repeat('aa', 32), 'hex'), now() + interval '30 days')`,
         [tripId],
       );
       await client.query(

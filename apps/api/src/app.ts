@@ -13,6 +13,7 @@ import {
   TripConcurrencyError,
   TripDomainInputError,
   type ProfileRepository,
+  type ShareRepository,
   type TripRepository,
 } from "@roavia/db";
 import { Hono, type MiddlewareHandler } from "hono";
@@ -23,6 +24,7 @@ import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
 import { type ApiEnvironment, errorResponse } from "./http.js";
 import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
 import { registerProfileRoutes } from "./profiles.js";
+import { registerShareRoutes } from "./sharing.js";
 import { registerTripRoutes } from "./trips.js";
 
 function createRequestId(candidate: string | undefined): string {
@@ -37,6 +39,7 @@ export interface CreateAppOptions {
   ) => Promise<DestinationSearchResponse["data"]>;
   searchRateLimiter?: RateLimiter;
   profileRepository?: ProfileRepository;
+  shareRepository?: ShareRepository;
   tripRepository?: TripRepository;
 }
 
@@ -188,6 +191,7 @@ export function createApp(options: CreateAppOptions = {}) {
   );
 
   registerTripRoutes(app, options.tripRepository);
+  registerShareRoutes(app, options.shareRepository);
   registerProfileRoutes(app, options.profileRepository);
 
   app.notFound((context) => errorResponse(context, 404, "not_found", "Route not found."));

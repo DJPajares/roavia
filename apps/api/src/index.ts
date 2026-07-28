@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import {
   createDatabaseClient,
   createProfileRepository,
+  createShareRepository,
   createTripRepository,
   searchDestinations,
 } from "@roavia/db";
@@ -32,6 +33,7 @@ const app = createApp({
   verifyAccessToken: createAccessTokenVerifierFromEnvironment(process.env),
   searchDestinations: database ? (query) => searchDestinations(database.db, query) : undefined,
   profileRepository: database ? createProfileRepository(database.db) : undefined,
+  shareRepository: database ? createShareRepository(database.db) : undefined,
   tripRepository: database ? createTripRepository(database.db) : undefined,
 });
 

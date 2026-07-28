@@ -4,6 +4,10 @@ import {
   destinationSearchResponseSchema,
   healthResponseSchema,
   profileResponseSchema,
+  shareLinkCreateResponseSchema,
+  shareLinkListResponseSchema,
+  shareLinkRevokeResponseSchema,
+  sharedTripResponseSchema,
   tripDeleteResponseSchema,
   tripChildDeleteResponseSchema,
   tripItemMutationResponseSchema,
@@ -16,6 +20,11 @@ import {
   type HealthResponse,
   type ProfileResponse,
   type ProfileUpdateInput,
+  type ShareLinkCreateInput,
+  type ShareLinkCreateResponse,
+  type ShareLinkListResponse,
+  type ShareLinkRevokeResponse,
+  type SharedTripResponse,
   type TripDeleteInput,
   type TripDeleteResponse,
   type TripChildDeleteInput,
@@ -38,6 +47,13 @@ export type {
   Profile,
   ProfileResponse,
   ProfileUpdateInput,
+  ShareLink,
+  ShareLinkCreateInput,
+  ShareLinkCreateResponse,
+  ShareLinkListResponse,
+  ShareLinkRevokeResponse,
+  SharedTrip,
+  SharedTripResponse,
   TripDeleteInput,
   TripDeleteResponse,
   TripChildDeleteInput,
@@ -82,6 +98,10 @@ export interface RoaviaApiClient {
   updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
   getTrip(tripId: string): Promise<TripResponse>;
   deleteTrip(tripId: string, input: TripDeleteInput): Promise<TripDeleteResponse>;
+  listShareLinks(tripId: string): Promise<ShareLinkListResponse>;
+  createShareLink(tripId: string, input: ShareLinkCreateInput): Promise<ShareLinkCreateResponse>;
+  revokeShareLink(tripId: string, shareLinkId: string): Promise<ShareLinkRevokeResponse>;
+  getSharedTrip(token: string): Promise<SharedTripResponse>;
   createTripItem(tripId: string, input: TripItemCreateInput): Promise<TripItemMutationResponse>;
   updateTripItem(
     tripId: string,
@@ -210,6 +230,30 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         body: input,
         method: "DELETE",
       });
+    },
+    async listShareLinks(tripId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/share-links`,
+        shareLinkListResponseSchema,
+        { authenticated: true },
+      );
+    },
+    async createShareLink(tripId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/share-links`,
+        shareLinkCreateResponseSchema,
+        { authenticated: true, body: input, method: "POST" },
+      );
+    },
+    async revokeShareLink(tripId, shareLinkId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/share-links/${encodeURIComponent(shareLinkId)}`,
+        shareLinkRevokeResponseSchema,
+        { authenticated: true, method: "DELETE" },
+      );
+    },
+    async getSharedTrip(token) {
+      return request(`/shared-trips/${encodeURIComponent(token)}`, sharedTripResponseSchema);
     },
     async createTripItem(tripId, input) {
       return request(`/trips/${encodeURIComponent(tripId)}/items`, tripItemMutationResponseSchema, {

@@ -1804,7 +1804,181 @@ input:focus-visible {
 .itinerary-workspace > .roavia-trust-notice {
   margin-top: 1rem;
 }
+.trip-sharing,
+.shared-trip__day {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+.trip-sharing {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.trip-sharing > p,
+.trip-sharing__empty,
+.shared-trip__header p,
+.shared-trip__header span {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.trip-sharing__heading,
+.trip-sharing__create,
+.trip-sharing__new-link > div,
+.trip-sharing__links li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.trip-sharing__heading h2,
+.shared-trip__header h1,
+.shared-trip__day h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.trip-sharing__create label,
+.trip-sharing__new-link label {
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.trip-sharing select,
+.trip-sharing input {
+  min-height: 2.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.trip-sharing select {
+  padding: 0 0.75rem;
+}
+.trip-sharing__new-link {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+.trip-sharing__new-link input {
+  width: 100%;
+  padding: 0 0.75rem;
+}
+.trip-sharing__new-link > div {
+  justify-content: flex-start;
+}
+.trip-sharing__message {
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+.trip-sharing__links {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trip-sharing__links li {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+.trip-sharing__links li > div {
+  display: grid;
+  gap: 0.2rem;
+}
+.trip-sharing__links span {
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+}
+.shared-trip {
+  display: grid;
+  gap: 1rem;
+  max-width: 54rem;
+  margin: 0 auto;
+}
+.shared-trip__header {
+  padding: 1rem 0 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.shared-trip__header h1 {
+  max-width: 16ch;
+  font-size: clamp(2.7rem, 8vw, 5.8rem);
+  line-height: 0.92;
+}
+.shared-trip__header p:not(.eyebrow) {
+  margin-top: 1rem;
+}
+.shared-trip__header span {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}
+.shared-trip__days {
+  display: grid;
+  gap: 1rem;
+}
+.shared-trip__day {
+  overflow: hidden;
+}
+.shared-trip__day > header {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+.shared-trip__day > header p,
+.shared-trip__day > header span {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+.shared-trip__day ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shared-trip__day li {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.shared-trip__day li:last-child {
+  border-bottom: 0;
+}
+.shared-trip__day time,
+.shared-trip__day small,
+.shared-trip__day li span {
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+}
+.shared-trip__day li div {
+  display: grid;
+  gap: 0.25rem;
+}
+.shared-trip__day li p {
+  margin: 0.25rem 0;
+}
+.shared-trip > .roavia-trust-notice {
+  margin-top: 0.5rem;
+}
 @media (max-width: 35rem) {
+  .trip-sharing__heading,
+  .trip-sharing__create,
+  .trip-sharing__links li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .shared-trip__day li {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
   .itinerary-editor__grid {
     grid-template-columns: 1fr;
   }

@@ -50,6 +50,13 @@
       "when": 1785235909598,
       "tag": "0006_trip_revision",
       "breakpoints": false
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785250230678,
+      "tag": "0007_share_link_expiry",
+      "breakpoints": false
     }
   ]
 }
