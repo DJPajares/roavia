@@ -2,8 +2,10 @@ export { createDatabaseClient, type Database, type DatabaseClient } from "./clie
 export {
   getDestinationContentProvenance,
   listDestinationContentByState,
+  searchDestinations,
   type DestinationContentFreshnessState,
   type DestinationContentState,
+  type DestinationSearchPage,
 } from "./destination-repository.js";
 export {
   ingestDestinationCatalog,

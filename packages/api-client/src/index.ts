@@ -1,13 +1,21 @@
 import {
   apiErrorResponseSchema,
   authSessionResponseSchema,
+  destinationSearchResponseSchema,
   healthResponseSchema,
   type ApiErrorCode,
   type AuthSessionResponse,
+  type DestinationSearchQuery,
+  type DestinationSearchResponse,
   type HealthResponse,
 } from "@roavia/contracts";
 
-export type { AuthSessionResponse, HealthResponse } from "@roavia/contracts";
+export type {
+  AuthSessionResponse,
+  DestinationSearchQuery,
+  DestinationSearchResponse,
+  HealthResponse,
+} from "@roavia/contracts";
 
 export interface ApiClientOptions {
   baseUrl: string;
@@ -33,6 +41,7 @@ export class ApiClientError extends Error {
 export interface RoaviaApiClient {
   health(): Promise<HealthResponse>;
   session(): Promise<AuthSessionResponse>;
+  searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
 }
 
 export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClient {
@@ -85,6 +94,25 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
     },
     async session(): Promise<AuthSessionResponse> {
       return request("/auth/session", authSessionResponseSchema, true);
+    },
+    async searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse> {
+      const params = new URLSearchParams({
+        q: query.query,
+        page: String(query.page),
+        limit: String(query.limit),
+      });
+
+      if (query.country) {
+        params.set("country", query.country);
+      }
+      if (query.regionId) {
+        params.set("regionId", query.regionId);
+      }
+      for (const type of query.types) {
+        params.append("type", type);
+      }
+
+      return request(`/destinations/search?${params.toString()}`, destinationSearchResponseSchema);
     },
   };
 }

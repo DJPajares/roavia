@@ -2,15 +2,21 @@ import {
   API_CONTRACT_VERSION,
   apiErrorResponseSchema,
   authSessionResponseSchema,
+  destinationSearchQuerySchema,
+  destinationSearchResponseSchema,
   healthResponseSchema,
   requestIdSchema,
   type ApiErrorCode,
   type AuthSession,
+  type DestinationSearchQuery,
+  type DestinationSearchResponse,
 } from "@roavia/contracts";
 import { Hono, type Context } from "hono";
+import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
+import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
 
 type ApiVariables = {
   authSession: AuthSession;
@@ -26,7 +32,12 @@ function createRequestId(candidate: string | undefined): string {
 }
 
 export interface CreateAppOptions {
+  corsOrigins?: string[];
   verifyAccessToken?: AccessTokenVerifier;
+  searchDestinations?: (
+    query: DestinationSearchQuery,
+  ) => Promise<DestinationSearchResponse["data"]>;
+  searchRateLimiter?: RateLimiter;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -43,7 +54,7 @@ function bearerToken(authorization: string | undefined): string | undefined {
 
 function errorResponse(
   context: Context<ApiEnvironment>,
-  status: 400 | 401 | 404 | 500,
+  status: 400 | 401 | 404 | 429 | 500 | 503,
   code: ApiErrorCode,
   message: string,
 ) {
@@ -60,8 +71,19 @@ function errorResponse(
 }
 
 export function createApp(options: CreateAppOptions = {}) {
+  const corsOrigins = options.corsOrigins ?? ["http://localhost:3000"];
   const verifyAccessToken = options.verifyAccessToken ?? unavailableVerifier;
+  const searchRateLimiter = options.searchRateLimiter ?? createFixedWindowRateLimiter();
   const app = new Hono<ApiEnvironment>();
+
+  app.use(
+    "*",
+    cors({
+      allowHeaders: ["Authorization", "Content-Type", "X-Request-Id"],
+      allowMethods: ["GET", "OPTIONS"],
+      origin: (origin) => (corsOrigins.includes(origin) ? origin : ""),
+    }),
+  );
 
   app.use("*", async (context, next) => {
     const requestId = createRequestId(context.req.header("x-request-id"));
@@ -84,6 +106,62 @@ export function createApp(options: CreateAppOptions = {}) {
       }),
     ),
   );
+
+  app.get("/destinations/search", async (context) => {
+    const parsedQuery = destinationSearchQuerySchema.safeParse({
+      query: context.req.query("q"),
+      page: context.req.query("page"),
+      limit: context.req.query("limit"),
+      types: context.req.queries("type") ?? [],
+      country: context.req.query("country"),
+      regionId: context.req.query("regionId"),
+    });
+
+    if (!parsedQuery.success) {
+      return errorResponse(
+        context,
+        400,
+        "bad_request",
+        "Destination search parameters are invalid.",
+      );
+    }
+
+    const clientKey = context.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+    const rateLimit = searchRateLimiter.consume(clientKey);
+    context.header("x-ratelimit-limit", String(rateLimit.limit));
+    context.header("x-ratelimit-remaining", String(rateLimit.remaining));
+    context.header("x-ratelimit-reset", rateLimit.resetAt.toISOString());
+
+    if (!rateLimit.allowed) {
+      context.header(
+        "retry-after",
+        String(Math.max(1, Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1_000))),
+      );
+      return errorResponse(
+        context,
+        429,
+        "rate_limited",
+        "Too many destination searches. Please try again shortly.",
+      );
+    }
+
+    if (!options.searchDestinations) {
+      return errorResponse(
+        context,
+        503,
+        "search_unavailable",
+        "Destination search is temporarily unavailable.",
+      );
+    }
+
+    const data = await options.searchDestinations(parsedQuery.data);
+    return context.json(
+      destinationSearchResponseSchema.parse({
+        data,
+        meta: { requestId: context.get("requestId") },
+      }),
+    );
+  });
 
   app.use("/auth/*", async (context, next) => {
     const authorization = context.req.header("authorization");
