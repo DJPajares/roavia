@@ -21,11 +21,15 @@ export {
 } from "./authorization.js";
 export {
   getDestinationContentProvenance,
+  listGroundingContent,
   listDestinationContentByState,
   searchDestinations,
   type DestinationContentFreshnessState,
   type DestinationContentState,
   type DestinationSearchPage,
+  type GroundingContentQuery,
+  type GroundingContentRecord,
+  type GroundingContentSource,
 } from "./destination-repository.js";
 export {
   ingestDestinationCatalog,

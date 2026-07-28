@@ -5,6 +5,14 @@ import type {
   AiProviderResult,
   AiProviderSuccess,
 } from "./contracts.js";
+import type {
+  GroundingCandidate,
+  GroundingDataSource,
+  GroundingDataSourceResult,
+  GroundingGapInput,
+  GroundingKind,
+  ResolvedGroundingRequest,
+} from "./grounding.js";
 import {
   ASSISTANT_OUTPUT_SCHEMA_VERSION,
   type AssistantOutputV1,
@@ -165,3 +173,76 @@ export const assistantOutputV1Fixture: AssistantOutputV1 = {
     },
   ],
 };
+
+export const officialGroundingSourceFixture: GroundingCandidate["sources"][number] = {
+  attributionText: "Source: Singapore official tourism authority",
+  kind: "official_authority",
+  license: "official-site-terms",
+  licenseUrl: "https://www.visitsingapore.com/terms-of-use/",
+  official: true,
+  provider: "visitsingapore",
+  publishedAt: null,
+  retrievedAt: "2026-07-28T00:00:00.000Z",
+  sourceId: "source-singapore-official",
+  title: "Visit Singapore",
+  trustTier: "tier_1",
+  url: "https://www.visitsingapore.com/",
+  validFrom: null,
+  validUntil: null,
+};
+
+export function groundingCandidateFixture(
+  overrides: Partial<GroundingCandidate> &
+    Pick<GroundingCandidate, "candidateId" | "kind" | "title">,
+): GroundingCandidate {
+  return {
+    authority: "official",
+    confidence: {
+      explanation: "Deterministic, source-backed fixture evidence.",
+      level: "high",
+      score: 0.9,
+    },
+    content: `${overrides.title} is represented by deterministic fixture evidence.`,
+    destinationIds: ["destination-singapore"],
+    facts: [],
+    freshness: {
+      expiresAt: "2027-07-28T00:00:00.000Z",
+      observedAt: "2026-07-28T00:00:00.000Z",
+      staleAt: "2026-12-28T00:00:00.000Z",
+      state: "fresh",
+    },
+    keywords: [],
+    sources: [officialGroundingSourceFixture],
+    ...overrides,
+  };
+}
+
+export class FixtureGroundingDataSource implements GroundingDataSource {
+  readonly calls: ResolvedGroundingRequest[] = [];
+  readonly name: string;
+  readonly supportedKinds: readonly GroundingKind[];
+
+  private readonly candidates: readonly GroundingCandidate[];
+  private readonly gaps: readonly GroundingGapInput[];
+  private readonly rejection: unknown;
+
+  constructor(input: {
+    candidates?: readonly GroundingCandidate[];
+    gaps?: readonly GroundingGapInput[];
+    name?: string;
+    rejection?: unknown;
+    supportedKinds?: readonly GroundingKind[];
+  }) {
+    this.candidates = input.candidates ?? [];
+    this.gaps = input.gaps ?? [];
+    this.name = input.name ?? "fixture-grounding";
+    this.rejection = input.rejection;
+    this.supportedKinds = input.supportedKinds ?? ["place", "practical", "seasonality", "route"];
+  }
+
+  async retrieve(request: ResolvedGroundingRequest): Promise<GroundingDataSourceResult> {
+    this.calls.push(request);
+    if (this.rejection !== undefined) throw this.rejection;
+    return { candidates: this.candidates, gaps: this.gaps };
+  }
+}

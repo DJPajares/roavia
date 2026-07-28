@@ -12,11 +12,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "oxlint src test --deny-warnings",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@roavia/db": "workspace:*",
     "ai": "7.0.37",
     "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2"
   }
 }
