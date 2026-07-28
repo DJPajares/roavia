@@ -158,6 +158,9 @@ function TripPreview({
           </p>
         </section>
         <div className="trip-preview__actions">
+          <Link className="roavia-button roavia-button--accent" href={`/trips/${trip.id}`}>
+            Open itinerary
+          </Link>
           <Link className="roavia-button roavia-button--quiet" href={`/plan?tripId=${trip.id}`}>
             Resume planning
           </Link>

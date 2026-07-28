@@ -46,6 +46,66 @@ export const tripTimeZoneSchema = z.string().trim().min(1).max(100).refine(isTim
 export const tripCurrencySchema = z.string().regex(CURRENCY_PATTERN);
 export const tripJsonObjectSchema = z.record(z.string(), z.unknown());
 
+export const itineraryCoordinatesSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+export const itinerarySourceSchema = z.object({
+  freshness: z.enum(["fresh", "stale"]),
+  label: z.string().trim().min(1).max(200),
+  retrievedAt: z.string().datetime({ offset: true }),
+  url: z
+    .string()
+    .url()
+    .refine((value) => value.startsWith("https://") || value.startsWith("http://"), {
+      message: "Source URL must use HTTP or HTTPS.",
+    })
+    .optional(),
+});
+
+export const itineraryItemSourceSnapshotSchema = z.object({
+  place: z
+    .object({
+      address: z.string().trim().min(1).max(500).optional(),
+      coordinates: itineraryCoordinatesSchema.optional(),
+      name: z.string().trim().min(1).max(300),
+    })
+    .optional(),
+  source: itinerarySourceSchema.optional(),
+});
+
+const itineraryRouteAvailableSchema = z.object({
+  availability: z.literal("available"),
+  confidence: z.object({
+    explanation: z.string().trim().min(1).max(1_000),
+    level: z.literal("provider_estimate"),
+  }),
+  distanceMeters: z.number().min(0),
+  durationSeconds: z.number().min(0),
+  freshness: z.enum(["fresh", "stale"]).default("fresh"),
+  geometry: z
+    .object({
+      coordinates: z.array(itineraryCoordinatesSchema).min(2),
+      type: z.literal("LineString"),
+    })
+    .optional(),
+  mode: z.enum(["cycling", "driving", "walking"]),
+  retrievedAt: z.string().datetime({ offset: true }),
+  trafficBasis: z.enum(["current_and_historical", "none"]),
+  waypoints: z.array(itineraryCoordinatesSchema).min(2),
+});
+
+const itineraryRouteUnavailableSchema = z.object({
+  availability: z.enum(["provider_unavailable", "route_unavailable"]),
+  reason: z.string().trim().min(1).max(1_000),
+});
+
+export const itineraryRouteSnapshotSchema = z.discriminatedUnion("availability", [
+  itineraryRouteAvailableSchema,
+  itineraryRouteUnavailableSchema,
+]);
+
 export const tripDateFlexibilitySchema = z.object({
   daysBefore: z.number().int().min(0).max(365).default(0),
   daysAfter: z.number().int().min(0).max(365).default(0),
@@ -366,3 +426,7 @@ export type TripDayUpdateInput = z.infer<typeof tripDayUpdateInputSchema>;
 export type TripItem = z.infer<typeof tripItemSchema>;
 export type TripItemCreateInput = z.infer<typeof tripItemCreateInputSchema>;
 export type TripItemUpdateInput = z.infer<typeof tripItemUpdateInputSchema>;
+export type ItineraryCoordinates = z.infer<typeof itineraryCoordinatesSchema>;
+export type ItineraryItemSourceSnapshot = z.infer<typeof itineraryItemSourceSnapshotSchema>;
+export type ItineraryRouteSnapshot = z.infer<typeof itineraryRouteSnapshotSchema>;
+export type ItinerarySource = z.infer<typeof itinerarySourceSchema>;

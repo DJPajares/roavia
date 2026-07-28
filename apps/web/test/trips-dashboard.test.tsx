@@ -106,6 +106,9 @@ describe("TripsDashboard", () => {
 
     await user.click(screen.getByRole("button", { name: "Open Kyoto draft" }));
     expect(screen.getByRole("dialog", { name: "Kyoto draft" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Open itinerary" }).getAttribute("href")).toBe(
+      `/trips/${trips[0].id}`,
+    );
     await user.click(screen.getByRole("button", { name: "Remove trip" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe("The trip could not be removed.");
