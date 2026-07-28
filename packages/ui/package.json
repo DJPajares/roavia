@@ -8,9 +8,23 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
-    "lint": "oxlint src --deny-warnings",
-    "test": "vitest run --passWithNoTests",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "oxlint src test --deny-warnings",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "axe-core": "^4.12.1",
+    "jsdom": "^29.1.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   }
 }
