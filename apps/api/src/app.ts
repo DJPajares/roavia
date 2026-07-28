@@ -12,6 +12,7 @@ import {
   AuthorizedResourceNotFoundError,
   TripConcurrencyError,
   TripDomainInputError,
+  type ProfileRepository,
   type TripRepository,
 } from "@roavia/db";
 import { Hono, type MiddlewareHandler } from "hono";
@@ -21,6 +22,7 @@ import { HTTPException } from "hono/http-exception";
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
 import { type ApiEnvironment, errorResponse } from "./http.js";
 import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
+import { registerProfileRoutes } from "./profiles.js";
 import { registerTripRoutes } from "./trips.js";
 
 function createRequestId(candidate: string | undefined): string {
@@ -34,6 +36,7 @@ export interface CreateAppOptions {
     query: DestinationSearchQuery,
   ) => Promise<DestinationSearchResponse["data"]>;
   searchRateLimiter?: RateLimiter;
+  profileRepository?: ProfileRepository;
   tripRepository?: TripRepository;
 }
 
@@ -168,6 +171,8 @@ export function createApp(options: CreateAppOptions = {}) {
   };
 
   app.use("/auth/*", requireAuthentication);
+  app.use("/me", requireAuthentication);
+  app.use("/me/*", requireAuthentication);
   app.use("/trips", requireAuthentication);
   app.use("/trips/*", requireAuthentication);
 
@@ -183,6 +188,7 @@ export function createApp(options: CreateAppOptions = {}) {
   );
 
   registerTripRoutes(app, options.tripRepository);
+  registerProfileRoutes(app, options.profileRepository);
 
   app.notFound((context) => errorResponse(context, 404, "not_found", "Route not found."));
 

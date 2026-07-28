@@ -739,6 +739,119 @@ input:focus-visible {
 .profile-session__details strong {
   overflow-wrap: anywhere;
 }
+.profile-page,
+.profile-preferences {
+  max-width: 58rem;
+}
+.profile-preferences__intro {
+  max-width: 44rem;
+}
+.profile-preferences__intro h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 8vw, 5.5rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+}
+.profile-preferences__intro > p:not(.eyebrow) {
+  max-width: 40rem;
+  margin: 1.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+}
+.profile-preferences__identity {
+  font-size: 0.9rem !important;
+}
+.profile-preferences__form {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+.profile-preferences fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: clamp(1.15rem, 3vw, 1.6rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+.profile-preferences legend {
+  padding: 0 0.2rem;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.profile-preferences label {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+.profile-preferences input:not([type="checkbox"]),
+.profile-preferences select,
+.profile-preferences textarea {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}
+.profile-preferences textarea {
+  min-height: 5.75rem;
+  resize: vertical;
+}
+.profile-preferences fieldset > p {
+  margin: -0.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+.profile-preferences__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+}
+.profile-preferences__choices label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 650;
+}
+.profile-preferences__choices input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--accent-strong);
+}
+.profile-preferences__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 1rem;
+}
+.profile-preferences__actions p {
+  min-height: 1.4rem;
+  margin: 0;
+  color: var(--moss);
+  font-size: 0.88rem;
+}
+.profile-preferences .trust-notice {
+  margin-top: 0.25rem;
+}
+.profile-page__sign-out {
+  margin-top: 1.5rem;
+}
 
 @keyframes orbit {
   to {
@@ -760,6 +873,12 @@ input:focus-visible {
   }
   .profile-session__details {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .profile-preferences__form > fieldset:first-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .profile-preferences__form > fieldset:first-child legend {
+    grid-column: 1 / -1;
   }
 }
 @media (min-width: 68rem) {

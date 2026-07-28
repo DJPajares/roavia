@@ -3,11 +3,14 @@ import {
   authSessionResponseSchema,
   destinationSearchResponseSchema,
   healthResponseSchema,
+  profileResponseSchema,
   type ApiErrorCode,
   type AuthSessionResponse,
   type DestinationSearchQuery,
   type DestinationSearchResponse,
   type HealthResponse,
+  type ProfileResponse,
+  type ProfileUpdateInput,
 } from "@roavia/contracts";
 
 export type {
@@ -15,6 +18,9 @@ export type {
   DestinationSearchQuery,
   DestinationSearchResponse,
   HealthResponse,
+  Profile,
+  ProfileResponse,
+  ProfileUpdateInput,
 } from "@roavia/contracts";
 
 export interface ApiClientOptions {
@@ -42,6 +48,8 @@ export interface RoaviaApiClient {
   health(): Promise<HealthResponse>;
   session(): Promise<AuthSessionResponse>;
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
+  getProfile(): Promise<ProfileResponse>;
+  updateProfile(input: ProfileUpdateInput): Promise<ProfileResponse>;
 }
 
 export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClient {
@@ -52,17 +60,19 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
   async function request<T>(
     path: string,
     schema: { parse(value: unknown): T },
-    authenticated = false,
+    requestOptions: { authenticated?: boolean; body?: unknown; method?: "GET" | "PATCH" } = {},
   ): Promise<T> {
     const requestId = createRequestId();
-    const accessToken = authenticated ? await options.accessToken?.() : null;
+    const accessToken = requestOptions.authenticated ? await options.accessToken?.() : null;
     const response = await fetchImplementation(`${baseUrl}${path}`, {
       headers: {
         accept: "application/json",
         ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        ...(requestOptions.body === undefined ? {} : { "content-type": "application/json" }),
         "x-request-id": requestId,
       },
-      method: "GET",
+      method: requestOptions.method ?? "GET",
+      ...(requestOptions.body === undefined ? {} : { body: JSON.stringify(requestOptions.body) }),
     });
     const body: unknown = await response.json();
 
@@ -93,7 +103,7 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       return request("/health", healthResponseSchema);
     },
     async session(): Promise<AuthSessionResponse> {
-      return request("/auth/session", authSessionResponseSchema, true);
+      return request("/auth/session", authSessionResponseSchema, { authenticated: true });
     },
     async searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse> {
       const params = new URLSearchParams({
@@ -113,6 +123,16 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       }
 
       return request(`/destinations/search?${params.toString()}`, destinationSearchResponseSchema);
+    },
+    async getProfile(): Promise<ProfileResponse> {
+      return request("/me", profileResponseSchema, { authenticated: true });
+    },
+    async updateProfile(input: ProfileUpdateInput): Promise<ProfileResponse> {
+      return request("/me/preferences", profileResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "PATCH",
+      });
     },
   };
 }
