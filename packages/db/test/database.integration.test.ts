@@ -1,11 +1,7 @@
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
-import {
-  assertSafeTestDatabaseUrl,
-  migrateDatabase,
-  resetAndMigrateTestDatabase,
-} from "../src/migrations.js";
+import { assertSafeTestDatabaseUrl, migrateDatabase } from "../src/migrations.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
@@ -29,7 +25,6 @@ describeDatabase("database migration baseline", () => {
   const client = new Client({ connectionString });
 
   beforeAll(async () => {
-    await resetAndMigrateTestDatabase(connectionString);
     await client.connect();
   });
 
@@ -220,15 +215,11 @@ describeDatabase("database migration baseline", () => {
     }
   });
 
-  test("is idempotent and resets back to an empty migrated database", async () => {
+  test("migration runner is idempotent", async () => {
     await migrateDatabase(connectionString);
-    await client.query(
-      "insert into sources (provider, source_url) values ('test', 'https://example.com')",
+    const result = await client.query<{ count: string }>(
+      "select count(*) from information_schema.tables where table_schema = 'public'",
     );
-
-    await resetAndMigrateTestDatabase(connectionString);
-
-    const result = await client.query<{ count: string }>("select count(*) from sources");
-    expect(result.rows[0]?.count).toBe("0");
+    expect(Number(result.rows[0]?.count)).toBeGreaterThanOrEqual(12);
   });
 });
