@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export * from "./trips";
 export * from "./profile";
+export * from "./sharing";
 
 export const API_CONTRACT_VERSION = "v1" as const;
 
@@ -22,6 +23,7 @@ export const apiErrorCodeSchema = z.enum([
   "rate_limited",
   "search_unavailable",
   "session_expired",
+  "share_service_unavailable",
   "trip_service_unavailable",
 ]);
 

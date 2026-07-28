@@ -46,5 +46,10 @@ export {
   type ProfilePrincipal,
   type ProfileRepository,
 } from "./profile-repository.js";
+export {
+  createShareRepository,
+  type ShareMutationContext,
+  type ShareRepository,
+} from "./share-repository.js";
 export { mvpLaunchDestinationCatalog } from "./fixtures/mvp-launch-destinations.js";
 export * from "./schema.js";

@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   createTripItem: vi.fn<(tripId: string, input: any) => Promise<any>>(),
   deleteTripItem: vi.fn<(tripId: string, itemId: string, input: any) => Promise<any>>(),
   getTrip: vi.fn<(tripId: string) => Promise<unknown>>(),
+  listShareLinks: vi.fn<(tripId: string) => Promise<unknown>>(),
   updateTripItem: vi.fn<(tripId: string, itemId: string, input: any) => Promise<any>>(),
 }));
 
@@ -185,8 +186,10 @@ describe("ItineraryWorkspace", () => {
     api.createTripItem.mockReset();
     api.deleteTripItem.mockReset();
     api.getTrip.mockReset();
+    api.listShareLinks.mockReset();
     api.updateTripItem.mockReset();
     api.getTrip.mockResolvedValue({ data: trip, meta: { requestId } });
+    api.listShareLinks.mockResolvedValue({ data: { links: [] }, meta: { requestId } });
     api.createTripItem.mockImplementation(async (_requestedTripId, input) => ({
       data: {
         item: {

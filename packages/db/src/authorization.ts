@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 
 import type { Database } from "./client.js";
 import { auditEvents, shareLinks, travelProfiles, trips, users } from "./schema.js";
@@ -169,7 +169,7 @@ export async function authorizeTripAccess(
         eq(shareLinks.tokenHash, tokenHash),
         eq(shareLinks.permission, "view"),
         isNull(shareLinks.revokedAt),
-        or(isNull(shareLinks.expiresAt), gt(shareLinks.expiresAt, now)),
+        gt(shareLinks.expiresAt, now),
       ),
     )
     .limit(1);
@@ -292,7 +292,7 @@ export async function revokeShareLink(db: Database, options: RevokeShareLinkOpti
         and(
           eq(shareLinks.tripId, options.tripId),
           isNull(shareLinks.revokedAt),
-          or(isNull(shareLinks.expiresAt), gt(shareLinks.expiresAt, now)),
+          gt(shareLinks.expiresAt, now),
         ),
       )
       .limit(1);

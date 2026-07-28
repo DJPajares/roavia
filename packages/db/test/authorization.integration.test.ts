@@ -14,6 +14,7 @@ import {
   revokeShareLink,
 } from "../src/authorization.js";
 import { createDatabaseClient } from "../src/client.js";
+import { createShareRepository } from "../src/share-repository.js";
 
 const DAY_MS = 24 * 60 * 60 * 1_000;
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -326,6 +327,66 @@ describeDatabase("ownership and share-link authorization", () => {
         "occurred_at",
         "expires_at",
       ]);
+    } finally {
+      await cleanAuthorizationFixture(client, fixture, correlationIds);
+      await client.close();
+    }
+  });
+
+  test("resolves an allowlisted read-only trip and fails closed after expiry or revocation", async () => {
+    const client = createDatabaseClient(testDatabaseUrl!);
+    const fixture = await seedAuthorizationFixture(client);
+    const correlationIds = [randomUUID(), randomUUID()];
+    const dayId = randomUUID();
+    const now = new Date("2026-07-28T10:00:00.000Z");
+    const repository = createShareRepository(client.db);
+
+    try {
+      await client.pool.query(
+        `insert into itinerary_days (id, trip_id, local_date, timezone, title, order_index)
+         values ($1, $2, '2026-08-10', 'Asia/Tokyo', 'Arrival rhythm', 0)`,
+        [dayId, fixture.aliceTripId],
+      );
+      await client.pool.query(
+        `insert into itinerary_items
+           (itinerary_day_id, item_type, start_time, end_time, duration_minutes,
+            booking_json, source_snapshot_json, order_index)
+         values ($1, 'activity', '09:00', '10:00', 60, $2::jsonb, $3::jsonb, 0)`,
+        [
+          dayId,
+          JSON.stringify({ confirmation: "PRIVATE-42" }),
+          JSON.stringify({ place: { name: "Morning walk" } }),
+        ],
+      );
+
+      const created = await repository.createLink(
+        fixture.aliceAuthUserId,
+        fixture.aliceTripId,
+        { expiresInDays: 30 },
+        { correlationId: correlationIds[0], now },
+      );
+      await expect(
+        repository.listLinks(fixture.aliceAuthUserId, fixture.aliceTripId, now),
+      ).resolves.toEqual([created.link]);
+      const shared = await repository.getSharedTrip(created.token, now);
+      expect(shared).toMatchObject({
+        title: "Alice private trip",
+        days: [{ items: [{ sourceSnapshot: { place: { name: "Morning walk" } } }] }],
+      });
+      expect(JSON.stringify(shared)).not.toContain("PRIVATE-42");
+      expect(JSON.stringify(shared)).not.toContain(fixture.aliceUserId);
+      expect(JSON.stringify(shared)).not.toContain(fixture.aliceTripId);
+
+      await expect(
+        repository.getSharedTrip(created.token, new Date(now.getTime() + 31 * DAY_MS)),
+      ).rejects.toBeInstanceOf(AuthorizedResourceNotFoundError);
+      await repository.revokeLink(fixture.aliceAuthUserId, fixture.aliceTripId, created.link.id, {
+        correlationId: correlationIds[1],
+        now: new Date(now.getTime() + DAY_MS),
+      });
+      await expect(
+        repository.getSharedTrip(created.token, new Date(now.getTime() + DAY_MS)),
+      ).rejects.toBeInstanceOf(AuthorizedResourceNotFoundError);
     } finally {
       await cleanAuthorizationFixture(client, fixture, correlationIds);
       await client.close();

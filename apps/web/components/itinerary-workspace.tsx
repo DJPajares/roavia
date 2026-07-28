@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "../lib/supabase/client";
 import { ItineraryItemEditor, type ItemDraft, type ItemEditorMode } from "./itinerary-item-editor";
+import { TripShareControls } from "./trip-share-controls";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
 
@@ -769,6 +770,7 @@ export function ItineraryWorkspace({
           state="empty"
           title="This itinerary has no days yet"
         />
+        <TripShareControls tripId={trip.id} />
       </section>
     );
   }
@@ -994,6 +996,8 @@ export function ItineraryWorkspace({
           Refresh itinerary
         </Button>
       </header>
+
+      <TripShareControls tripId={trip.id} />
 
       {offline ? (
         <output className="itinerary-workspace__notice is-offline">
