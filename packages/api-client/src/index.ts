@@ -5,6 +5,8 @@ import {
   healthResponseSchema,
   profileResponseSchema,
   tripDeleteResponseSchema,
+  tripChildDeleteResponseSchema,
+  tripItemMutationResponseSchema,
   tripListResponseSchema,
   tripResponseSchema,
   type ApiErrorCode,
@@ -16,10 +18,15 @@ import {
   type ProfileUpdateInput,
   type TripDeleteInput,
   type TripDeleteResponse,
+  type TripChildDeleteInput,
+  type TripChildDeleteResponse,
   type TripCreateInput,
   type TripListQuery,
   type TripListResponse,
   type TripResponse,
+  type TripItemCreateInput,
+  type TripItemMutationResponse,
+  type TripItemUpdateInput,
   type TripUpdateInput,
 } from "@roavia/contracts";
 
@@ -33,10 +40,15 @@ export type {
   ProfileUpdateInput,
   TripDeleteInput,
   TripDeleteResponse,
+  TripChildDeleteInput,
+  TripChildDeleteResponse,
   TripCreateInput,
   TripListQuery,
   TripListResponse,
   TripResponse,
+  TripItemCreateInput,
+  TripItemMutationResponse,
+  TripItemUpdateInput,
   TripUpdateInput,
 } from "@roavia/contracts";
 
@@ -70,6 +82,17 @@ export interface RoaviaApiClient {
   updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
   getTrip(tripId: string): Promise<TripResponse>;
   deleteTrip(tripId: string, input: TripDeleteInput): Promise<TripDeleteResponse>;
+  createTripItem(tripId: string, input: TripItemCreateInput): Promise<TripItemMutationResponse>;
+  updateTripItem(
+    tripId: string,
+    itemId: string,
+    input: TripItemUpdateInput,
+  ): Promise<TripItemMutationResponse>;
+  deleteTripItem(
+    tripId: string,
+    itemId: string,
+    input: TripChildDeleteInput,
+  ): Promise<TripChildDeleteResponse>;
   getProfile(): Promise<ProfileResponse>;
   updateProfile(input: ProfileUpdateInput): Promise<ProfileResponse>;
 }
@@ -187,6 +210,27 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         body: input,
         method: "DELETE",
       });
+    },
+    async createTripItem(tripId, input) {
+      return request(`/trips/${encodeURIComponent(tripId)}/items`, tripItemMutationResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "POST",
+      });
+    },
+    async updateTripItem(tripId, itemId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/items/${encodeURIComponent(itemId)}`,
+        tripItemMutationResponseSchema,
+        { authenticated: true, body: input, method: "PATCH" },
+      );
+    },
+    async deleteTripItem(tripId, itemId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/items/${encodeURIComponent(itemId)}`,
+        tripChildDeleteResponseSchema,
+        { authenticated: true, body: input, method: "DELETE" },
+      );
     },
     async getProfile(): Promise<ProfileResponse> {
       return request("/me", profileResponseSchema, { authenticated: true });

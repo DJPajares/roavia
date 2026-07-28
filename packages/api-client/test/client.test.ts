@@ -23,6 +23,23 @@ const trip = {
   visibility: "private" as const,
 };
 
+const itineraryItem = {
+  booking: { reference: "ROA-42" },
+  confidence: null,
+  durationMinutes: 90,
+  endTime: "11:30",
+  estimatedCost: { amountMinor: 4_500, currency: "SGD" },
+  id: "77777777-7777-4777-8777-777777777777",
+  itineraryDayId: "22222222-2222-4222-8222-222222222222",
+  itemType: "food" as const,
+  notes: "Try the seasonal set.",
+  orderIndex: 1,
+  placeId: null,
+  sourceSnapshot: { place: { name: "Nishiki Market" } },
+  startTime: "10:00",
+  transport: { mode: "walking" },
+};
+
 describe("Roavia API client", () => {
   test("calls the API health endpoint through the shared contract", async () => {
     const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
@@ -177,6 +194,78 @@ describe("Roavia API client", () => {
       data: { deletedId: trip.id },
       meta: { requestId },
     });
+  });
+
+  test("creates, updates, and deletes itinerary items with revision guards", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const requests: Request[] = [];
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test/",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request.clone());
+        expect(request.headers.get("authorization")).toBe("Bearer valid-access-token");
+        if (request.method === "DELETE") {
+          return Response.json({
+            data: { deletedId: itineraryItem.id, tripRevision: 7 },
+            meta: { requestId },
+          });
+        }
+        return Response.json({
+          data: { item: itineraryItem, tripRevision: request.method === "POST" ? 5 : 6 },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    const createInput = {
+      booking: { reference: "ROA-42" },
+      confidence: null,
+      durationMinutes: 90,
+      endTime: "11:30",
+      estimatedCost: { amountMinor: 4_500, currency: "SGD" },
+      expectedTripRevision: 4,
+      itineraryDayId: itineraryItem.itineraryDayId,
+      itemType: "food" as const,
+      notes: "Try the seasonal set.",
+      orderIndex: 1,
+      placeId: null,
+      sourceSnapshot: { place: { name: "Nishiki Market" } },
+      startTime: "10:00",
+      transport: { mode: "walking" },
+    };
+    await expect(client.createTripItem(trip.id, createInput)).resolves.toMatchObject({
+      data: { item: { id: itineraryItem.id }, tripRevision: 5 },
+    });
+    await expect(
+      client.updateTripItem(trip.id, itineraryItem.id, {
+        expectedTripRevision: 5,
+        notes: "Arrive before the lunch rush.",
+      }),
+    ).resolves.toMatchObject({ data: { tripRevision: 6 } });
+    await expect(
+      client.deleteTripItem(trip.id, itineraryItem.id, { expectedTripRevision: 6 }),
+    ).resolves.toMatchObject({ data: { deletedId: itineraryItem.id, tripRevision: 7 } });
+
+    expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([
+      { method: "POST", url: `https://api.roavia.test/trips/${trip.id}/items` },
+      {
+        method: "PATCH",
+        url: `https://api.roavia.test/trips/${trip.id}/items/${itineraryItem.id}`,
+      },
+      {
+        method: "DELETE",
+        url: `https://api.roavia.test/trips/${trip.id}/items/${itineraryItem.id}`,
+      },
+    ]);
+    await expect(requests[0]?.json()).resolves.toEqual(createInput);
+    await expect(requests[1]?.json()).resolves.toEqual({
+      expectedTripRevision: 5,
+      notes: "Arrive before the lunch rush.",
+    });
+    await expect(requests[2]?.json()).resolves.toEqual({ expectedTripRevision: 6 });
   });
 
   test("surfaces a normalized missing-session error", async () => {
