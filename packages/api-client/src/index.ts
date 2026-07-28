@@ -16,9 +16,11 @@ import {
   type ProfileUpdateInput,
   type TripDeleteInput,
   type TripDeleteResponse,
+  type TripCreateInput,
   type TripListQuery,
   type TripListResponse,
   type TripResponse,
+  type TripUpdateInput,
 } from "@roavia/contracts";
 
 export type {
@@ -31,9 +33,11 @@ export type {
   ProfileUpdateInput,
   TripDeleteInput,
   TripDeleteResponse,
+  TripCreateInput,
   TripListQuery,
   TripListResponse,
   TripResponse,
+  TripUpdateInput,
 } from "@roavia/contracts";
 
 export interface ApiClientOptions {
@@ -62,6 +66,8 @@ export interface RoaviaApiClient {
   session(): Promise<AuthSessionResponse>;
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
   listTrips(query: TripListQuery): Promise<TripListResponse>;
+  createTrip(input: TripCreateInput): Promise<TripResponse>;
+  updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
   getTrip(tripId: string): Promise<TripResponse>;
   deleteTrip(tripId: string, input: TripDeleteInput): Promise<TripDeleteResponse>;
   getProfile(): Promise<ProfileResponse>;
@@ -79,7 +85,7 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
     requestOptions: {
       authenticated?: boolean;
       body?: unknown;
-      method?: "DELETE" | "GET" | "PATCH";
+      method?: "DELETE" | "GET" | "PATCH" | "POST";
     } = {},
   ): Promise<T> {
     const requestId = createRequestId();
@@ -154,6 +160,20 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       }
       return request(`/trips?${params.toString()}`, tripListResponseSchema, {
         authenticated: true,
+      });
+    },
+    async createTrip(input) {
+      return request("/trips", tripResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "POST",
+      });
+    },
+    async updateTrip(tripId, input) {
+      return request(`/trips/${encodeURIComponent(tripId)}`, tripResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "PATCH",
       });
     },
     async getTrip(tripId) {
