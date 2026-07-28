@@ -6,11 +6,13 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
-    "lint": "oxlint app next.config.ts --deny-warnings",
+    "lint": "oxlint app lib next.config.ts --deny-warnings",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@roavia/api-client": "workspace:*",
+    "@roavia/contracts": "workspace:*",
     "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8"
