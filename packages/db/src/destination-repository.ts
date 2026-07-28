@@ -1,4 +1,5 @@
 import { and, asc, eq, gt, isNotNull, lte, sql } from "drizzle-orm";
+import type { DestinationPlaceType, DestinationSearchQuery } from "@roavia/contracts";
 
 import type { Database } from "./client.js";
 import { destinationContent, destinationContentSources, places, sources } from "./schema.js";
@@ -8,6 +9,140 @@ export type DestinationContentFreshnessState = Exclude<
   DestinationContentState,
   "manually_reviewed"
 >;
+
+type SearchablePlace = {
+  id: string;
+  parentPlaceId: string | null;
+  placeType: DestinationPlaceType;
+  canonicalName: string;
+  localizedNames: Record<string, string>;
+  countryCode: string | null;
+};
+
+export interface DestinationSearchPage {
+  query: string;
+  results: Array<{
+    id: string;
+    canonicalName: string;
+    localizedNames: Record<string, string>;
+    placeType: DestinationPlaceType;
+    countryCode: string | null;
+    hierarchy: Array<{ id: string; name: string; type: DestinationPlaceType }>;
+  }>;
+  pagination: { page: number; limit: number; total: number; nextPage: number | null };
+}
+
+function normalized(value: string): string {
+  return value.normalize("NFKC").toLocaleLowerCase();
+}
+
+function localizedNameMap(value: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].trim() !== "",
+    ),
+  );
+}
+
+function hierarchyFor(place: SearchablePlace, allPlaces: Map<string, SearchablePlace>) {
+  const hierarchy: Array<{ id: string; name: string; type: DestinationPlaceType }> = [];
+  const visited = new Set<string>([place.id]);
+  let parentId = place.parentPlaceId;
+
+  while (parentId) {
+    const parent = allPlaces.get(parentId);
+    if (!parent || visited.has(parent.id)) {
+      break;
+    }
+    hierarchy.unshift({ id: parent.id, name: parent.canonicalName, type: parent.placeType });
+    visited.add(parent.id);
+    parentId = parent.parentPlaceId;
+  }
+
+  return hierarchy;
+}
+
+function matchRank(place: SearchablePlace, query: string): number | null {
+  const canonical = normalized(place.canonicalName);
+  const localNames = Object.values(place.localizedNames).map(normalized);
+
+  if (canonical === query) return 0;
+  if (localNames.includes(query)) return 1;
+  if (canonical.startsWith(query)) return 2;
+  if (localNames.some((name) => name.startsWith(query))) return 3;
+  if (canonical.includes(query)) return 4;
+  if (localNames.some((name) => name.includes(query))) return 5;
+  return null;
+}
+
+export async function searchDestinations(
+  db: Database,
+  query: DestinationSearchQuery,
+): Promise<DestinationSearchPage> {
+  const records = await db
+    .select({
+      id: places.id,
+      parentPlaceId: places.parentPlaceId,
+      placeType: places.placeType,
+      canonicalName: places.canonicalName,
+      localizedNames: places.localizedNames,
+      countryCode: places.countryCode,
+    })
+    .from(places)
+    .where(eq(places.status, "active"))
+    .orderBy(asc(places.canonicalName), asc(places.id));
+
+  const allPlaces = new Map<string, SearchablePlace>(
+    records.map((record) => [
+      record.id,
+      {
+        ...record,
+        placeType: record.placeType as DestinationPlaceType,
+        localizedNames: localizedNameMap(record.localizedNames),
+      },
+    ]),
+  );
+  const normalizedQuery = normalized(query.query);
+
+  const ranked = [...allPlaces.values()]
+    .flatMap((place) => {
+      const rank = matchRank(place, normalizedQuery);
+      const hierarchy = hierarchyFor(place, allPlaces);
+      const matchesRegion = !query.regionId || hierarchy.some((item) => item.id === query.regionId);
+      const matchesType = query.types.length === 0 || query.types.includes(place.placeType);
+      const matchesCountry = !query.country || place.countryCode === query.country;
+
+      return rank === null || !matchesRegion || !matchesType || !matchesCountry
+        ? []
+        : [{ place, rank, hierarchy }];
+    })
+    .toSorted(
+      (left, right) =>
+        left.rank - right.rank ||
+        left.place.canonicalName.localeCompare(right.place.canonicalName) ||
+        left.place.id.localeCompare(right.place.id),
+    );
+  const start = (query.page - 1) * query.limit;
+  const pageResults = ranked.slice(start, start + query.limit);
+
+  return {
+    query: query.query,
+    results: pageResults.map(({ place, hierarchy }) => ({
+      id: place.id,
+      canonicalName: place.canonicalName,
+      localizedNames: place.localizedNames,
+      placeType: place.placeType,
+      countryCode: place.countryCode,
+      hierarchy,
+    })),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total: ranked.length,
+      nextPage: start + query.limit < ranked.length ? query.page + 1 : null,
+    },
+  };
+}
 
 function freshnessStateAt(now: Date) {
   return sql<DestinationContentFreshnessState>`case

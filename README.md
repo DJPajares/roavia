@@ -80,6 +80,8 @@ WEATHER_API_KEY
 TRAVEL_DATA_*
 APP_BASE_URL
 API_BASE_URL
+NEXT_PUBLIC_API_BASE_URL
+CORS_ORIGINS
 ```
 
 Never expose secret values through client-prefixed environment variables.

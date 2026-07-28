@@ -90,4 +90,40 @@ describe("Roavia API client", () => {
       status: 401,
     });
   });
+
+  test("serializes destination search filters and parses the shared response", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const regionId = "22222222-2222-4222-8222-222222222222";
+    const client = createRoaviaApiClient({
+      baseUrl: "https://api.roavia.test",
+      fetch: (input, init) => {
+        const request = new Request(input, init);
+        expect(request.url).toBe(
+          `https://api.roavia.test/destinations/search?q=Singapore&page=1&limit=8&country=SG&regionId=${regionId}&type=city`,
+        );
+        return Promise.resolve(
+          Response.json({
+            data: {
+              query: "Singapore",
+              results: [],
+              pagination: { page: 1, limit: 8, total: 0, nextPage: null },
+            },
+            meta: { requestId },
+          }),
+        );
+      },
+      requestId: () => requestId,
+    });
+
+    await expect(
+      client.searchDestinations({
+        query: "Singapore",
+        page: 1,
+        limit: 8,
+        types: ["city"],
+        country: "SG",
+        regionId,
+      }),
+    ).resolves.toMatchObject({ data: { query: "Singapore" } });
+  });
 });

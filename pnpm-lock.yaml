@@ -38,6 +38,9 @@ importers:
       '@roavia/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@roavia/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       hono:
         specifier: 4.12.32
         version: 4.12.32
@@ -144,6 +147,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@roavia/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
