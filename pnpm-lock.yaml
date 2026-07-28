@@ -112,6 +112,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@roavia/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@roavia/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
@@ -147,6 +150,9 @@ importers:
       pg:
         specifier: 8.22.0
         version: 8.22.0
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: 24.13.2

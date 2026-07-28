@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@roavia/db": "workspace:*",
     "@roavia/jobs": "workspace:*"
   },
   "devDependencies": {

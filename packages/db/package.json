@@ -12,14 +12,16 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "node --import tsx scripts/migrate.ts",
     "db:reset:test": "node --import tsx scripts/reset-test.ts",
+    "db:seed:destinations": "node --import tsx scripts/seed-destinations.ts",
     "lint": "oxlint drizzle.config.ts scripts src test --deny-warnings",
     "test": "vitest run",
-    "test:db": "vitest run test/database.integration.test.ts",
+    "test:db": "vitest run test/*.integration.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
-    "pg": "8.22.0"
+    "pg": "8.22.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "24.13.2",

@@ -35,6 +35,16 @@ pnpm --filter @roavia/jobs schema:generate
 - Abort cancellation at safe handler checkpoints and preserve user-authored state.
 - Recover interrupted leases through `pg-boss`; the deterministic runtime exposes `recoverInterrupted()` for contract tests.
 
+## Destination catalog refresh
+
+`destination.catalog-ingest.v1` accepts only the approved `mvp-launch-v1`
+catalog and `seed` or `refresh` mode. The worker registers the job with
+single-job concurrency and a bounded five-minute timeout. Its database handler
+uses stable provider record identities and preserves reviewed editorial content,
+so both queue redelivery and scheduled refresh are safe to repeat. Producers
+should use an idempotency key that includes the catalog key and source revision or
+refresh window, for example `destination:mvp-launch-v1:refresh:2026-07-28`.
+
 ## Operator recovery
 
 `listJobs()` provides a bounded, status-filtered view of queued, running, retrying, and dead-lettered application records without exposing queue tables. `listDeadLetters()` returns terminal failure metadata. `redrive()` revalidates the current payload schema and creates a new job ID/idempotency key. `discard()` marks the application record terminal. Both recovery operations require an operator ID and reason and append an immutable `job_operator_actions` audit record.

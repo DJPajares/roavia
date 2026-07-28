@@ -50,6 +50,7 @@ describeDatabase("database migration baseline", () => {
       "application_jobs",
       "destination_content",
       "destination_content_sources",
+      "destination_ingestion_quarantine",
       "freshness_policies",
       "itinerary_days",
       "itinerary_items",
@@ -72,7 +73,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(16);
+    expect(idDefaults.rows).toHaveLength(17);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -105,6 +106,7 @@ describeDatabase("database migration baseline", () => {
       "destination_content_policy_id_idx",
       "destination_content_quality_stale_idx",
       "destination_content_sources_source_id_idx",
+      "destination_ingestion_quarantine_pending_seen_idx",
       "place_provider_ids_place_provider_idx",
       "places_parent_type_name_idx",
       "places_parent_place_id_idx",
