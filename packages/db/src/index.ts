@@ -34,5 +34,12 @@ export {
   type DestinationIngestionOptions,
   type DestinationIngestionSummary,
 } from "./destination-ingestion.js";
+export {
+  TripConcurrencyError,
+  TripDomainInputError,
+  createTripRepository,
+  type TripMutationContext,
+  type TripRepository,
+} from "./trip-repository.js";
 export { mvpLaunchDestinationCatalog } from "./fixtures/mvp-launch-destinations.js";
 export * from "./schema.js";
