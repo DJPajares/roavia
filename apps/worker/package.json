@@ -1,0 +1,22 @@
+{
+  "name": "@roavia/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Roavia background worker composition root.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "oxlint src test --deny-warnings",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@roavia/jobs": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2",
+    "tsx": "4.23.1"
+  }
+}

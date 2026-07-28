@@ -23,6 +23,7 @@ Roavia is an AI-assisted travel planner and destination intelligence platform. T
 apps/
   web/
   api/
+  worker/
 packages/
   ai/
   api-client/
@@ -32,6 +33,7 @@ packages/
   offline/
   travel-data/
   ui/
+  jobs/
 ```
 
 ### Workspace Responsibilities
@@ -40,6 +42,7 @@ packages/
 | ---------------------- | --------------------------------------------------------------------- |
 | `apps/web`             | Next.js responsive web application and future PWA client              |
 | `apps/api`             | Hono API runtime and server-only integration boundary                 |
+| `apps/worker`          | Dedicated background worker composition root                          |
 | `packages/ai`          | Provider-neutral AI orchestration, validation, repair, and evaluation |
 | `packages/api-client`  | Typed client boundary for the Roavia API                              |
 | `packages/config`      | Shared TypeScript and future repository-tool configuration            |
@@ -48,6 +51,7 @@ packages/
 | `packages/offline`     | Offline manifests, serialization, caching, and sync contracts         |
 | `packages/travel-data` | Normalized destination and live travel-data provider boundaries       |
 | `packages/ui`          | Roavia-owned accessible components, patterns, and design tokens       |
+| `packages/jobs`        | Versioned job contracts, reliability controls, and queue adapter      |
 
 ## Requirements
 
@@ -92,6 +96,7 @@ The combined development command starts the web application at `http://localhost
 pnpm dev              # Start web and API together
 pnpm dev:web          # Start only the Next.js application
 pnpm dev:api          # Start only the Hono API
+pnpm dev:worker       # Start the PostgreSQL-backed background worker
 pnpm format:check     # Verify repository formatting
 pnpm lint             # Lint all workspaces
 pnpm typecheck        # Type-check all workspaces
@@ -147,7 +152,9 @@ The architecture supports:
 - logs, metrics, and alerting
 - safe database migrations and rollback
 
-Production provisioning, concrete provider selection, and job-runtime implementation remain scoped to their dedicated Linear issues.
+Production provisioning remains scoped to its dedicated Linear issue.
+
+The worker uses the versioned internal contracts in `@roavia/jobs` and the `pg-boss` adapter only at its composition root. Run `pnpm db:migrate` before `pnpm dev:worker`; local execution needs PostgreSQL but no production queue or provider credentials.
 
 ## Linear Workflow
 

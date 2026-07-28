@@ -508,9 +508,104 @@ export const offlinePackages = pgTable(
   ],
 );
 
+export const applicationJobs = pgTable(
+  "application_jobs",
+  {
+    id: uuidPrimaryKey(),
+    type: text("type").notNull(),
+    payloadVersion: integer("payload_version").notNull(),
+    subjectId: text("subject_id").notNull(),
+    requestedByKind: text("requested_by_kind", {
+      enum: ["user", "system", "operator"],
+    }).notNull(),
+    requestedById: text("requested_by_id").notNull(),
+    correlationId: uuid("correlation_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    status: text("status", {
+      enum: [
+        "queued",
+        "running",
+        "retrying",
+        "succeeded",
+        "cancelled",
+        "dead_lettered",
+        "discarded",
+      ],
+    })
+      .notNull()
+      .default("queued"),
+    payload: jsonb("payload_json").$type<JsonObject>().notNull(),
+    result: jsonb("result_json").$type<JsonObject>(),
+    attempt: integer("attempt").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull(),
+    notBefore: timestamp("not_before", { mode: "date", precision: 3, withTimezone: true }),
+    startedAt: timestamp("started_at", { mode: "date", precision: 3, withTimezone: true }),
+    completedAt: timestamp("completed_at", { mode: "date", precision: 3, withTimezone: true }),
+    errorCode: text("error_code"),
+    errorSummary: text("error_summary"),
+    releaseSha: text("release_sha"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    uniqueIndex("application_jobs_idempotency_key_uidx").on(table.idempotencyKey),
+    index("application_jobs_status_updated_idx").on(table.status, table.updatedAt.desc()),
+    index("application_jobs_subject_created_idx").on(table.subjectId, table.createdAt.desc()),
+    index("application_jobs_type_status_idx").on(table.type, table.status),
+    check(
+      "application_jobs_type_version_chk",
+      sql`${table.type} ~ '^[a-z][a-z0-9_.-]+\\.v[1-9][0-9]*$'`,
+    ),
+    check("application_jobs_payload_version_positive_chk", sql`${table.payloadVersion} > 0`),
+    check("application_jobs_payload_object_chk", sql`jsonb_typeof(${table.payload}) = 'object'`),
+    check(
+      "application_jobs_result_object_chk",
+      sql`${table.result} is null or jsonb_typeof(${table.result}) = 'object'`,
+    ),
+    check("application_jobs_attempt_nonnegative_chk", sql`${table.attempt} >= 0`),
+    check("application_jobs_max_attempts_positive_chk", sql`${table.maxAttempts} > 0`),
+    check("application_jobs_attempt_limit_chk", sql`${table.attempt} <= ${table.maxAttempts}`),
+    check(
+      "application_jobs_requested_by_kind_chk",
+      sql`${table.requestedByKind} in ('user', 'system', 'operator')`,
+    ),
+    check(
+      "application_jobs_status_chk",
+      sql`${table.status} in ('queued', 'running', 'retrying', 'succeeded', 'cancelled', 'dead_lettered', 'discarded')`,
+    ),
+  ],
+);
+
+export const jobOperatorActions = pgTable(
+  "job_operator_actions",
+  {
+    id: uuidPrimaryKey(),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => applicationJobs.id, { onDelete: "restrict" }),
+    replacementJobId: uuid("replacement_job_id").references(() => applicationJobs.id, {
+      onDelete: "set null",
+    }),
+    operatorId: text("operator_id").notNull(),
+    action: text("action", { enum: ["redrive", "discard"] }).notNull(),
+    reason: text("reason").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index("job_operator_actions_job_created_idx").on(table.jobId, table.createdAt.desc()),
+    check("job_operator_actions_action_chk", sql`${table.action} in ('redrive', 'discard')`),
+    check(
+      "job_operator_actions_reason_length_chk",
+      sql`char_length(${table.reason}) between 1 and 500`,
+    ),
+  ],
+);
+
 export const coreTables = {
+  applicationJobs,
   itineraryDays,
   itineraryItems,
+  jobOperatorActions,
   offlinePackages,
   places,
   shareLinks,

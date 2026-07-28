@@ -46,8 +46,10 @@ describeDatabase("database migration baseline", () => {
     `);
 
     expect(tables.rows.map(({ table_name }) => table_name)).toEqual([
+      "application_jobs",
       "itinerary_days",
       "itinerary_items",
+      "job_operator_actions",
       "offline_packages",
       "places",
       "share_links",
@@ -65,7 +67,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(10);
+    expect(idDefaults.rows).toHaveLength(12);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -105,6 +107,23 @@ describeDatabase("database migration baseline", () => {
     ]) {
       expect(names.has(expected), `missing index ${expected}`).toBe(true);
     }
+  });
+
+  test("installs the pinned pg-boss schema through the migration gate", async () => {
+    const version = await client.query<{ version: number }>(
+      "select version from jobs.version order by version desc limit 1",
+    );
+    expect(version.rows).toEqual([{ version: 37 }]);
+
+    const tables = await client.query<{ table_name: string }>(`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'jobs' and table_type = 'BASE TABLE'
+      order by table_name
+    `);
+    expect(tables.rows.map(({ table_name }) => table_name)).toEqual(
+      expect.arrayContaining(["job", "job_common", "queue", "schedule", "version"]),
+    );
   });
 
   test("enforces ownership, checks, and cascade behavior", async () => {
