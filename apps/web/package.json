@@ -6,7 +6,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
-    "lint": "oxlint app lib next.config.ts --deny-warnings",
+    "dev:auth-fixture": "node test/fixtures/supabase-auth.mjs",
+    "lint": "oxlint app components lib test next.config.ts proxy.ts --deny-warnings",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
@@ -14,6 +15,8 @@
     "@roavia/api-client": "workspace:*",
     "@roavia/contracts": "workspace:*",
     "@roavia/ui": "workspace:*",
+    "@supabase/ssr": "0.12.3",
+    "@supabase/supabase-js": "2.110.9",
     "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8"

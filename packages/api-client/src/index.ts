@@ -1,14 +1,17 @@
 import {
   apiErrorResponseSchema,
+  authSessionResponseSchema,
   healthResponseSchema,
   type ApiErrorCode,
+  type AuthSessionResponse,
   type HealthResponse,
 } from "@roavia/contracts";
 
-export type { HealthResponse } from "@roavia/contracts";
+export type { AuthSessionResponse, HealthResponse } from "@roavia/contracts";
 
 export interface ApiClientOptions {
   baseUrl: string;
+  accessToken?: () => Promise<string | null> | string | null;
   fetch?: typeof fetch;
   requestId?: () => string;
 }
@@ -29,6 +32,7 @@ export class ApiClientError extends Error {
 
 export interface RoaviaApiClient {
   health(): Promise<HealthResponse>;
+  session(): Promise<AuthSessionResponse>;
 }
 
 export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClient {
@@ -36,38 +40,51 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
   const baseUrl = options.baseUrl.replace(/\/+$/, "");
   const createRequestId = options.requestId ?? (() => crypto.randomUUID());
 
-  return {
-    async health(): Promise<HealthResponse> {
-      const requestId = createRequestId();
-      const response = await fetchImplementation(`${baseUrl}/health`, {
-        headers: {
-          accept: "application/json",
-          "x-request-id": requestId,
-        },
-        method: "GET",
-      });
-      const body: unknown = await response.json();
+  async function request<T>(
+    path: string,
+    schema: { parse(value: unknown): T },
+    authenticated = false,
+  ): Promise<T> {
+    const requestId = createRequestId();
+    const accessToken = authenticated ? await options.accessToken?.() : null;
+    const response = await fetchImplementation(`${baseUrl}${path}`, {
+      headers: {
+        accept: "application/json",
+        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        "x-request-id": requestId,
+      },
+      method: "GET",
+    });
+    const body: unknown = await response.json();
 
-      if (!response.ok) {
-        const parsedError = apiErrorResponseSchema.safeParse(body);
-        if (parsedError.success) {
-          throw new ApiClientError({
-            code: parsedError.data.error.code,
-            message: parsedError.data.error.message,
-            requestId: parsedError.data.error.requestId,
-            status: response.status,
-          });
-        }
-
+    if (!response.ok) {
+      const parsedError = apiErrorResponseSchema.safeParse(body);
+      if (parsedError.success) {
         throw new ApiClientError({
-          code: "internal_error",
-          message: "The API returned an invalid error response.",
-          requestId,
+          code: parsedError.data.error.code,
+          message: parsedError.data.error.message,
+          requestId: parsedError.data.error.requestId,
           status: response.status,
         });
       }
 
-      return healthResponseSchema.parse(body);
+      throw new ApiClientError({
+        code: "internal_error",
+        message: "The API returned an invalid error response.",
+        requestId,
+        status: response.status,
+      });
+    }
+
+    return schema.parse(body);
+  }
+
+  return {
+    async health(): Promise<HealthResponse> {
+      return request("/health", healthResponseSchema);
+    },
+    async session(): Promise<AuthSessionResponse> {
+      return request("/auth/session", authSessionResponseSchema, true);
     },
   };
 }

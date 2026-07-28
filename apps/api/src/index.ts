@@ -1,8 +1,12 @@
 import { serve } from "@hono/node-server";
 
-import { app } from "./app.js";
+import { createApp } from "./app.js";
+import { createAccessTokenVerifierFromEnvironment } from "./auth.js";
 
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
+const app = createApp({
+  verifyAccessToken: createAccessTokenVerifierFromEnvironment(process.env),
+});
 
 serve(
   {
