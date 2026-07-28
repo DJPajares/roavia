@@ -48,6 +48,7 @@ describeDatabase("database migration baseline", () => {
 
     expect(tables.rows.map(({ table_name }) => table_name)).toEqual([
       "application_jobs",
+      "audit_events",
       "destination_content",
       "destination_content_sources",
       "destination_ingestion_quarantine",
@@ -73,7 +74,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(17);
+    expect(idDefaults.rows).toHaveLength(18);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -97,6 +98,9 @@ describeDatabase("database migration baseline", () => {
     const names = new Set(indexes.rows.map(({ indexname }) => indexname));
 
     for (const expected of [
+      "audit_events_actor_occurred_id_idx",
+      "audit_events_expires_at_idx",
+      "audit_events_subject_occurred_idx",
       "itinerary_days_trip_order_unique",
       "itinerary_items_day_order_unique",
       "itinerary_items_place_id_idx",
@@ -120,6 +124,73 @@ describeDatabase("database migration baseline", () => {
     ]) {
       expect(names.has(expected), `missing index ${expected}`).toBe(true);
     }
+  });
+
+  test("enables ownership RLS and revokes direct access to private tables", async () => {
+    const protectedTables = [
+      "audit_events",
+      "itinerary_days",
+      "itinerary_items",
+      "offline_packages",
+      "share_links",
+      "travel_profiles",
+      "trip_destinations",
+      "trips",
+      "users",
+    ];
+    const expectedPolicies = [
+      "audit_events_actor_access",
+      "itinerary_days_owner_access",
+      "itinerary_items_owner_access",
+      "offline_packages_owner_access",
+      "share_links_owner_access",
+      "travel_profiles_owner_access",
+      "trip_destinations_owner_access",
+      "trips_owner_access",
+      "users_owner_access",
+    ];
+
+    const rowSecurity = await client.query<{ relname: string; relrowsecurity: boolean }>(
+      `
+      select relname, relrowsecurity
+      from pg_class
+      where relnamespace = 'public'::regnamespace
+        and relname = any($1::text[])
+      order by relname
+    `,
+      [protectedTables],
+    );
+    expect(rowSecurity.rows).toEqual(
+      protectedTables.map((relname) => ({ relname, relrowsecurity: true })),
+    );
+
+    const policies = await client.query<{ policyname: string }>(
+      `
+      select policyname
+      from pg_policies
+      where schemaname = 'public'
+        and tablename = any($1::text[])
+      order by policyname
+    `,
+      [protectedTables],
+    );
+    expect(policies.rows.map(({ policyname }) => policyname)).toEqual(expectedPolicies);
+
+    const exposedPrivileges = await client.query<{
+      grantee: string;
+      privilege_type: string;
+      table_name: string;
+    }>(
+      `
+      select grantee, table_name, privilege_type
+      from information_schema.table_privileges
+      where table_schema = 'public'
+        and table_name = any($1::text[])
+        and grantee = any(array['PUBLIC', 'anon', 'authenticated'])
+    `,
+      [protectedTables],
+    );
+    expect(exposedPrivileges.rows).toEqual([]);
   });
 
   test("traces destination content through normalized place, provider, and source records", async () => {
