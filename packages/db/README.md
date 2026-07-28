@@ -37,6 +37,30 @@ The reset command reads only `TEST_DATABASE_URL`. It refuses remote hosts and da
 - Share links store only a unique 32-byte SHA-256 token hash in `bytea`. The application must generate a high-entropy raw token, compare hashes, and never log or persist the raw token. Any future algorithm change requires a reviewed migration that adds an explicit algorithm version.
 - Exact trip dates and place coordinates are sensitive. The API must authorize owner access before reading them and must not include them in logs or analytics payloads.
 
+## Destination provenance and freshness
+
+- `places.id` is the only Roavia place identity. Provider records live in
+  `place_provider_ids`, where `(provider, provider_place_id)` is unique and
+  reconciles back to a place without leaking provider identity into domain IDs.
+- `destination_content` stores one normalized content record per place, content
+  type, and locale. `destination_content_sources` is the many-to-many provenance
+  edge and records the retrieval timestamp used for each imported source.
+- `sources` records source kind, WDL-57 trust tier, license and attribution text,
+  reuse/offline permissions, publication/retrieval time, and validity bounds.
+  High-stakes content still requires an official source; a trust tier never
+  grants rights that the recorded license does not provide.
+- `freshness_policies` versions the policy inputs used by ingestion and refresh
+  work. Content stores concrete `refreshed_at`, `stale_at`, and `expires_at`
+  boundaries so fresh, stale, and expired states are queryable without relying on
+  request time as a proxy for source freshness.
+- Approved content is manually reviewed only when both `reviewed_at` and
+  `reviewed_by` are present. The partial review index supports editorial queues;
+  stale/expiry and hierarchy/provider indexes support refresh and navigation
+  jobs. JSONB remains unindexed until a demonstrated containment query exists.
+- `getDestinationContentProvenance` returns a normalized content-to-place-to-source
+  trace. `listDestinationContentByState` exposes bounded fresh, stale, expired,
+  and manually reviewed queries for repository and refresh workflows.
+
 ## Access and rollback
 
 Migrations must run through a dedicated deployment credential. Runtime services should use a separate least-privilege role with explicit DML grants and no schema-changing privileges. Row-level security is intentionally deferred until the authentication provider and request-scoped database identity are established; API authorization remains mandatory in the meantime.
