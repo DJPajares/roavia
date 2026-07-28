@@ -5,12 +5,13 @@
   "type": "module",
   "description": "Normalized destination and live travel-data provider boundaries.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
-    "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
-    "lint": "oxlint src --deny-warnings",
-    "test": "vitest run --passWithNoTests",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "oxlint src test --deny-warnings",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   }
 }
