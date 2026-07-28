@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export * from "./trips";
+export * from "./profile";
 
 export const API_CONTRACT_VERSION = "v1" as const;
 
@@ -17,6 +18,7 @@ export const apiErrorCodeSchema = z.enum([
   "internal_error",
   "invalid_session",
   "not_found",
+  "profile_service_unavailable",
   "rate_limited",
   "search_unavailable",
   "session_expired",

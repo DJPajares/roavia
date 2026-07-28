@@ -41,5 +41,10 @@ export {
   type TripMutationContext,
   type TripRepository,
 } from "./trip-repository.js";
+export {
+  createProfileRepository,
+  type ProfilePrincipal,
+  type ProfileRepository,
+} from "./profile-repository.js";
 export { mvpLaunchDestinationCatalog } from "./fixtures/mvp-launch-destinations.js";
 export * from "./schema.js";

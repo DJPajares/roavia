@@ -75,6 +75,44 @@ describe("Roavia API client", () => {
     });
   });
 
+  test("sends authenticated profile updates through the shared contract", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        expect(request.method).toBe("PATCH");
+        expect(request.headers.get("authorization")).toBe("Bearer valid-access-token");
+        expect(request.headers.get("content-type")).toBe("application/json");
+        const body = await request.json();
+        expect(body).toEqual({ defaultPace: "slow" });
+        return Response.json({
+          data: {
+            accessibilityNeeds: [],
+            defaultBudgetStyle: "midrange",
+            defaultPace: "slow",
+            dietaryNeeds: [],
+            email: "traveler@roavia.test",
+            homeCountry: null,
+            interests: [],
+            locale: "en",
+            preferredCurrency: "USD",
+            timezone: "UTC",
+            travelPreferences: { mustAvoid: [], mustDo: [] },
+            updatedAt: "2026-07-28T10:00:00.000Z",
+          },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    await expect(client.updateProfile({ defaultPace: "slow" })).resolves.toMatchObject({
+      data: { defaultPace: "slow" },
+    });
+  });
+
   test("surfaces a normalized missing-session error", async () => {
     const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
     const authenticatedApp = createApp();

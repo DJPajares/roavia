@@ -2,7 +2,12 @@ import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { serve } from "@hono/node-server";
-import { createDatabaseClient, createTripRepository, searchDestinations } from "@roavia/db";
+import {
+  createDatabaseClient,
+  createProfileRepository,
+  createTripRepository,
+  searchDestinations,
+} from "@roavia/db";
 
 import { createApp } from "./app.js";
 import { createAccessTokenVerifierFromEnvironment } from "./auth.js";
@@ -26,6 +31,7 @@ const app = createApp({
   corsOrigins: corsOrigins && corsOrigins.length > 0 ? corsOrigins : undefined,
   verifyAccessToken: createAccessTokenVerifierFromEnvironment(process.env),
   searchDestinations: database ? (query) => searchDestinations(database.db, query) : undefined,
+  profileRepository: database ? createProfileRepository(database.db) : undefined,
   tripRepository: database ? createTripRepository(database.db) : undefined,
 });
 
