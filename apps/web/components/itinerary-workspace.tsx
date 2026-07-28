@@ -16,11 +16,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "../lib/supabase/client";
+import { ItineraryItemEditor, type ItemDraft, type ItemEditorMode } from "./itinerary-item-editor";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
 
 type LoadState = "error" | "loading" | "permission" | "ready";
 type MobileView = "plan" | "route";
+type EditorState = { item: TripItem | null; mode: ItemEditorMode } | null;
 
 interface PresentedItem {
   item: TripItem;
@@ -151,6 +153,34 @@ function warningFor(items: PresentedItem[], index: number) {
   return null;
 }
 
+function duplicateWarningFor(items: PresentedItem[], index: number) {
+  const current = items[index];
+  if (!current) return null;
+  const currentName = current.snapshot.place?.name.trim().toLocaleLowerCase();
+  const duplicate = items.some(({ item, snapshot }, otherIndex) => {
+    if (otherIndex === index) return false;
+    if (current.item.placeId && item.placeId === current.item.placeId) return true;
+    return Boolean(currentName && snapshot.place?.name.trim().toLocaleLowerCase() === currentName);
+  });
+  return duplicate
+    ? "Possible duplicate: another item on this day uses the same saved place or name."
+    : null;
+}
+
+function metadataString(value: Record<string, unknown>, key: string) {
+  return typeof value[key] === "string" ? value[key] : null;
+}
+
+function safeHttpUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 function errorDetail(error: unknown) {
   if (error instanceof ApiClientError && error.status === 401) {
     return "Your session has expired. Sign in again to view this itinerary.";
@@ -176,6 +206,29 @@ function dayCosts(items: PresentedItem[]) {
     );
   }
   return [...totals.entries()].map(([currency, amount]) => formatMoney(amount, currency));
+}
+
+function withDayItems(
+  trip: TripDetail,
+  dayId: string,
+  items: TripItem[],
+  revision = trip.revision,
+) {
+  return {
+    ...trip,
+    revision,
+    days: trip.days.map((day) => (day.id === dayId ? { ...day, items } : day)),
+  };
+}
+
+function orderedWithMove(items: TripItem[], itemId: string, targetIndex: number) {
+  const ordered = items.toSorted((left, right) => left.orderIndex - right.orderIndex);
+  const sourceIndex = ordered.findIndex(({ id }) => id === itemId);
+  if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= ordered.length) return ordered;
+  const [moved] = ordered.splice(sourceIndex, 1);
+  if (!moved) return ordered;
+  ordered.splice(targetIndex, 0, moved);
+  return ordered.map((item, index) => ({ ...item, orderIndex: index }));
 }
 
 function DayTabs({
@@ -228,23 +281,44 @@ function DayTabs({
 }
 
 function ItemCard({
+  busy,
   index,
   items,
+  onDragStart,
+  onDrop,
+  onDuplicate,
+  onEdit,
   onLocate,
+  onMove,
+  onRemove,
+  onReplace,
   selected,
 }: Readonly<{
+  busy: boolean;
   index: number;
   items: PresentedItem[];
+  onDragStart: (itemId: string) => void;
+  onDrop: (targetIndex: number, draggedItemId: string) => void;
+  onDuplicate: (item: TripItem) => void;
+  onEdit: (item: TripItem) => void;
   onLocate: (itemId: string) => void;
+  onMove: (itemId: string, targetIndex: number) => void;
+  onRemove: (item: TripItem) => void;
+  onReplace: (item: TripItem) => void;
   selected: boolean;
 }>) {
   const presented = items[index];
   if (!presented) return null;
   const { item, route, snapshot } = presented;
   const warning = warningFor(items, index);
+  const duplicateWarning = duplicateWarningFor(items, index);
   const name = itemName(presented);
   const source = snapshot.source;
   const hasMapPoint = Boolean(snapshot.place?.coordinates);
+  const transportMode = metadataString(item.transport, "mode");
+  const transportDetails = metadataString(item.transport, "details");
+  const bookingReference = metadataString(item.booking, "reference");
+  const bookingUrl = safeHttpUrl(metadataString(item.booking, "url"));
 
   return (
     <article
@@ -252,9 +326,29 @@ function ItemCard({
       className={`itinerary-item${selected ? " is-selected" : ""}`}
       id={`itinerary-item-${item.id}`}
     >
-      <div aria-hidden="true" className="itinerary-item__sequence">
+      <button
+        aria-label={`Drag ${name} to reorder; current position ${index + 1}`}
+        className="itinerary-item__sequence"
+        disabled={busy}
+        draggable={!busy}
+        onDragOver={(event) => event.preventDefault()}
+        onDragStart={(event) => {
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", item.id);
+          }
+          onDragStart(item.id);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          onDrop(index, event.dataTransfer?.getData("text/plain") ?? "");
+        }}
+        onPointerDown={() => onDragStart(item.id)}
+        onPointerUp={() => onDrop(index, "")}
+        type="button"
+      >
         {index + 1}
-      </div>
+      </button>
       <div className="itinerary-item__body">
         <div className="itinerary-item__heading">
           <div>
@@ -312,7 +406,34 @@ function ItemCard({
           <p className="itinerary-item__missing">Route details have not been added yet.</p>
         ) : null}
         {warning ? <output className="itinerary-item__warning">{warning}</output> : null}
+        {duplicateWarning ? (
+          <output className="itinerary-item__warning">{duplicateWarning}</output>
+        ) : null}
         {item.notes ? <p className="itinerary-item__notes">{item.notes}</p> : null}
+        {transportDetails || bookingReference || bookingUrl ? (
+          <dl className="itinerary-item__metadata">
+            {transportDetails ? (
+              <div>
+                <dt>Transport{transportMode ? ` · ${transportMode}` : ""}</dt>
+                <dd>{transportDetails}</dd>
+              </div>
+            ) : null}
+            {bookingReference ? (
+              <div>
+                <dt>Booking reference</dt>
+                <dd>{bookingReference}</dd>
+              </div>
+            ) : null}
+            {bookingUrl ? (
+              <div>
+                <dt>Booking</dt>
+                <dd>
+                  <a href={bookingUrl}>Open saved booking link</a>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        ) : null}
 
         <div className="itinerary-item__footer">
           {source ? (
@@ -330,6 +451,44 @@ function ItemCard({
               Locate on route
             </Button>
           ) : null}
+        </div>
+        <div aria-label={`Actions for ${name}`} className="itinerary-item__actions">
+          <span aria-hidden="true" className="itinerary-item__drag-hint">
+            Drag to reorder
+          </span>
+          <button
+            aria-label={`Move ${name} earlier`}
+            disabled={busy || index === 0}
+            onClick={() => onMove(item.id, index - 1)}
+            type="button"
+          >
+            ↑ Earlier
+          </button>
+          <button
+            aria-label={`Move ${name} later`}
+            disabled={busy || index === items.length - 1}
+            onClick={() => onMove(item.id, index + 1)}
+            type="button"
+          >
+            ↓ Later
+          </button>
+          <button disabled={busy} onClick={() => onEdit(item)} type="button">
+            Edit
+          </button>
+          <button disabled={busy} onClick={() => onReplace(item)} type="button">
+            Replace
+          </button>
+          <button disabled={busy} onClick={() => onDuplicate(item)} type="button">
+            Duplicate
+          </button>
+          <button
+            className="is-danger"
+            disabled={busy}
+            onClick={() => onRemove(item)}
+            type="button"
+          >
+            Remove
+          </button>
         </div>
       </div>
     </article>
@@ -494,6 +653,11 @@ export function ItineraryWorkspace({
   const [selectedDayId, setSelectedDayId] = useState("");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<MobileView>("plan");
+  const [editor, setEditor] = useState<EditorState>(null);
+  const [removeItem, setRemoveItem] = useState<TripItem | null>(null);
+  const [mutationMessage, setMutationMessage] = useState("");
+  const [mutationBusy, setMutationBusy] = useState(false);
+  const draggedItemId = useRef<string | null>(null);
   const tripRef = useRef<TripDetail | null>(null);
   const api = useMemo(
     () =>
@@ -511,6 +675,7 @@ export function ItineraryWorkspace({
     try {
       const response = await api.getTrip(tripId);
       const days = sortedDays(response.data);
+      tripRef.current = response.data;
       setTrip(response.data);
       setSelectedDayId((current) =>
         days.some(({ id }) => id === current) ? current : (days[0]?.id ?? ""),
@@ -629,6 +794,187 @@ export function ItineraryWorkspace({
     setMobileView("route");
   }
 
+  function saveTrip(nextTrip: TripDetail) {
+    tripRef.current = nextTrip;
+    setTrip(nextTrip);
+  }
+
+  async function restoreAfterFailure(before: TripDetail, error: unknown) {
+    saveTrip(before);
+    if (error instanceof ApiClientError && error.status === 409) {
+      try {
+        const response = await api.getTrip(tripId);
+        saveTrip(response.data);
+        setMutationMessage(
+          "This trip changed in another session. Your attempted change was not applied, and the latest saved itinerary has been reloaded.",
+        );
+      } catch (reloadError) {
+        setMutationMessage(
+          `This trip changed in another session. Your attempted change was not applied. Reload failed: ${errorDetail(reloadError)}`,
+        );
+      }
+      return;
+    }
+    setMutationMessage(
+      `Save failed. The previous itinerary was restored and your editor remains open. ${errorDetail(error)}`,
+    );
+  }
+
+  async function submitEditor(draft: ItemDraft) {
+    if (!editor || mutationBusy) return;
+    if ((editor.mode === "edit" || editor.mode === "replace") && !editor.item) return;
+    const before = tripRef.current;
+    if (!before) return;
+    const targetDayId = editor.item?.itineraryDayId ?? selectedDay.id;
+    const targetDay = before.days.find(({ id }) => id === targetDayId);
+    if (!targetDay) return;
+    setMutationBusy(true);
+    setMutationMessage("");
+    if (editor.mode === "add" || editor.mode === "duplicate") {
+      const orderIndex =
+        editor.mode === "duplicate" && editor.item
+          ? editor.item.orderIndex + 1
+          : targetDay.items.length;
+      const optimisticId = crypto.randomUUID();
+      const optimisticItem: TripItem = {
+        ...draft,
+        id: optimisticId,
+        itineraryDayId: targetDayId,
+        orderIndex,
+      };
+      const optimisticItems = orderedWithMove(
+        [...targetDay.items, { ...optimisticItem, orderIndex: targetDay.items.length }],
+        optimisticId,
+        Math.min(orderIndex, targetDay.items.length),
+      );
+      const optimisticTrip = withDayItems(before, targetDayId, optimisticItems);
+      saveTrip(optimisticTrip);
+      try {
+        const response = await api.createTripItem(tripId, {
+          ...draft,
+          expectedTripRevision: before.revision,
+          itineraryDayId: targetDayId,
+          orderIndex,
+        });
+        saveTrip(
+          withDayItems(
+            optimisticTrip,
+            targetDayId,
+            optimisticItems.map((item) => (item.id === optimisticId ? response.data.item : item)),
+            response.data.tripRevision,
+          ),
+        );
+        setEditor(null);
+        setMutationMessage(
+          editor.mode === "duplicate" ? "Item duplicated and saved." : "Item added and saved.",
+        );
+      } catch (error) {
+        await restoreAfterFailure(before, error);
+      } finally {
+        setMutationBusy(false);
+      }
+      return;
+    }
+
+    if (!editor.item) return;
+    const optimisticItem = { ...editor.item, ...draft };
+    const optimisticTrip = withDayItems(
+      before,
+      targetDayId,
+      targetDay.items.map((item) => (item.id === editor.item?.id ? optimisticItem : item)),
+    );
+    saveTrip(optimisticTrip);
+    try {
+      const response = await api.updateTripItem(tripId, editor.item.id, {
+        ...draft,
+        expectedTripRevision: before.revision,
+      });
+      saveTrip(
+        withDayItems(
+          optimisticTrip,
+          targetDayId,
+          optimisticTrip.days
+            .find(({ id }) => id === targetDayId)!
+            .items.map((item) => (item.id === response.data.item.id ? response.data.item : item)),
+          response.data.tripRevision,
+        ),
+      );
+      setEditor(null);
+      setMutationMessage(editor.mode === "replace" ? "Item replaced and saved." : "Changes saved.");
+    } catch (error) {
+      await restoreAfterFailure(before, error);
+    } finally {
+      setMutationBusy(false);
+    }
+  }
+
+  async function confirmRemove() {
+    const item = removeItem;
+    const before = tripRef.current;
+    if (!item || !before || mutationBusy) return;
+    const targetDay = before.days.find(({ id }) => id === item.itineraryDayId);
+    if (!targetDay) return;
+    setMutationBusy(true);
+    setMutationMessage("");
+    const optimisticTrip = withDayItems(
+      before,
+      item.itineraryDayId,
+      targetDay.items
+        .filter(({ id }) => id !== item.id)
+        .map((value, index) => ({ ...value, orderIndex: index })),
+    );
+    saveTrip(optimisticTrip);
+    try {
+      const response = await api.deleteTripItem(tripId, item.id, {
+        expectedTripRevision: before.revision,
+      });
+      saveTrip({ ...optimisticTrip, revision: response.data.tripRevision });
+      setRemoveItem(null);
+      setMutationMessage("Item removed and saved.");
+    } catch (error) {
+      await restoreAfterFailure(before, error);
+    } finally {
+      setMutationBusy(false);
+    }
+  }
+
+  async function moveItem(itemId: string, targetIndex: number) {
+    const before = tripRef.current;
+    if (!before || mutationBusy) return;
+    const day = before.days.find(({ id }) => id === selectedDay.id);
+    const item = day?.items.find(({ id }) => id === itemId);
+    if (!day || !item || item.orderIndex === targetIndex) return;
+    const movedItems = orderedWithMove(day.items, itemId, targetIndex);
+    const optimisticTrip = withDayItems(before, day.id, movedItems);
+    setMutationBusy(true);
+    setMutationMessage("");
+    saveTrip(optimisticTrip);
+    try {
+      const response = await api.updateTripItem(tripId, itemId, {
+        expectedTripRevision: before.revision,
+        orderIndex: targetIndex,
+      });
+      saveTrip(
+        withDayItems(
+          optimisticTrip,
+          day.id,
+          movedItems.map((value) =>
+            value.id === response.data.item.id
+              ? { ...response.data.item, orderIndex: value.orderIndex }
+              : value,
+          ),
+          response.data.tripRevision,
+        ),
+      );
+      setMutationMessage("Item order saved.");
+    } catch (error) {
+      await restoreAfterFailure(before, error);
+    } finally {
+      setMutationBusy(false);
+      draggedItemId.current = null;
+    }
+  }
+
   return (
     <section aria-labelledby="itinerary-heading" className="itinerary-workspace">
       <Link className="itinerary-workspace__back" href="/trips">
@@ -659,6 +1005,9 @@ export function ItineraryWorkspace({
         <output className="itinerary-workspace__notice">
           Refresh failed: {message} The loaded itinerary is unchanged.
         </output>
+      ) : null}
+      {mutationMessage ? (
+        <output className="itinerary-workspace__notice">{mutationMessage}</output>
       ) : null}
       {stale ? (
         <output className="itinerary-workspace__notice is-stale">
@@ -715,15 +1064,36 @@ export function ItineraryWorkspace({
               <span>Day estimate</span>
               <strong>{costs.length > 0 ? costs.join(" + ") : "No costs yet"}</strong>
             </div>
+            <button
+              className="itinerary-timeline__add"
+              disabled={mutationBusy || offline}
+              onClick={() => setEditor({ item: null, mode: "add" })}
+              type="button"
+            >
+              + Add item
+            </button>
           </div>
           {items.length > 0 ? (
             <div className="itinerary-timeline__items">
               {items.map(({ item }, index) => (
                 <ItemCard
+                  busy={mutationBusy || offline}
                   index={index}
                   items={items}
                   key={item.id}
+                  onDragStart={(itemId) => {
+                    draggedItemId.current = itemId;
+                  }}
+                  onDrop={(targetIndex, transferredItemId) => {
+                    const itemId = transferredItemId || draggedItemId.current;
+                    if (itemId) void moveItem(itemId, targetIndex);
+                  }}
+                  onDuplicate={(value) => setEditor({ item: value, mode: "duplicate" })}
+                  onEdit={(value) => setEditor({ item: value, mode: "edit" })}
                   onLocate={selectItem}
+                  onMove={(itemId, targetIndex) => void moveItem(itemId, targetIndex)}
+                  onRemove={setRemoveItem}
+                  onReplace={(value) => setEditor({ item: value, mode: "replace" })}
                   selected={selectedItemId === item.id}
                 />
               ))}
@@ -746,6 +1116,46 @@ export function ItineraryWorkspace({
         This workspace does not silently change your itinerary. Route estimates and confidence are
         context for your decision, not confirmed bookings.
       </TrustNotice>
+      {editor ? (
+        <ItineraryItemEditor
+          busy={mutationBusy}
+          item={editor.item}
+          key={`${editor.mode}-${editor.item?.id ?? selectedDay.id}`}
+          mode={editor.mode}
+          onCancel={() => setEditor(null)}
+          onSubmit={submitEditor}
+        />
+      ) : null}
+      {removeItem ? (
+        <div className="itinerary-editor-backdrop">
+          <section
+            aria-labelledby="remove-itinerary-item-heading"
+            aria-modal="true"
+            className="itinerary-remove-dialog"
+            role="alertdialog"
+          >
+            <p className="eyebrow">Confirm removal</p>
+            <h2 id="remove-itinerary-item-heading">Remove this itinerary item?</h2>
+            <p>
+              This removes the saved item, including its notes, cost, transport, and booking
+              metadata. If saving fails, the complete item will be restored.
+            </p>
+            <div className="itinerary-editor__actions">
+              <button disabled={mutationBusy} onClick={() => setRemoveItem(null)} type="button">
+                Keep item
+              </button>
+              <button
+                className="is-danger"
+                disabled={mutationBusy}
+                onClick={() => void confirmRemove()}
+                type="button"
+              >
+                {mutationBusy ? "Removing…" : "Remove item"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }

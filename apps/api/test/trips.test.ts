@@ -1,4 +1,4 @@
-import type { TripDetail } from "@roavia/contracts";
+import type { TripDetail, TripItem } from "@roavia/contracts";
 import {
   AuthorizedResourceNotFoundError,
   TripConcurrencyError,
@@ -11,6 +11,8 @@ import { createApp } from "../src/app.js";
 const userId = "11111111-1111-4111-8111-111111111111";
 const tripId = "22222222-2222-4222-8222-222222222222";
 const requestId = "33333333-3333-4333-8333-333333333333";
+const dayId = "44444444-4444-4444-8444-444444444444";
+const itemId = "55555555-5555-4555-8555-555555555555";
 const unavailable = () => Promise.reject(new Error("Unexpected repository call."));
 
 const trip: TripDetail = {
@@ -31,6 +33,23 @@ const trip: TripDetail = {
   travelerSummary: { adults: 2, children: 0, infants: 0 },
   updatedAt: "2026-07-28T10:00:00.000Z",
   visibility: "private",
+};
+
+const item: TripItem = {
+  booking: { reference: "ROA-42" },
+  confidence: null,
+  durationMinutes: 60,
+  endTime: "10:00",
+  estimatedCost: null,
+  id: itemId,
+  itineraryDayId: dayId,
+  itemType: "activity",
+  notes: "Morning walk",
+  orderIndex: 0,
+  placeId: null,
+  sourceSnapshot: { place: { name: "Riverside" } },
+  startTime: "09:00",
+  transport: {},
 };
 
 function testApp(tripRepository?: TripRepository) {
@@ -147,5 +166,97 @@ describe("trip API routes", () => {
     await expect(notFound.json()).resolves.toMatchObject({
       error: { code: "not_found", message: "Resource not found." },
     });
+  });
+
+  test("validates and forwards item create, reorder, delete, and concurrent edits", async () => {
+    const createItem = vi
+      .fn<TripRepository["createItem"]>()
+      .mockResolvedValue({ item, tripRevision: 2 });
+    const updateItem = vi
+      .fn<TripRepository["updateItem"]>()
+      .mockResolvedValue({ item, tripRevision: 3 });
+    const deleteItem = vi
+      .fn<TripRepository["deleteItem"]>()
+      .mockResolvedValue({ deletedId: itemId, tripRevision: 4 });
+    const app = testApp(repositoryWith({ createItem, deleteItem, updateItem }));
+    const authenticatedHeaders = {
+      authorization: "Bearer test-token",
+      "content-type": "application/json",
+      "x-request-id": requestId,
+    };
+
+    const invalid = await app.request(`/trips/${tripId}/items`, {
+      body: JSON.stringify({
+        expectedTripRevision: 1,
+        itineraryDayId: dayId,
+        itemType: "activity",
+        startTime: "09:00",
+      }),
+      headers: authenticatedHeaders,
+      method: "POST",
+    });
+    expect(invalid.status).toBe(400);
+    expect(createItem).not.toHaveBeenCalled();
+
+    const created = await app.request(`/trips/${tripId}/items`, {
+      body: JSON.stringify({
+        booking: { reference: "ROA-42" },
+        endTime: "10:00",
+        expectedTripRevision: 1,
+        itineraryDayId: dayId,
+        itemType: "activity",
+        notes: "Morning walk",
+        sourceSnapshot: { place: { name: "Riverside" } },
+        startTime: "09:00",
+      }),
+      headers: authenticatedHeaders,
+      method: "POST",
+    });
+    expect(created.status).toBe(201);
+    expect(createItem).toHaveBeenCalledWith(
+      userId,
+      tripId,
+      expect.objectContaining({ expectedTripRevision: 1, itineraryDayId: dayId }),
+      { correlationId: requestId },
+    );
+
+    const reordered = await app.request(`/trips/${tripId}/items/${itemId}`, {
+      body: JSON.stringify({ expectedTripRevision: 2, orderIndex: 0 }),
+      headers: authenticatedHeaders,
+      method: "PATCH",
+    });
+    expect(reordered.status).toBe(200);
+    expect(updateItem).toHaveBeenCalledWith(
+      userId,
+      tripId,
+      itemId,
+      { expectedTripRevision: 2, orderIndex: 0 },
+      { correlationId: requestId },
+    );
+
+    const deleted = await app.request(`/trips/${tripId}/items/${itemId}`, {
+      body: JSON.stringify({ expectedTripRevision: 3 }),
+      headers: authenticatedHeaders,
+      method: "DELETE",
+    });
+    expect(deleted.status).toBe(200);
+    expect(deleteItem).toHaveBeenCalledWith(
+      userId,
+      tripId,
+      itemId,
+      { expectedTripRevision: 3 },
+      { correlationId: requestId },
+    );
+
+    const staleApp = testApp(
+      repositoryWith({ updateItem: () => Promise.reject(new TripConcurrencyError()) }),
+    );
+    const stale = await staleApp.request(`/trips/${tripId}/items/${itemId}`, {
+      body: JSON.stringify({ expectedTripRevision: 2, notes: "Concurrent edit" }),
+      headers: authenticatedHeaders,
+      method: "PATCH",
+    });
+    expect(stale.status).toBe(409);
+    await expect(stale.json()).resolves.toMatchObject({ error: { code: "conflict" } });
   });
 });
