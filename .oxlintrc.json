@@ -27,6 +27,22 @@
   },
   "overrides": [
     {
+      "files": ["apps/web/**/*.{js,jsx,ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@roavia/travel-data/server", "@roavia/travel-data/server/*"],
+                "message": "Concrete travel-data adapters and credentials are server-only."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["apps/web/next-env.d.ts"],
       "rules": {
         "import/no-unassigned-import": "off"

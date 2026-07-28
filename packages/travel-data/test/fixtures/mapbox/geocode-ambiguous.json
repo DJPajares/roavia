@@ -1,0 +1,58 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "springfield-illinois",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-89.6501, 39.7817]
+      },
+      "properties": {
+        "mapbox_id": "springfield-illinois",
+        "feature_type": "place",
+        "name": "Springfield",
+        "coordinates": {
+          "longitude": -89.6501,
+          "latitude": 39.7817
+        },
+        "context": {
+          "region": {
+            "name": "Illinois"
+          },
+          "country": {
+            "name": "United States",
+            "country_code": "us"
+          }
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "springfield-massachusetts",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-72.5898, 42.1015]
+      },
+      "properties": {
+        "mapbox_id": "springfield-massachusetts",
+        "feature_type": "place",
+        "name": "Springfield",
+        "coordinates": {
+          "longitude": -72.5898,
+          "latitude": 42.1015
+        },
+        "context": {
+          "region": {
+            "name": "Massachusetts"
+          },
+          "country": {
+            "name": "United States",
+            "country_code": "us"
+          }
+        }
+      }
+    }
+  ],
+  "attribution": "NOTICE: © Mapbox and its suppliers."
+}

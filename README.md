@@ -86,6 +86,11 @@ CORS_ORIGINS
 
 Never expose secret values through client-prefixed environment variables.
 
+The launch map integration accepts `MAPS_PROVIDER=mapbox` and a server-only
+`MAPS_API_KEY`. Temporary geocodes are never cached; only calls made through the
+permanent-geocoding adapter may be persisted. Map tiles and route payloads are
+excluded from offline packages until separate rights are approved.
+
 For authentication, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is intentionally public project configuration. Never place a Supabase secret key, service-role key, or shared JWT secret in a `NEXT_PUBLIC_*` variable. The Hono API verifies asymmetric access tokens with `SUPABASE_URL` and the provider's public JWKS; it does not need an auth-admin secret.
 
 ## Local Setup

@@ -1,0 +1,28 @@
+{
+  "code": "Ok",
+  "routes": [
+    {
+      "distance": 1820.4,
+      "duration": 1420.8,
+      "weight_name": "pedestrian",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.2945, 48.8584],
+          [2.3072, 48.8606],
+          [2.3125, 48.8661]
+        ]
+      }
+    }
+  ],
+  "waypoints": [
+    {
+      "name": "Eiffel Tower",
+      "location": [2.2945, 48.8584]
+    },
+    {
+      "name": "Arc de Triomphe",
+      "location": [2.3125, 48.8661]
+    }
+  ]
+}
