@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export * from "./trips";
+
 export const API_CONTRACT_VERSION = "v1" as const;
 
 export const requestIdSchema = z.string().uuid();
@@ -11,12 +13,14 @@ export const apiMetaSchema = z.object({
 export const apiErrorCodeSchema = z.enum([
   "authentication_required",
   "bad_request",
+  "conflict",
   "internal_error",
   "invalid_session",
   "not_found",
   "rate_limited",
   "search_unavailable",
   "session_expired",
+  "trip_service_unavailable",
 ]);
 
 export const apiErrorSchema = z.object({

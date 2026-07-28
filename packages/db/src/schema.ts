@@ -577,6 +577,7 @@ export const trips = pgTable(
     })
       .notNull()
       .default("idle"),
+    revision: integer("revision").notNull().default(1),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -611,6 +612,7 @@ export const trips = pgTable(
       "trips_generation_state_chk",
       sql`${table.generationState} in ('idle', 'queued', 'generating', 'ready', 'failed')`,
     ),
+    check("trips_revision_positive_chk", sql`${table.revision} > 0`),
   ],
 );
 

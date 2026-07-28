@@ -1,31 +1,27 @@
 import {
   API_CONTRACT_VERSION,
-  apiErrorResponseSchema,
   authSessionResponseSchema,
   destinationSearchQuerySchema,
   destinationSearchResponseSchema,
   healthResponseSchema,
   requestIdSchema,
-  type ApiErrorCode,
-  type AuthSession,
   type DestinationSearchQuery,
   type DestinationSearchResponse,
 } from "@roavia/contracts";
-import { Hono, type Context } from "hono";
+import {
+  AuthorizedResourceNotFoundError,
+  TripConcurrencyError,
+  TripDomainInputError,
+  type TripRepository,
+} from "@roavia/db";
+import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
+import { type ApiEnvironment, errorResponse } from "./http.js";
 import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
-
-type ApiVariables = {
-  authSession: AuthSession;
-  requestId: string;
-};
-
-type ApiEnvironment = {
-  Variables: ApiVariables;
-};
+import { registerTripRoutes } from "./trips.js";
 
 function createRequestId(candidate: string | undefined): string {
   return requestIdSchema.safeParse(candidate).success ? candidate! : crypto.randomUUID();
@@ -38,6 +34,7 @@ export interface CreateAppOptions {
     query: DestinationSearchQuery,
   ) => Promise<DestinationSearchResponse["data"]>;
   searchRateLimiter?: RateLimiter;
+  tripRepository?: TripRepository;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -52,24 +49,6 @@ function bearerToken(authorization: string | undefined): string | undefined {
   return match?.[1];
 }
 
-function errorResponse(
-  context: Context<ApiEnvironment>,
-  status: 400 | 401 | 404 | 429 | 500 | 503,
-  code: ApiErrorCode,
-  message: string,
-) {
-  return context.json(
-    apiErrorResponseSchema.parse({
-      error: {
-        code,
-        message,
-        requestId: context.get("requestId"),
-      },
-    }),
-    status,
-  );
-}
-
 export function createApp(options: CreateAppOptions = {}) {
   const corsOrigins = options.corsOrigins ?? ["http://localhost:3000"];
   const verifyAccessToken = options.verifyAccessToken ?? unavailableVerifier;
@@ -80,7 +59,7 @@ export function createApp(options: CreateAppOptions = {}) {
     "*",
     cors({
       allowHeaders: ["Authorization", "Content-Type", "X-Request-Id"],
-      allowMethods: ["GET", "OPTIONS"],
+      allowMethods: ["DELETE", "GET", "OPTIONS", "PATCH", "POST"],
       origin: (origin) => (corsOrigins.includes(origin) ? origin : ""),
     }),
   );
@@ -163,7 +142,7 @@ export function createApp(options: CreateAppOptions = {}) {
     );
   });
 
-  app.use("/auth/*", async (context, next) => {
+  const requireAuthentication: MiddlewareHandler<ApiEnvironment> = async (context, next) => {
     const authorization = context.req.header("authorization");
     const accessToken = bearerToken(authorization);
 
@@ -186,7 +165,11 @@ export function createApp(options: CreateAppOptions = {}) {
     }
 
     await next();
-  });
+  };
+
+  app.use("/auth/*", requireAuthentication);
+  app.use("/trips", requireAuthentication);
+  app.use("/trips/*", requireAuthentication);
 
   app.get("/auth/session", (context) =>
     context.json(
@@ -199,9 +182,23 @@ export function createApp(options: CreateAppOptions = {}) {
     ),
   );
 
+  registerTripRoutes(app, options.tripRepository);
+
   app.notFound((context) => errorResponse(context, 404, "not_found", "Route not found."));
 
   app.onError((error, context) => {
+    if (error instanceof AuthorizedResourceNotFoundError) {
+      return errorResponse(context, 404, "not_found", "Resource not found.");
+    }
+
+    if (error instanceof TripConcurrencyError) {
+      return errorResponse(context, 409, "conflict", error.message);
+    }
+
+    if (error instanceof TripDomainInputError) {
+      return errorResponse(context, 400, "bad_request", error.message);
+    }
+
     if (error instanceof HTTPException && error.status < 500) {
       return errorResponse(context, 400, "bad_request", "Request could not be processed.");
     }
