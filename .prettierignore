@@ -6,3 +6,4 @@ dist/
 coverage/
 .husky/_/
 pnpm-lock.yaml
+packages/db/drizzle/meta/

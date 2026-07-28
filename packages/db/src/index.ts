@@ -1,2 +1,2 @@
-/** Database schemas and migrations are intentionally deferred to their scoped issue. */
-export {};
+export { createDatabaseClient, type Database, type DatabaseClient } from "./client.js";
+export * from "./schema.js";

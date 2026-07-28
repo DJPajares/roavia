@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: roavia_test
+      POSTGRES_PASSWORD: roavia_test
+      POSTGRES_USER: roavia_test
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roavia_test -d roavia_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    volumes:
+      - roavia-db-test-data:/var/lib/postgresql
+
+volumes:
+  roavia-db-test-data:
