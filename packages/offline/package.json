@@ -5,12 +5,19 @@
   "type": "module",
   "description": "Offline manifest, serialization, cache, and sync contracts.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
   },
   "scripts": {
     "build": "tsc --noEmit false --outDir dist --rootDir src --declaration --declarationMap",
-    "lint": "oxlint src --deny-warnings",
+    "lint": "oxlint src test --deny-warnings",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@roavia/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2"
   }
 }

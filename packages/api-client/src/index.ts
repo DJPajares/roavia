@@ -9,6 +9,8 @@ import {
   itineraryGenerationQueuedResponseSchema,
   itineraryGenerationCancelledResponseSchema,
   itineraryGenerationStatusResponseSchema,
+  offlinePackageMutationResponseSchema,
+  offlinePackageResponseSchema,
   profileResponseSchema,
   shareLinkCreateResponseSchema,
   shareLinkListResponseSchema,
@@ -35,6 +37,8 @@ import {
   type ItineraryGenerationCancelledResponse,
   type ItineraryGenerationRequestInput,
   type ItineraryGenerationStatusResponse,
+  type OfflinePackageMutationResponse,
+  type OfflinePackageResponse,
   type ProfileResponse,
   type ProfileUpdateInput,
   type ShareLinkCreateInput,
@@ -70,6 +74,8 @@ export type {
   ItineraryGenerationCancelledResponse,
   ItineraryGenerationRequestInput,
   ItineraryGenerationStatusResponse,
+  OfflinePackageMutationResponse,
+  OfflinePackageResponse,
   Profile,
   ProfileResponse,
   ProfileUpdateInput,
@@ -144,6 +150,8 @@ export interface RoaviaApiClient {
     tripId: string,
     input: ItineraryGenerationCancelInput,
   ): Promise<ItineraryGenerationCancelledResponse>;
+  createOfflinePackage(tripId: string): Promise<OfflinePackageMutationResponse>;
+  getOfflinePackage(tripId: string): Promise<OfflinePackageResponse>;
   extractTripIntent(input: TripIntentExtractionInput): Promise<TripIntentExtractionResponse>;
   createTripDestination(
     tripId: string,
@@ -317,6 +325,20 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         `/trips/${encodeURIComponent(tripId)}/generation/cancel`,
         itineraryGenerationCancelledResponseSchema,
         { authenticated: true, body: input, method: "POST" },
+      );
+    },
+    async createOfflinePackage(tripId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/offline-package`,
+        offlinePackageMutationResponseSchema,
+        { authenticated: true, method: "POST" },
+      );
+    },
+    async getOfflinePackage(tripId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/offline-package`,
+        offlinePackageResponseSchema,
+        { authenticated: true },
       );
     },
     async extractTripIntent(input) {

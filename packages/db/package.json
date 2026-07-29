@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@roavia/contracts": "workspace:*",
+    "@roavia/offline": "workspace:*",
     "drizzle-orm": "0.45.2",
     "pg": "8.22.0",
     "zod": "4.4.3"
