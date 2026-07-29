@@ -55,7 +55,7 @@ export interface AssistantActionRepository {
     authUserId: string,
     actionId: string,
     context?: Pick<AssistantActionContext, "now">,
-  ): Promise<{ actionId: string; tripId: string }>;
+  ): Promise<{ actionId: string; correlationId: string; tripId: string }>;
   resolve(
     actionId: string,
     outcome: "applied" | "failed",
@@ -178,7 +178,11 @@ export function createAssistantActionRepository(db: Database): AssistantActionRe
           .update(assistantActions)
           .set({ resolvedAt: now, status: "cancelled", updatedAt: now })
           .where(eq(assistantActions.id, actionId));
-        return { actionId, tripId: row.action.tripId };
+        return {
+          actionId,
+          correlationId: row.action.correlationId,
+          tripId: row.action.tripId,
+        };
       });
     },
 

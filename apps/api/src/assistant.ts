@@ -8,7 +8,12 @@ import {
   type AssistantAnswer,
   type AssistantQueryInput,
 } from "@roavia/contracts";
-import type { AssistantActionRepository, ClaimedAssistantAction, TripRepository } from "@roavia/db";
+import type {
+  AiTelemetryRepository,
+  AssistantActionRepository,
+  ClaimedAssistantAction,
+  TripRepository,
+} from "@roavia/db";
 import type { Hono } from "hono";
 
 import { type ApiEnvironment, errorResponse } from "./http.js";
@@ -121,6 +126,7 @@ async function applyAction(
 export function createAssistantApiService(dependencies: {
   actions: AssistantActionRepository;
   assistant: AssistantDraftService;
+  telemetry?: Pick<AiTelemetryRepository, "recordAssistantAction">;
   trips: TripRepository;
 }): AssistantApiService {
   return {
@@ -142,6 +148,14 @@ export function createAssistantApiService(dependencies: {
         draft.actionPayloads,
         { correlationId: context.requestId },
       );
+      await dependencies.telemetry
+        ?.recordAssistantAction({
+          actionCount: actions.length,
+          correlationId: context.requestId,
+          outcome: "offered",
+          timestamp: new Date().toISOString(),
+        })
+        .catch(() => undefined);
       return { ...draft.answer, actions };
     },
 
@@ -152,14 +166,38 @@ export function createAssistantApiService(dependencies: {
         tripRevision = await applyAction(dependencies.trips, context.authUserId, action);
       } catch (error) {
         await dependencies.actions.resolve(actionId, "failed").catch(() => undefined);
+        await dependencies.telemetry
+          ?.recordAssistantAction({
+            actionCount: 1,
+            correlationId: action.correlationId,
+            outcome: "failed",
+            timestamp: new Date().toISOString(),
+          })
+          .catch(() => undefined);
         throw error;
       }
       await dependencies.actions.resolve(actionId, "applied");
+      await dependencies.telemetry
+        ?.recordAssistantAction({
+          actionCount: 1,
+          correlationId: action.correlationId,
+          outcome: "confirmed",
+          timestamp: new Date().toISOString(),
+        })
+        .catch(() => undefined);
       return { actionId, status: "applied", tripId: action.tripId, tripRevision };
     },
 
     async cancel(actionId, context) {
       const action = await dependencies.actions.cancel(context.authUserId, actionId);
+      await dependencies.telemetry
+        ?.recordAssistantAction({
+          actionCount: 1,
+          correlationId: action.correlationId,
+          outcome: "cancelled",
+          timestamp: new Date().toISOString(),
+        })
+        .catch(() => undefined);
       return {
         actionId,
         status: "cancelled",

@@ -47,6 +47,9 @@ describeDatabase("database migration baseline", () => {
     `);
 
     expect(tables.rows.map(({ table_name }) => table_name)).toEqual([
+      "ai_evaluation_case_results",
+      "ai_evaluation_runs",
+      "ai_telemetry_events",
       "application_jobs",
       "assistant_actions",
       "audit_events",
@@ -77,7 +80,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(21);
+    expect(idDefaults.rows).toHaveLength(24);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -101,6 +104,14 @@ describeDatabase("database migration baseline", () => {
     const names = new Set(indexes.rows.map(({ indexname }) => indexname));
 
     for (const expected of [
+      "ai_evaluation_case_results_run_idx",
+      "ai_evaluation_runs_prompt_model_idx",
+      "ai_evaluation_runs_suite_created_idx",
+      "ai_telemetry_correlation_idx",
+      "ai_telemetry_expiry_idx",
+      "ai_telemetry_generation_event_uidx",
+      "ai_telemetry_operation_created_idx",
+      "ai_telemetry_quality_event_uidx",
       "assistant_actions_owner_trip_created_idx",
       "assistant_actions_pending_expiry_idx",
       "audit_events_actor_occurred_id_idx",
@@ -108,6 +119,7 @@ describeDatabase("database migration baseline", () => {
       "audit_events_subject_occurred_idx",
       "itinerary_days_trip_order_unique",
       "itinerary_generation_attempts_run_created_idx",
+      "itinerary_generation_attempts_generation_id_uidx",
       "itinerary_generation_runs_active_trip_uidx",
       "itinerary_generation_runs_requester_created_idx",
       "itinerary_generation_runs_trip_created_idx",
@@ -137,6 +149,9 @@ describeDatabase("database migration baseline", () => {
 
   test("enables ownership RLS and revokes direct access to private tables", async () => {
     const protectedTables = [
+      "ai_evaluation_case_results",
+      "ai_evaluation_runs",
+      "ai_telemetry_events",
       "assistant_actions",
       "audit_events",
       "itinerary_days",

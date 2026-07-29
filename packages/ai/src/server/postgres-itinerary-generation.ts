@@ -12,6 +12,7 @@ import {
   tripDestinations,
   trips,
   users,
+  type AiTelemetryRepository,
   type Database,
 } from "@roavia/db";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
@@ -194,9 +195,11 @@ function summaryFromRows(
 /** PostgreSQL run/audit store. It never persists prompts or unvalidated provider output. */
 export class PostgresItineraryGenerationStore implements ItineraryGenerationStore {
   private readonly db: Database;
+  private readonly telemetry?: AiTelemetryRepository;
 
-  constructor(db: Database) {
+  constructor(db: Database, telemetry?: AiTelemetryRepository) {
     this.db = db;
+    this.telemetry = telemetry;
   }
 
   async createRun(
@@ -463,7 +466,14 @@ export class PostgresItineraryGenerationStore implements ItineraryGenerationStor
 
   async recordAttempt(runId: string, attempt: ItineraryGenerationAttemptAudit): Promise<void> {
     const parsedRunId = z.uuid().parse(runId);
-    await this.db.transaction(async (transaction) => {
+    const timestamp = new Date();
+    const correlationId = await this.db.transaction(async (transaction) => {
+      const [run] = await transaction
+        .select({ correlationId: itineraryGenerationRuns.correlationId })
+        .from(itineraryGenerationRuns)
+        .where(eq(itineraryGenerationRuns.id, parsedRunId))
+        .limit(1);
+      if (!run) throw new ItineraryGenerationRunStateError("The generation run was not found.");
       await transaction
         .insert(itineraryGenerationAttempts)
         .values({
@@ -471,6 +481,7 @@ export class PostgresItineraryGenerationStore implements ItineraryGenerationStor
           costAmountMicros: attempt.cost?.amountMicros,
           costCurrency: attempt.cost?.currency,
           durationMs: attempt.durationMs,
+          generationId: attempt.generationId,
           generationRunId: parsedRunId,
           inputTokens: attempt.usage?.inputTokens,
           issueCodes: attempt.issueCodes,
@@ -494,11 +505,25 @@ export class PostgresItineraryGenerationStore implements ItineraryGenerationStor
           .update(itineraryGenerationRuns)
           .set({
             repairAttempts: sql`greatest(${itineraryGenerationRuns.repairAttempts}, ${attempt.repairNumber})`,
-            updatedAt: new Date(),
+            updatedAt: timestamp,
           })
           .where(eq(itineraryGenerationRuns.id, parsedRunId));
       }
+      return run.correlationId;
     });
+    await this.telemetry
+      ?.recordQuality({
+        correlationId,
+        generationId: attempt.generationId,
+        issueCodes: attempt.issueCodes,
+        model: attempt.model,
+        outcome: attempt.outcome === "provider_error" ? "error" : attempt.outcome,
+        promptVersion: attempt.promptVersion,
+        provider: attempt.provider,
+        repairCount: attempt.kind === "repair" ? 1 : 0,
+        timestamp: timestamp.toISOString(),
+      })
+      .catch(() => undefined);
   }
 
   async finishFailure(runId: string, failure: ItineraryGenerationRunFailure): Promise<void> {

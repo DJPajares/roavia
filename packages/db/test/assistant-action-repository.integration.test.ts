@@ -75,7 +75,11 @@ describeDatabase("assistant action repository", () => {
       ).rejects.toBeInstanceOf(AssistantActionConflictError);
       await expect(
         repository.cancel(aliceAuthUserId, previews[1]!.actionId, { now }),
-      ).resolves.toEqual({ actionId: previews[1]!.actionId, tripId });
+      ).resolves.toEqual({
+        actionId: previews[1]!.actionId,
+        correlationId: expect.any(String),
+        tripId,
+      });
 
       const actions = await client.pool.query<{ status: string }>(
         "select status from assistant_actions where trip_id = $1 order by created_at, id",

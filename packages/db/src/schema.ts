@@ -792,6 +792,7 @@ export const itineraryGenerationAttempts = pgTable(
     totalTokens: integer("total_tokens"),
     costAmountMicros: bigint("cost_amount_micros", { mode: "number" }),
     costCurrency: text("cost_currency", { enum: ["USD"] }),
+    generationId: uuid("generation_id"),
     createdAt: createdAt(),
   },
   (table) => [
@@ -803,6 +804,9 @@ export const itineraryGenerationAttempts = pgTable(
       table.generationRunId,
       table.createdAt,
     ),
+    uniqueIndex("itinerary_generation_attempts_generation_id_uidx")
+      .on(table.generationId)
+      .where(sql`${table.generationId} is not null`),
     check("itinerary_generation_attempts_number_positive_chk", sql`${table.attemptNumber} > 0`),
     check("itinerary_generation_attempts_kind_chk", sql`${table.kind} in ('initial', 'repair')`),
     check(
@@ -825,6 +829,241 @@ export const itineraryGenerationAttempts = pgTable(
     check(
       "itinerary_generation_attempts_cost_pair_chk",
       sql`(${table.costAmountMicros} is null) = (${table.costCurrency} is null)`,
+    ),
+  ],
+);
+
+export const aiTelemetryEvents = pgTable(
+  "ai_telemetry_events",
+  {
+    id: uuidPrimaryKey(),
+    generationId: uuid("generation_id"),
+    correlationId: text("correlation_id"),
+    eventType: text("event_type", { enum: ["generation", "quality", "user_action"] }).notNull(),
+    operation: text("operation", { enum: ["assistant", "itinerary", "trip_intent"] }).notNull(),
+    provider: text("provider"),
+    model: text("model"),
+    promptVersion: text("prompt_version"),
+    outcome: text("outcome", {
+      enum: [
+        "success",
+        "error",
+        "accepted",
+        "rejected",
+        "offered",
+        "confirmed",
+        "cancelled",
+        "failed",
+      ],
+    }).notNull(),
+    errorCode: text("error_code"),
+    durationMs: integer("duration_ms"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    totalTokens: integer("total_tokens"),
+    costAmountMicros: bigint("cost_amount_micros", { mode: "number" }),
+    costCurrency: text("cost_currency", { enum: ["USD"] }),
+    safetyBlocked: boolean("safety_blocked"),
+    safetyCategory: text("safety_category"),
+    validationFailureCount: integer("validation_failure_count").notNull().default(0),
+    repairCount: integer("repair_count").notNull().default(0),
+    actionCount: integer("action_count").notNull().default(0),
+    issueCodes: jsonb("issue_codes_json")
+      .$type<JsonArray>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    expiresAt: timestamp("expires_at", { mode: "date", precision: 3, withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '90 days'`),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex("ai_telemetry_generation_event_uidx")
+      .on(table.generationId)
+      .where(sql`${table.eventType} = 'generation'`),
+    uniqueIndex("ai_telemetry_quality_event_uidx")
+      .on(table.generationId)
+      .where(sql`${table.eventType} = 'quality'`),
+    index("ai_telemetry_operation_created_idx").on(table.operation, table.createdAt.desc()),
+    index("ai_telemetry_expiry_idx").on(table.expiresAt),
+    index("ai_telemetry_correlation_idx")
+      .on(table.correlationId)
+      .where(sql`${table.correlationId} is not null`),
+    check(
+      "ai_telemetry_event_type_chk",
+      sql`${table.eventType} in ('generation', 'quality', 'user_action')`,
+    ),
+    check(
+      "ai_telemetry_operation_chk",
+      sql`${table.operation} in ('assistant', 'itinerary', 'trip_intent')`,
+    ),
+    check(
+      "ai_telemetry_outcome_chk",
+      sql`${table.outcome} in ('success', 'error', 'accepted', 'rejected', 'offered', 'confirmed', 'cancelled', 'failed')`,
+    ),
+    check(
+      "ai_telemetry_identifier_length_chk",
+      sql`(${table.correlationId} is null or char_length(${table.correlationId}) between 1 and 100)
+        and (${table.provider} is null or char_length(${table.provider}) between 1 and 100)
+        and (${table.model} is null or char_length(${table.model}) between 1 and 200)
+        and (${table.promptVersion} is null or char_length(${table.promptVersion}) between 1 and 100)
+        and (${table.errorCode} is null or char_length(${table.errorCode}) between 1 and 100)`,
+    ),
+    check(
+      "ai_telemetry_counts_nonnegative_chk",
+      sql`(${table.durationMs} is null or ${table.durationMs} >= 0)
+        and (${table.inputTokens} is null or ${table.inputTokens} >= 0)
+        and (${table.outputTokens} is null or ${table.outputTokens} >= 0)
+        and (${table.totalTokens} is null or ${table.totalTokens} >= 0)
+        and (${table.costAmountMicros} is null or ${table.costAmountMicros} >= 0)
+        and ${table.validationFailureCount} >= 0
+        and ${table.repairCount} >= 0
+        and ${table.actionCount} >= 0`,
+    ),
+    check(
+      "ai_telemetry_cost_pair_chk",
+      sql`(${table.costAmountMicros} is null) = (${table.costCurrency} is null)`,
+    ),
+    check("ai_telemetry_issue_codes_array_chk", sql`jsonb_typeof(${table.issueCodes}) = 'array'`),
+    check(
+      "ai_telemetry_retention_chk",
+      sql`${table.expiresAt} > ${table.createdAt} and ${table.expiresAt} <= ${table.createdAt} + interval '90 days'`,
+    ),
+    check(
+      "ai_telemetry_event_shape_chk",
+      sql`(${table.eventType} = 'generation'
+          and ${table.generationId} is not null
+          and ${table.provider} is not null
+          and ${table.model} is not null
+          and ${table.promptVersion} is not null
+          and ${table.durationMs} is not null
+          and ${table.outcome} in ('success', 'error')
+          and ${table.validationFailureCount} = 0
+          and ${table.repairCount} = 0
+          and ${table.actionCount} = 0)
+        or (${table.eventType} = 'quality'
+          and ${table.generationId} is not null
+          and ${table.provider} is not null
+          and ${table.model} is not null
+          and ${table.promptVersion} is not null
+          and ${table.outcome} in ('accepted', 'rejected', 'error')
+          and ${table.actionCount} = 0)
+        or (${table.eventType} = 'user_action'
+          and ${table.correlationId} is not null
+          and ${table.operation} = 'assistant'
+          and ${table.outcome} in ('offered', 'confirmed', 'cancelled', 'failed')
+          and ${table.actionCount} > 0
+          and ${table.validationFailureCount} = 0
+          and ${table.repairCount} = 0)`,
+    ),
+  ],
+);
+
+export const aiEvaluationRuns = pgTable(
+  "ai_evaluation_runs",
+  {
+    id: uuidPrimaryKey(),
+    suiteId: text("suite_id").notNull(),
+    suiteVersion: text("suite_version").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    passed: boolean("passed").notNull(),
+    overallScore: numeric("overall_score", { mode: "number", precision: 5, scale: 4 }).notNull(),
+    p95LatencyMs: integer("p95_latency_ms").notNull(),
+    totalEstimatedCostMicros: bigint("total_estimated_cost_micros", {
+      mode: "number",
+    }).notNull(),
+    summary: jsonb("summary_json").$type<JsonObject>().notNull(),
+    thresholds: jsonb("thresholds_json").$type<JsonObject>().notNull(),
+    thresholdViolations: jsonb("threshold_violations_json").$type<JsonArray>().notNull(),
+    startedAt: timestamp("started_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    completedAt: timestamp("completed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index("ai_evaluation_runs_suite_created_idx").on(
+      table.suiteId,
+      table.suiteVersion,
+      table.createdAt.desc(),
+    ),
+    index("ai_evaluation_runs_prompt_model_idx").on(
+      table.promptVersion,
+      table.provider,
+      table.model,
+      table.createdAt.desc(),
+    ),
+    check(
+      "ai_evaluation_runs_identifier_chk",
+      sql`${table.suiteId} ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'
+        and ${table.suiteVersion} ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'
+        and ${table.promptVersion} ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'
+        and ${table.provider} ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'
+        and char_length(${table.model}) between 1 and 200`,
+    ),
+    check("ai_evaluation_runs_score_chk", sql`${table.overallScore} between 0 and 1`),
+    check(
+      "ai_evaluation_runs_metrics_nonnegative_chk",
+      sql`${table.p95LatencyMs} >= 0 and ${table.totalEstimatedCostMicros} >= 0`,
+    ),
+    check(
+      "ai_evaluation_runs_json_shape_chk",
+      sql`jsonb_typeof(${table.summary}) = 'object'
+        and jsonb_typeof(${table.thresholds}) = 'object'
+        and jsonb_typeof(${table.thresholdViolations}) = 'array'`,
+    ),
+    check(
+      "ai_evaluation_runs_time_order_chk",
+      sql`${table.completedAt} >= ${table.startedAt} and ${table.createdAt} >= ${table.startedAt}`,
+    ),
+  ],
+);
+
+export const aiEvaluationCaseResults = pgTable(
+  "ai_evaluation_case_results",
+  {
+    id: uuidPrimaryKey(),
+    evaluationRunId: uuid("evaluation_run_id")
+      .notNull()
+      .references(() => aiEvaluationRuns.id, { onDelete: "restrict" }),
+    caseId: text("case_id").notNull(),
+    caseVersion: text("case_version").notNull(),
+    dimensions: jsonb("dimensions_json").$type<JsonArray>().notNull(),
+    scores: jsonb("scores_json").$type<JsonObject>().notNull(),
+    score: numeric("score", { mode: "number", precision: 5, scale: 4 }).notNull(),
+    passed: boolean("passed").notNull(),
+    failureCodes: jsonb("failure_codes_json").$type<JsonArray>().notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    estimatedCostMicros: bigint("estimated_cost_micros", { mode: "number" }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("ai_evaluation_case_results_run_case_unique").on(table.evaluationRunId, table.caseId),
+    index("ai_evaluation_case_results_run_idx").on(table.evaluationRunId),
+    check(
+      "ai_evaluation_case_results_identifier_chk",
+      sql`${table.caseId} ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'
+        and ${table.caseVersion} ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'`,
+    ),
+    check("ai_evaluation_case_results_score_chk", sql`${table.score} between 0 and 1`),
+    check(
+      "ai_evaluation_case_results_metrics_nonnegative_chk",
+      sql`${table.durationMs} >= 0 and (${table.estimatedCostMicros} is null or ${table.estimatedCostMicros} >= 0)`,
+    ),
+    check(
+      "ai_evaluation_case_results_json_shape_chk",
+      sql`jsonb_typeof(${table.dimensions}) = 'array'
+        and jsonb_array_length(${table.dimensions}) > 0
+        and jsonb_typeof(${table.scores}) = 'object'
+        and jsonb_typeof(${table.failureCodes}) = 'array'`,
     ),
   ],
 );

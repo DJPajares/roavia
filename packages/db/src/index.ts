@@ -62,5 +62,17 @@ export {
   type AssistantActionRepository,
   type ClaimedAssistantAction,
 } from "./assistant-action-repository.js";
+export {
+  aiAssistantActionTelemetryInputSchema,
+  aiGenerationTelemetryInputSchema,
+  aiQualityTelemetryInputSchema,
+  createAiTelemetryRepository,
+  type AiAssistantActionTelemetryInput,
+  type AiGenerationTelemetryInput,
+  type AiQualityTelemetryInput,
+  type AiTelemetryAggregate,
+  type AiTelemetryAggregateQuery,
+  type AiTelemetryRepository,
+} from "./ai-telemetry-repository.js";
 export { mvpLaunchDestinationCatalog } from "./fixtures/mvp-launch-destinations.js";
 export * from "./schema.js";
