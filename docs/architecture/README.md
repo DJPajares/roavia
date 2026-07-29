@@ -16,6 +16,7 @@ This directory records consequential platform decisions for Roavia. Linear remai
 
 - [Travel-data provider and licensing matrix](../research/travel-data-provider-matrix.md) — candidate source coverage, licensing, caching, offline, cost, privacy, and approval gates; not a provider or contract decision.
 - [MVP launch destination catalog and content standards](../research/mvp-launch-destination-catalog.md) — approved seven-city cohort, place-content quality bars, trust/freshness rules, scenario coverage, and catalog governance.
+- [Launch practical-data integrations](../integrations/launch-practical-data.md) — concrete launch weather, calendar, official-source, and currency adapters with explicit production approval gates.
 
 ## MVP topology
 

@@ -1,0 +1,9 @@
+{
+  "base_path": "/foreign-travel-advice/thailand",
+  "content_id": "72ad7a67-f2e9-4f5f-8e6d-advisoryfixture",
+  "description": "Official travel advice fixture for Thailand, including safety, entry and health links.",
+  "document_type": "travel_advice",
+  "public_updated_at": "2026-07-29T08:00:00Z",
+  "schema_name": "travel_advice",
+  "title": "Thailand travel advice"
+}

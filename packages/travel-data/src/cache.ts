@@ -113,8 +113,10 @@ function policy(
 export const evaluationCachePolicies = {
   advisory: policy("advisory", hour, 5 * hour),
   climate: policy("climate", 30 * day, 60 * day, "durable"),
+  closure: policy("closure", 6 * hour, 18 * hour),
   currency: policy("currency", day, day, "durable"),
   editorial: policy("editorial", 90 * day, 90 * day, "durable"),
+  emergency: policy("emergency", hour, 5 * hour),
   event: policy("event", 6 * hour, 6 * hour),
   geocode: policy("geocode", hour, 0),
   holiday: policy("holiday", 30 * day, 30 * day, "durable"),
@@ -123,6 +125,7 @@ export const evaluationCachePolicies = {
   place_catalog: policy("place_catalog", 31 * day, 62 * day, "durable"),
   place_details: policy("place_details", day, day),
   route: policy("route", 15 * minute, 15 * minute),
+  visa: policy("visa", hour, 5 * hour),
   weather_alert: policy("weather_alert", 15 * minute, 45 * minute),
   weather_forecast: policy("weather_forecast", 30 * minute, 90 * minute),
 } as const satisfies Record<TravelDataClass, TravelDataCachePolicy>;

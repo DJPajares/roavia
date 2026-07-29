@@ -80,6 +80,10 @@ MAPS_PROVIDER
 MAPS_API_KEY
 WEATHER_PROVIDER
 WEATHER_API_KEY
+HOLIDAY_PROVIDER
+HOLIDAY_API_KEY
+ADVISORY_PROVIDER
+CURRENCY_PROVIDER
 TRAVEL_DATA_*
 APP_BASE_URL
 API_BASE_URL
@@ -102,6 +106,15 @@ The launch map integration accepts `MAPS_PROVIDER=mapbox` and a server-only
 `MAPS_API_KEY`. Temporary geocodes are never cached; only calls made through the
 permanent-geocoding adapter may be persisted. Map tiles and route payloads are
 excluded from offline packages until separate rights are approved.
+
+The launch practical-data adapters accept `WEATHER_PROVIDER=open-meteo`,
+`HOLIDAY_PROVIDER=calendarific`, `ADVISORY_PROVIDER=govuk`, and
+`CURRENCY_PROVIDER=ecb`. Open-Meteo and Calendarific remain explicit opt-ins:
+do not provide production keys until the contract, privacy, caching, and budget
+gates in the provider matrix are approved. GOV.UK advice applies only to GB
+travelers, official registry links remain source-only, and ECB conversions are
+dated planning estimates rather than transaction rates. See
+[the launch practical-data runbook](./docs/integrations/launch-practical-data.md).
 
 For authentication, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is intentionally public project configuration. Never place a Supabase secret key, service-role key, or shared JWT secret in a `NEXT_PUBLIC_*` variable. The Hono API verifies asymmetric access tokens with `SUPABASE_URL` and the provider's public JWKS; it does not need an auth-admin secret.
 

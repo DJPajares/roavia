@@ -3,8 +3,10 @@
 export type TravelDataClass =
   | "advisory"
   | "climate"
+  | "closure"
   | "currency"
   | "editorial"
+  | "emergency"
   | "event"
   | "geocode"
   | "holiday"
@@ -13,6 +15,7 @@ export type TravelDataClass =
   | "place_catalog"
   | "place_details"
   | "route"
+  | "visa"
   | "weather_alert"
   | "weather_forecast";
 

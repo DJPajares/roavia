@@ -1,0 +1,31 @@
+{
+  "latitude": -33.9,
+  "longitude": 151.2,
+  "generationtime_ms": 31.5,
+  "utc_offset_seconds": 36000,
+  "timezone": "Australia/Sydney",
+  "timezone_abbreviation": "AEST",
+  "elevation": 58,
+  "daily_units": {
+    "time": "iso8601",
+    "temperature_2m_mean_CMCC_CM2_VHR4": "°C",
+    "temperature_2m_max_CMCC_CM2_VHR4": "°C",
+    "temperature_2m_min_CMCC_CM2_VHR4": "°C",
+    "precipitation_sum_CMCC_CM2_VHR4": "mm",
+    "temperature_2m_mean_MRI_AGCM3_2_S": "°C",
+    "temperature_2m_max_MRI_AGCM3_2_S": "°C",
+    "temperature_2m_min_MRI_AGCM3_2_S": "°C",
+    "precipitation_sum_MRI_AGCM3_2_S": "mm"
+  },
+  "daily": {
+    "time": ["2025-07-01", "2025-07-02"],
+    "temperature_2m_mean_CMCC_CM2_VHR4": [13.4, 14.1],
+    "temperature_2m_max_CMCC_CM2_VHR4": [17.8, 18.2],
+    "temperature_2m_min_CMCC_CM2_VHR4": [9.7, 10.3],
+    "precipitation_sum_CMCC_CM2_VHR4": [2.1, 0.4],
+    "temperature_2m_mean_MRI_AGCM3_2_S": [15.6, 15.9],
+    "temperature_2m_max_MRI_AGCM3_2_S": [20.1, 20.4],
+    "temperature_2m_min_MRI_AGCM3_2_S": [11.9, 12.1],
+    "precipitation_sum_MRI_AGCM3_2_S": [8.3, 5.7]
+  }
+}
