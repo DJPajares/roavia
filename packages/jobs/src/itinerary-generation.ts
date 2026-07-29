@@ -125,6 +125,34 @@ export function createItineraryGenerationRequestService<TStatus>(
   store: ItineraryGenerationRequestStore<TStatus>,
 ) {
   return {
+    async cancelGeneration(
+      authUserId: string,
+      tripId: string,
+      input: { generationRunId: string; jobId: string },
+    ) {
+      const job = await runtime.get(input.jobId);
+      if (
+        !job ||
+        job.envelope.type !== ITINERARY_GENERATION_JOB_TYPE ||
+        job.envelope.subjectId !== tripId ||
+        job.envelope.requestedBy.kind !== "user" ||
+        job.envelope.requestedBy.id !== authUserId ||
+        job.envelope.payload.generationRunId !== input.generationRunId
+      ) {
+        return null;
+      }
+      await runtime.cancel(input.jobId);
+      await store.finishFailure(input.generationRunId, {
+        cancelled: true,
+        code: "cancelled",
+        terminal: true,
+      });
+      return {
+        generationRunId: input.generationRunId,
+        jobId: input.jobId,
+        status: "cancelled" as const,
+      };
+    },
     getGeneration(authUserId: string, tripId: string): Promise<TStatus | null> {
       return store.getLatestRun(authUserId, tripId);
     },

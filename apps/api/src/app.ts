@@ -28,6 +28,7 @@ import {
 } from "./itinerary-generation.js";
 import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
 import { registerProfileRoutes } from "./profiles.js";
+import { registerTripPlannerRoutes, type TripPlannerApiService } from "./trip-planner.js";
 import { registerShareRoutes } from "./sharing.js";
 import { registerTripRoutes } from "./trips.js";
 
@@ -46,6 +47,7 @@ export interface CreateAppOptions {
   shareRepository?: ShareRepository;
   tripRepository?: TripRepository;
   itineraryGenerationService?: ItineraryGenerationApiService;
+  tripPlannerService?: TripPlannerApiService;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -183,6 +185,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use("/me/*", requireAuthentication);
   app.use("/trips", requireAuthentication);
   app.use("/trips/*", requireAuthentication);
+  app.use("/planner/*", requireAuthentication);
 
   app.get("/auth/session", (context) =>
     context.json(
@@ -197,6 +200,7 @@ export function createApp(options: CreateAppOptions = {}) {
 
   registerTripRoutes(app, options.tripRepository);
   registerItineraryGenerationRoutes(app, options.itineraryGenerationService);
+  registerTripPlannerRoutes(app, options.tripPlannerService);
   registerShareRoutes(app, options.shareRepository);
   registerProfileRoutes(app, options.profileRepository);
 

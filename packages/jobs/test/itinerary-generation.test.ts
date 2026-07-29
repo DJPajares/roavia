@@ -4,6 +4,7 @@ import {
   ITINERARY_GENERATION_JOB_TYPE,
   MemoryJobRuntime,
   createItineraryGenerationJob,
+  createItineraryGenerationRequestService,
   enqueueItineraryGeneration,
   type ItineraryGenerationJobService,
   type ItineraryGenerationRunQueueStore,
@@ -170,5 +171,52 @@ describe("itinerary generation job", () => {
         tripRevision: 4,
       }),
     ).toThrow(/prompt|Unrecognized key/);
+  });
+
+  test("cancels an owned run and rejects mismatched references", async () => {
+    const runtime = new MemoryJobRuntime();
+    runtime.register(
+      createItineraryGenerationJob({
+        generate: async () => ({ attempts: [], repairAttempts: 0, status: "success" }),
+      }),
+    );
+    const store = {
+      createRun: async () => ({
+        correlationId,
+        maxRepairAttempts: 2,
+        runId: generationRunId,
+        status: "queued" as const,
+        tripId,
+        tripRevision: 4,
+      }),
+      finishFailure: vi.fn<ItineraryGenerationRunQueueStore["finishFailure"]>(),
+      getLatestRun: async () => null,
+    };
+    const service = createItineraryGenerationRequestService(runtime, store);
+    const queued = await service.requestGeneration(
+      "traveler-test",
+      tripId,
+      { expectedTripRevision: 3 },
+      { correlationId },
+    );
+
+    await expect(
+      service.cancelGeneration("different-traveler", tripId, {
+        generationRunId,
+        jobId: queued.jobId,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      service.cancelGeneration("traveler-test", tripId, {
+        generationRunId,
+        jobId: queued.jobId,
+      }),
+    ).resolves.toEqual({ generationRunId, jobId: queued.jobId, status: "cancelled" });
+    expect(store.finishFailure).toHaveBeenCalledWith(generationRunId, {
+      cancelled: true,
+      code: "cancelled",
+      terminal: true,
+    });
+    await expect(runtime.get(queued.jobId)).resolves.toMatchObject({ status: "cancelled" });
   });
 });

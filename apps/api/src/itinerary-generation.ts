@@ -1,9 +1,12 @@
 import {
+  itineraryGenerationCancelledResponseSchema,
+  itineraryGenerationCancelInputSchema,
   itineraryGenerationQueuedResponseSchema,
   itineraryGenerationRequestInputSchema,
   itineraryGenerationStatusResponseSchema,
   tripIdSchema,
   type ItineraryGenerationQueued,
+  type ItineraryGenerationCancelInput,
   type ItineraryGenerationRequestInput,
   type ItineraryGenerationSummary,
 } from "@roavia/contracts";
@@ -19,6 +22,11 @@ export interface ItineraryGenerationApiService {
     input: ItineraryGenerationRequestInput,
     context: { correlationId: string },
   ): Promise<ItineraryGenerationQueued>;
+  cancelGeneration?(
+    authUserId: string,
+    tripId: string,
+    input: ItineraryGenerationCancelInput,
+  ): Promise<{ generationRunId: string; jobId: string; status: "cancelled" } | null>;
 }
 
 async function requestBody(request: Request): Promise<unknown> {
@@ -87,6 +95,37 @@ export function registerItineraryGenerationRoutes(
     const data = await service.getGeneration(context.get("authSession").identity.userId, tripId);
     return context.json(
       itineraryGenerationStatusResponseSchema.parse({
+        data,
+        meta: { requestId: context.get("requestId") },
+      }),
+    );
+  });
+
+  app.post("/trips/:tripId/generation/cancel", async (context) => {
+    if (!service?.cancelGeneration) {
+      return errorResponse(
+        context,
+        503,
+        "generation_service_unavailable",
+        "Itinerary generation is temporarily unavailable.",
+      );
+    }
+    const tripId = routeId(context.req.param("tripId"));
+    if (!tripId) return errorResponse(context, 404, "not_found", "Resource not found.");
+    const input = itineraryGenerationCancelInputSchema.safeParse(
+      await requestBody(context.req.raw),
+    );
+    if (!input.success) {
+      return errorResponse(context, 400, "bad_request", "Cancellation request is invalid.");
+    }
+    const data = await service.cancelGeneration(
+      context.get("authSession").identity.userId,
+      tripId,
+      input.data,
+    );
+    if (!data) return errorResponse(context, 404, "not_found", "Resource not found.");
+    return context.json(
+      itineraryGenerationCancelledResponseSchema.parse({
         data,
         meta: { requestId: context.get("requestId") },
       }),

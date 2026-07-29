@@ -73,6 +73,7 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 AI_PROVIDER
 AI_API_KEY
+AI_MODEL
 MAPS_PROVIDER
 MAPS_API_KEY
 WEATHER_PROVIDER
@@ -85,6 +86,11 @@ CORS_ORIGINS
 ```
 
 Never expose secret values through client-prefixed environment variables.
+
+Natural-language planning and itinerary generation use Vercel AI Gateway when
+`AI_PROVIDER=vercel-gateway`; set `AI_MODEL` to a Gateway model ID and keep
+`AI_API_KEY` server-only. Without all three values, the API reports the planner
+and generator as unavailable instead of accepting work it cannot process.
 
 The launch map integration accepts `MAPS_PROVIDER=mapbox` and a server-only
 `MAPS_API_KEY`. Temporary geocodes are never cached; only calls made through the

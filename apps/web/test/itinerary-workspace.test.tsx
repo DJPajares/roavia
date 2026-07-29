@@ -69,6 +69,7 @@ const baseItem = {
 
 const trip: TripDetail = {
   budget: { amountMinor: 300_000, currency: "SGD", style: "midrange" as const },
+  planningPreferences: null,
   createdAt: "2026-07-28T10:00:00.000Z",
   dateFlexibility: { daysAfter: 0, daysBefore: 0 },
   days: [

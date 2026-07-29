@@ -1,0 +1,2 @@
+ALTER TABLE "trips" ADD COLUMN "planning_preferences_json" jsonb;
+ALTER TABLE "trips" ADD CONSTRAINT "trips_planning_preferences_object_chk" CHECK ("trips"."planning_preferences_json" is null or jsonb_typeof("trips"."planning_preferences_json") = 'object');

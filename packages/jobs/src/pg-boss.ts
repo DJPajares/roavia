@@ -62,14 +62,14 @@ export class PgBossJobRuntime implements JobRuntime {
     this.definitions.set(definition.type, definition);
   }
 
-  async start() {
+  async start(options: { workers?: boolean } = {}) {
     if (this.started) return;
     await this.boss.start();
     this.started = true;
     try {
       for (const definition of this.definitions.values()) {
         await this.createQueues(definition);
-        await this.startWorker(definition);
+        if (options.workers !== false) await this.startWorker(definition);
       }
     } catch (error) {
       await this.shutdown();
