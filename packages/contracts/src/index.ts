@@ -6,6 +6,7 @@ export * from "./sharing";
 export * from "./destinations";
 export * from "./trip-planner";
 export * from "./assistant";
+export * from "./offline";
 
 export const API_CONTRACT_VERSION = "v1" as const;
 
@@ -28,6 +29,7 @@ export const apiErrorCodeSchema = z.enum([
   "planner_extraction_failed",
   "planner_service_unavailable",
   "not_found",
+  "offline_service_unavailable",
   "profile_service_unavailable",
   "rate_limited",
   "search_unavailable",

@@ -179,6 +179,9 @@ importers:
       '@roavia/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@roavia/offline':
+        specifier: workspace:*
+        version: link:../offline
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)
@@ -221,7 +224,15 @@ importers:
         specifier: 24.13.2
         version: 24.13.2
 
-  packages/offline: {}
+  packages/offline:
+    dependencies:
+      '@roavia/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.2
+        version: 24.13.2
 
   packages/travel-data: {}
 

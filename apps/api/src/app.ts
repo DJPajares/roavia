@@ -16,6 +16,7 @@ import {
   TripConcurrencyError,
   TripDomainInputError,
   type ProfileRepository,
+  type OfflinePackageRepository,
   type ShareRepository,
   type TripRepository,
 } from "@roavia/db";
@@ -30,6 +31,7 @@ import {
   registerItineraryGenerationRoutes,
   type ItineraryGenerationApiService,
 } from "./itinerary-generation.js";
+import { registerOfflinePackageRoutes } from "./offline.js";
 import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
 import { registerProfileRoutes } from "./profiles.js";
 import { registerTripPlannerRoutes, type TripPlannerApiService } from "./trip-planner.js";
@@ -50,6 +52,7 @@ export interface CreateAppOptions {
   searchRateLimiter?: RateLimiter;
   assistantRateLimiter?: RateLimiter;
   profileRepository?: ProfileRepository;
+  offlinePackageRepository?: OfflinePackageRepository;
   shareRepository?: ShareRepository;
   tripRepository?: TripRepository;
   itineraryGenerationService?: ItineraryGenerationApiService;
@@ -228,6 +231,7 @@ export function createApp(options: CreateAppOptions = {}) {
   );
 
   registerTripRoutes(app, options.tripRepository);
+  registerOfflinePackageRoutes(app, options.offlinePackageRepository);
   registerItineraryGenerationRoutes(app, options.itineraryGenerationService);
   registerTripPlannerRoutes(app, options.tripPlannerService);
   registerAssistantRoutes(app, options.assistantService, assistantRateLimiter);

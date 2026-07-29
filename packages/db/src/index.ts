@@ -75,5 +75,10 @@ export {
   type AiTelemetryAggregateQuery,
   type AiTelemetryRepository,
 } from "./ai-telemetry-repository.js";
+export {
+  createOfflinePackageRepository,
+  type OfflinePackageGenerationContext,
+  type OfflinePackageRepository,
+} from "./offline-package-repository.js";
 export { mvpLaunchDestinationCatalog } from "./fixtures/mvp-launch-destinations.js";
 export * from "./schema.js";
