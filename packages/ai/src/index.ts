@@ -2,4 +2,6 @@
 export * from "./contracts.js";
 export * from "./gateway.js";
 export * from "./grounding.js";
+export * from "./itinerary-generation.js";
+export * from "./itinerary-generation-service.js";
 export * from "./schemas.js";

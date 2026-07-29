@@ -18,6 +18,7 @@ export const apiErrorCodeSchema = z.enum([
   "conflict",
   "internal_error",
   "invalid_session",
+  "generation_service_unavailable",
   "not_found",
   "profile_service_unavailable",
   "rate_limited",

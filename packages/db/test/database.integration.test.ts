@@ -54,6 +54,8 @@ describeDatabase("database migration baseline", () => {
       "destination_ingestion_quarantine",
       "freshness_policies",
       "itinerary_days",
+      "itinerary_generation_attempts",
+      "itinerary_generation_runs",
       "itinerary_items",
       "job_operator_actions",
       "offline_packages",
@@ -74,7 +76,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(18);
+    expect(idDefaults.rows).toHaveLength(20);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -102,6 +104,10 @@ describeDatabase("database migration baseline", () => {
       "audit_events_expires_at_idx",
       "audit_events_subject_occurred_idx",
       "itinerary_days_trip_order_unique",
+      "itinerary_generation_attempts_run_created_idx",
+      "itinerary_generation_runs_active_trip_uidx",
+      "itinerary_generation_runs_requester_created_idx",
+      "itinerary_generation_runs_trip_created_idx",
       "itinerary_items_day_order_unique",
       "itinerary_items_place_id_idx",
       "offline_packages_trip_id_idx",
@@ -130,6 +136,8 @@ describeDatabase("database migration baseline", () => {
     const protectedTables = [
       "audit_events",
       "itinerary_days",
+      "itinerary_generation_attempts",
+      "itinerary_generation_runs",
       "itinerary_items",
       "offline_packages",
       "share_links",
@@ -141,6 +149,8 @@ describeDatabase("database migration baseline", () => {
     const expectedPolicies = [
       "audit_events_actor_access",
       "itinerary_days_owner_access",
+      "itinerary_generation_attempts_owner_access",
+      "itinerary_generation_runs_owner_access",
       "itinerary_items_owner_access",
       "offline_packages_owner_access",
       "share_links_owner_access",

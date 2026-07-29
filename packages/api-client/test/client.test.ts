@@ -196,6 +196,58 @@ describe("Roavia API client", () => {
     });
   });
 
+  test("queues generation and reads its asynchronous stage", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const runId = "22222222-2222-4222-8222-222222222222";
+    const jobId = "33333333-3333-4333-8333-333333333333";
+    const requests: Request[] = [];
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request.clone());
+        if (request.method === "GET") {
+          return Response.json({
+            data: {
+              assumptions: [],
+              completedAt: null,
+              createdAt: "2026-07-29T00:00:00.000Z",
+              failureCode: null,
+              groundingStatus: null,
+              id: runId,
+              maxRepairAttempts: 2,
+              overallConfidence: null,
+              repairAttempts: 0,
+              sources: [],
+              status: "queued",
+              tripRevision: 4,
+              warnings: [],
+            },
+            meta: { requestId },
+          });
+        }
+        expect(await request.json()).toEqual({ expectedTripRevision: 3 });
+        return Response.json({
+          data: { generationRunId: runId, jobId, status: "queued", tripRevision: 4 },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    await client.generateTrip(trip.id, { expectedTripRevision: 3 });
+    await client.regenerateTrip(trip.id, { expectedTripRevision: 3 });
+    await expect(client.getTripGeneration(trip.id)).resolves.toMatchObject({
+      data: { id: runId, status: "queued" },
+    });
+    expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([
+      { method: "POST", url: `https://api.roavia.test/trips/${trip.id}/generate` },
+      { method: "POST", url: `https://api.roavia.test/trips/${trip.id}/regenerate` },
+      { method: "GET", url: `https://api.roavia.test/trips/${trip.id}/generation` },
+    ]);
+  });
+
   test("creates, updates, and deletes itinerary items with revision guards", async () => {
     const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
     const requests: Request[] = [];

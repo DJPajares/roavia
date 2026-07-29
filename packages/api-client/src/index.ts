@@ -3,6 +3,8 @@ import {
   authSessionResponseSchema,
   destinationSearchResponseSchema,
   healthResponseSchema,
+  itineraryGenerationQueuedResponseSchema,
+  itineraryGenerationStatusResponseSchema,
   profileResponseSchema,
   shareLinkCreateResponseSchema,
   shareLinkListResponseSchema,
@@ -18,6 +20,9 @@ import {
   type DestinationSearchQuery,
   type DestinationSearchResponse,
   type HealthResponse,
+  type ItineraryGenerationQueuedResponse,
+  type ItineraryGenerationRequestInput,
+  type ItineraryGenerationStatusResponse,
   type ProfileResponse,
   type ProfileUpdateInput,
   type ShareLinkCreateInput,
@@ -44,6 +49,9 @@ export type {
   DestinationSearchQuery,
   DestinationSearchResponse,
   HealthResponse,
+  ItineraryGenerationQueuedResponse,
+  ItineraryGenerationRequestInput,
+  ItineraryGenerationStatusResponse,
   Profile,
   ProfileResponse,
   ProfileUpdateInput,
@@ -98,6 +106,15 @@ export interface RoaviaApiClient {
   updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
   getTrip(tripId: string): Promise<TripResponse>;
   deleteTrip(tripId: string, input: TripDeleteInput): Promise<TripDeleteResponse>;
+  generateTrip(
+    tripId: string,
+    input: ItineraryGenerationRequestInput,
+  ): Promise<ItineraryGenerationQueuedResponse>;
+  regenerateTrip(
+    tripId: string,
+    input: ItineraryGenerationRequestInput,
+  ): Promise<ItineraryGenerationQueuedResponse>;
+  getTripGeneration(tripId: string): Promise<ItineraryGenerationStatusResponse>;
   listShareLinks(tripId: string): Promise<ShareLinkListResponse>;
   createShareLink(tripId: string, input: ShareLinkCreateInput): Promise<ShareLinkCreateResponse>;
   revokeShareLink(tripId: string, shareLinkId: string): Promise<ShareLinkRevokeResponse>;
@@ -230,6 +247,27 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         body: input,
         method: "DELETE",
       });
+    },
+    async generateTrip(tripId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/generate`,
+        itineraryGenerationQueuedResponseSchema,
+        { authenticated: true, body: input, method: "POST" },
+      );
+    },
+    async regenerateTrip(tripId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/regenerate`,
+        itineraryGenerationQueuedResponseSchema,
+        { authenticated: true, body: input, method: "POST" },
+      );
+    },
+    async getTripGeneration(tripId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/generation`,
+        itineraryGenerationStatusResponseSchema,
+        { authenticated: true },
+      );
     },
     async listShareLinks(tripId) {
       return request(

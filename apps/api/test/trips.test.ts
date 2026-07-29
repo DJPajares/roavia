@@ -22,6 +22,7 @@ const trip: TripDetail = {
   days: [],
   destinations: [],
   endDate: "2026-09-12",
+  generation: null,
   generationState: "idle",
   id: tripId,
   originPlaceId: null,

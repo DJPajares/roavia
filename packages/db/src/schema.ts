@@ -646,6 +646,182 @@ export const tripDestinations = pgTable(
   ],
 );
 
+export const itineraryGenerationRuns = pgTable(
+  "itinerary_generation_runs",
+  {
+    id: uuidPrimaryKey(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    requestedByUserId: uuid("requested_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    tripRevision: integer("trip_revision").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    maxRepairAttempts: integer("max_repair_attempts").notNull(),
+    repairAttempts: integer("repair_attempts").notNull().default(0),
+    status: text("status", {
+      enum: [
+        "queued",
+        "retrieving",
+        "generating",
+        "validating",
+        "repairing",
+        "persisting",
+        "succeeded",
+        "failed",
+        "cancelled",
+      ],
+    })
+      .notNull()
+      .default("queued"),
+    groundingSchemaVersion: text("grounding_schema_version"),
+    groundingStatus: text("grounding_status", {
+      enum: ["complete", "partial", "empty"],
+    }),
+    assumptions: jsonb("assumptions_json")
+      .$type<JsonArray>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    warnings: jsonb("warnings_json")
+      .$type<JsonArray>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    sources: jsonb("sources_json")
+      .$type<JsonArray>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    overallConfidence: numeric("overall_confidence", {
+      mode: "number",
+      precision: 4,
+      scale: 3,
+    }),
+    failureCode: text("failure_code"),
+    correlationId: uuid("correlation_id").notNull(),
+    startedAt: timestamp("started_at", { mode: "date", precision: 3, withTimezone: true }),
+    completedAt: timestamp("completed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("itinerary_generation_runs_trip_revision_unique").on(table.tripId, table.tripRevision),
+    uniqueIndex("itinerary_generation_runs_active_trip_uidx")
+      .on(table.tripId)
+      .where(
+        sql`${table.status} in ('queued', 'retrieving', 'generating', 'validating', 'repairing', 'persisting')`,
+      ),
+    index("itinerary_generation_runs_trip_created_idx").on(table.tripId, table.createdAt.desc()),
+    index("itinerary_generation_runs_requester_created_idx").on(
+      table.requestedByUserId,
+      table.createdAt.desc(),
+    ),
+    check("itinerary_generation_runs_revision_positive_chk", sql`${table.tripRevision} > 0`),
+    check(
+      "itinerary_generation_runs_prompt_version_chk",
+      sql`${table.promptVersion} ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$'`,
+    ),
+    check(
+      "itinerary_generation_runs_repair_bounds_chk",
+      sql`${table.maxRepairAttempts} between 0 and 3 and ${table.repairAttempts} between 0 and ${table.maxRepairAttempts}`,
+    ),
+    check(
+      "itinerary_generation_runs_status_chk",
+      sql`${table.status} in ('queued', 'retrieving', 'generating', 'validating', 'repairing', 'persisting', 'succeeded', 'failed', 'cancelled')`,
+    ),
+    check(
+      "itinerary_generation_runs_grounding_status_chk",
+      sql`${table.groundingStatus} is null or ${table.groundingStatus} in ('complete', 'partial', 'empty')`,
+    ),
+    check(
+      "itinerary_generation_runs_assumptions_array_chk",
+      sql`jsonb_typeof(${table.assumptions}) = 'array'`,
+    ),
+    check(
+      "itinerary_generation_runs_warnings_array_chk",
+      sql`jsonb_typeof(${table.warnings}) = 'array'`,
+    ),
+    check(
+      "itinerary_generation_runs_sources_array_chk",
+      sql`jsonb_typeof(${table.sources}) = 'array'`,
+    ),
+    check(
+      "itinerary_generation_runs_confidence_range_chk",
+      sql`${table.overallConfidence} is null or ${table.overallConfidence} between 0 and 1`,
+    ),
+    check(
+      "itinerary_generation_runs_completion_chk",
+      sql`(${table.status} in ('succeeded', 'failed', 'cancelled')) = (${table.completedAt} is not null)`,
+    ),
+  ],
+);
+
+export const itineraryGenerationAttempts = pgTable(
+  "itinerary_generation_attempts",
+  {
+    id: uuidPrimaryKey(),
+    generationRunId: uuid("generation_run_id")
+      .notNull()
+      .references(() => itineraryGenerationRuns.id, { onDelete: "cascade" }),
+    attemptNumber: integer("attempt_number").notNull(),
+    kind: text("kind", { enum: ["initial", "repair"] }).notNull(),
+    repairNumber: integer("repair_number"),
+    outcome: text("outcome", {
+      enum: ["accepted", "rejected", "provider_error"],
+    }).notNull(),
+    issueCodes: jsonb("issue_codes_json")
+      .$type<JsonArray>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    totalTokens: integer("total_tokens"),
+    costAmountMicros: bigint("cost_amount_micros", { mode: "number" }),
+    costCurrency: text("cost_currency", { enum: ["USD"] }),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("itinerary_generation_attempts_run_number_unique").on(
+      table.generationRunId,
+      table.attemptNumber,
+    ),
+    index("itinerary_generation_attempts_run_created_idx").on(
+      table.generationRunId,
+      table.createdAt,
+    ),
+    check("itinerary_generation_attempts_number_positive_chk", sql`${table.attemptNumber} > 0`),
+    check("itinerary_generation_attempts_kind_chk", sql`${table.kind} in ('initial', 'repair')`),
+    check(
+      "itinerary_generation_attempts_repair_number_chk",
+      sql`(${table.kind} = 'repair' and ${table.repairNumber} > 0) or (${table.kind} = 'initial' and ${table.repairNumber} is null)`,
+    ),
+    check(
+      "itinerary_generation_attempts_outcome_chk",
+      sql`${table.outcome} in ('accepted', 'rejected', 'provider_error')`,
+    ),
+    check(
+      "itinerary_generation_attempts_issue_codes_array_chk",
+      sql`jsonb_typeof(${table.issueCodes}) = 'array'`,
+    ),
+    check("itinerary_generation_attempts_duration_nonnegative_chk", sql`${table.durationMs} >= 0`),
+    check(
+      "itinerary_generation_attempts_tokens_nonnegative_chk",
+      sql`(${table.inputTokens} is null or ${table.inputTokens} >= 0) and (${table.outputTokens} is null or ${table.outputTokens} >= 0) and (${table.totalTokens} is null or ${table.totalTokens} >= 0)`,
+    ),
+    check(
+      "itinerary_generation_attempts_cost_pair_chk",
+      sql`(${table.costAmountMicros} is null) = (${table.costCurrency} is null)`,
+    ),
+  ],
+);
+
 export const itineraryDays = pgTable(
   "itinerary_days",
   {
@@ -970,6 +1146,8 @@ export const coreTables = {
   destinationContentSources,
   destinationIngestionQuarantine,
   freshnessPolicies,
+  itineraryGenerationAttempts,
+  itineraryGenerationRuns,
   itineraryDays,
   itineraryItems,
   jobOperatorActions,
