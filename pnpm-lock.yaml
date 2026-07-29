@@ -35,12 +35,18 @@ importers:
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.32)
+      '@roavia/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@roavia/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@roavia/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@roavia/jobs':
+        specifier: workspace:*
+        version: link:../../packages/jobs
       hono:
         specifier: 4.12.32
         version: 4.12.32
@@ -115,6 +121,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@roavia/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@roavia/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -131,6 +140,9 @@ importers:
 
   packages/ai:
     dependencies:
+      '@roavia/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@roavia/db':
         specifier: workspace:*
         version: link:../db

@@ -1,5 +1,6 @@
 import {
   APICallError,
+  createGateway,
   generateText,
   NoObjectGeneratedError,
   Output,
@@ -16,12 +17,27 @@ import type {
   AiProviderResult,
   AiTokenUsage,
 } from "../contracts.js";
+import { AiGateway } from "../gateway.js";
 
 export interface AiSdkAdapterOptions {
   calculateCost?: (usage: AiTokenUsage) => AiCost | undefined;
   languageModel: LanguageModel;
   model: string;
   provider: string;
+}
+
+export function createVercelGatewayAiGateway(input: { apiKey: string; model: string }) {
+  if (!input.apiKey.trim() || !input.model.trim()) {
+    throw new Error("Vercel AI Gateway requires an API key and model identifier.");
+  }
+  const provider = createGateway({ apiKey: input.apiKey });
+  return new AiGateway(
+    new AiSdkAdapter({
+      languageModel: provider(input.model),
+      model: input.model,
+      provider: "vercel-gateway",
+    }),
+  );
 }
 
 function usage(input: LanguageModelUsage | undefined): AiTokenUsage | undefined {

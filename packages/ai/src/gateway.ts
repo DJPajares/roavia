@@ -18,6 +18,8 @@ import {
   type AssistantOutputV1,
   itineraryOutputV1Schema,
   type ItineraryOutputV1,
+  tripIntentOutputV1Schema,
+  type TripIntentOutputV1,
 } from "./schemas.js";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -99,6 +101,16 @@ export class AiGateway {
       schema: assistantOutputV1Schema,
       schemaDescription: "A strict, source-aware Roavia assistant response.",
       schemaName: "RoaviaAssistantV1",
+    });
+  }
+
+  generateTripIntent(input: AiGenerationRequest): Promise<AiGatewayResult<TripIntentOutputV1>> {
+    return this.generate(input, {
+      operation: "trip_intent",
+      schema: tripIntentOutputV1Schema,
+      schemaDescription:
+        "A strict Roavia trip intent containing only facts and explicit assumptions from the traveler prompt.",
+      schemaName: "RoaviaTripIntentV1",
     });
   }
 

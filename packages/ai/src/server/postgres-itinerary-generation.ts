@@ -340,19 +340,32 @@ export class PostgresItineraryGenerationStore implements ItineraryGenerationStor
         .where(eq(travelProfiles.userId, tripOwner.user.id))
         .limit(1);
       const preferences = preferenceObject(profile?.travelPreferences);
-      const pace = profile?.defaultPace ?? "balanced";
+      const tripPreferences = preferenceObject(tripOwner.trip.planningPreferences);
+      const hasTripPreferences = tripOwner.trip.planningPreferences !== null;
+      const tripPace = tripPreferences.pace;
+      const pace = hasTripPreferences
+        ? tripPace === "slow" || tripPace === "balanced" || tripPace === "fast"
+          ? tripPace
+          : "balanced"
+        : (profile?.defaultPace ?? "balanced");
       const fallbackTransfers = pace === "slow" ? 3 : pace === "fast" ? 6 : 4;
       const fallbackMinutes = pace === "slow" ? 75 : pace === "fast" ? 180 : 120;
       const request: NormalizedItineraryGenerationRequest = normalizeItineraryGenerationRequest({
-        accessibilityNeeds: stringList(profile?.accessibilityNeeds),
+        accessibilityNeeds: hasTripPreferences
+          ? stringList(tripPreferences.accessibilityNeeds)
+          : stringList(profile?.accessibilityNeeds),
         budget: tripOwner.trip.budget,
         destinations: destinations.map((destination) => ({
           ...destination,
           timezone: destination.timezone ?? tripOwner.user.timezone,
         })),
-        dietaryNeeds: stringList(profile?.dietaryNeeds),
+        dietaryNeeds: hasTripPreferences
+          ? stringList(tripPreferences.dietaryNeeds)
+          : stringList(profile?.dietaryNeeds),
         endDate: tripOwner.trip.endDate,
-        interests: stringList(profile?.interests),
+        interests: hasTripPreferences
+          ? stringList(tripPreferences.interests)
+          : stringList(profile?.interests),
         locale: tripOwner.user.locale,
         maxTransferMinutes: boundedInteger(
           preferences.maxTransferMinutes,
@@ -366,8 +379,12 @@ export class PostgresItineraryGenerationStore implements ItineraryGenerationStor
           0,
           20,
         ),
-        mustAvoid: stringList(preferences.mustAvoid),
-        mustDo: stringList(preferences.mustDo),
+        mustAvoid: hasTripPreferences
+          ? stringList(tripPreferences.mustAvoid)
+          : stringList(preferences.mustAvoid),
+        mustDo: hasTripPreferences
+          ? stringList(tripPreferences.mustDo)
+          : stringList(preferences.mustDo),
         pace,
         startDate: tripOwner.trip.startDate,
         title: tripOwner.trip.title,

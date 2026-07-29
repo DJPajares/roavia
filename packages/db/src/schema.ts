@@ -566,6 +566,7 @@ export const trips = pgTable(
       .$type<JsonObject>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    planningPreferences: jsonb("planning_preferences_json").$type<JsonObject>(),
     status: text("status", { enum: ["draft", "active", "archived"] })
       .notNull()
       .default("draft"),
@@ -606,6 +607,10 @@ export const trips = pgTable(
       sql`jsonb_typeof(${table.travelerSummary}) = 'object'`,
     ),
     check("trips_budget_object_chk", sql`jsonb_typeof(${table.budget}) = 'object'`),
+    check(
+      "trips_planning_preferences_object_chk",
+      sql`${table.planningPreferences} is null or jsonb_typeof(${table.planningPreferences}) = 'object'`,
+    ),
     check("trips_status_chk", sql`${table.status} in ('draft', 'active', 'archived')`),
     check("trips_visibility_chk", sql`${table.visibility} in ('private', 'link')`),
     check(

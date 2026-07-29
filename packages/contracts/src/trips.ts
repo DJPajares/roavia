@@ -143,6 +143,19 @@ export const tripBudgetSchema = z.object({
   style: z.enum(["budget", "midrange", "premium", "luxury"]),
 });
 
+const tripPreferenceListSchema = z.array(z.string().trim().min(1).max(200)).max(30);
+
+export const tripPlanningPreferencesSchema = z
+  .object({
+    accessibilityNeeds: tripPreferenceListSchema,
+    dietaryNeeds: tripPreferenceListSchema,
+    interests: tripPreferenceListSchema,
+    mustAvoid: tripPreferenceListSchema,
+    mustDo: tripPreferenceListSchema,
+    pace: z.enum(["slow", "balanced", "fast"]),
+  })
+  .strict();
+
 export const tripMoneySchema = z.object({
   currency: tripCurrencySchema,
   amountMinor: z.number().int().min(0).max(100_000_000_000),
@@ -173,6 +186,7 @@ export const tripCreateInputSchema = tripDatesSchema
     dateFlexibility: tripDateFlexibilitySchema.default({ daysAfter: 0, daysBefore: 0 }),
     travelerSummary: tripTravelerSummarySchema,
     budget: tripBudgetSchema,
+    planningPreferences: tripPlanningPreferencesSchema.nullable().default(null),
     status: tripStatusSchema.default("draft"),
     visibility: tripVisibilitySchema.default("private"),
   })
@@ -188,6 +202,7 @@ export const tripUpdateInputSchema = z
     dateFlexibility: tripDateFlexibilitySchema.optional(),
     travelerSummary: tripTravelerSummarySchema.optional(),
     budget: tripBudgetSchema.optional(),
+    planningPreferences: tripPlanningPreferencesSchema.nullable().optional(),
     status: tripStatusSchema.optional(),
     visibility: tripVisibilitySchema.optional(),
   })
@@ -216,6 +231,7 @@ export const tripSchema = z.object({
   dateFlexibility: tripDateFlexibilitySchema,
   travelerSummary: tripTravelerSummarySchema,
   budget: tripBudgetSchema,
+  planningPreferences: tripPlanningPreferencesSchema.nullable().default(null),
   status: tripStatusSchema,
   visibility: tripVisibilitySchema,
   generationState: tripGenerationStateSchema,
@@ -438,6 +454,22 @@ export const itineraryGenerationStatusResponseSchema = z.object({
   meta: tripApiMetaSchema,
 });
 
+export const itineraryGenerationCancelInputSchema = z
+  .object({
+    generationRunId: z.string().uuid(),
+    jobId: z.string().uuid(),
+  })
+  .strict();
+
+export const itineraryGenerationCancelledResponseSchema = z.object({
+  data: z.object({
+    generationRunId: z.string().uuid(),
+    jobId: z.string().uuid(),
+    status: z.literal("cancelled"),
+  }),
+  meta: tripApiMetaSchema,
+});
+
 export const tripDetailSchema = tripSchema.extend({
   destinations: z.array(tripDestinationSchema),
   days: z.array(tripDaySchema),
@@ -491,6 +523,7 @@ export type TripDeleteResponse = z.infer<typeof tripDeleteResponseSchema>;
 export type TripDestination = z.infer<typeof tripDestinationSchema>;
 export type TripDestinationCreateInput = z.infer<typeof tripDestinationCreateInputSchema>;
 export type TripDestinationUpdateInput = z.infer<typeof tripDestinationUpdateInputSchema>;
+export type TripDestinationMutationResponse = z.infer<typeof tripDestinationMutationResponseSchema>;
 export type TripChildDeleteInput = z.infer<typeof tripChildDeleteInputSchema>;
 export type TripDay = z.infer<typeof tripDaySchema>;
 export type TripDayCreateInput = z.infer<typeof tripDayCreateInputSchema>;
@@ -512,4 +545,8 @@ export type ItineraryGenerationQueuedResponse = z.infer<
 >;
 export type ItineraryGenerationStatusResponse = z.infer<
   typeof itineraryGenerationStatusResponseSchema
+>;
+export type ItineraryGenerationCancelInput = z.infer<typeof itineraryGenerationCancelInputSchema>;
+export type ItineraryGenerationCancelledResponse = z.infer<
+  typeof itineraryGenerationCancelledResponseSchema
 >;

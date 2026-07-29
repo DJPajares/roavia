@@ -852,6 +852,83 @@ input:focus-visible {
 .profile-page__sign-out {
   margin-top: 1.5rem;
 }
+.trip-planner-shell {
+  width: 100%;
+}
+.trip-planner-shell__modes {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-bottom: 2rem;
+  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.trip-planner-shell__modes button {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.trip-planner-shell__modes button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--canvas);
+}
+.natural-planner__notice {
+  margin-top: 1.5rem;
+  padding: 1rem 1.15rem;
+  border-left: 3px solid var(--moss);
+  background: var(--surface);
+}
+.natural-planner__notice--warning {
+  border-left-color: var(--warning);
+}
+.natural-planner__notice h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+.natural-planner__notice ul {
+  margin: 0.65rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--ink-soft);
+}
+.natural-planner__progress {
+  display: grid;
+  gap: 0.65rem;
+  margin: 2rem 0;
+  padding: 0;
+  list-style: none;
+}
+.natural-planner__progress li {
+  padding: 0.8rem 1rem;
+  border-left: 3px solid var(--line);
+  color: var(--ink-soft);
+  background: var(--surface);
+}
+.natural-planner__progress li.is-current {
+  border-left-color: var(--accent-strong);
+  color: var(--ink);
+  font-weight: 750;
+}
+.natural-planner__progress li.is-complete {
+  border-left-color: var(--moss);
+}
+.natural-planner__warning {
+  color: var(--warning);
+  font-weight: 650;
+}
+.natural-planner__message {
+  display: block;
+  margin: 1rem 0;
+  color: var(--ink-soft);
+}
 .trips-dashboard {
   max-width: 70rem;
 }

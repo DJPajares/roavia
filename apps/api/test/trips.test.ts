@@ -17,6 +17,7 @@ const unavailable = () => Promise.reject(new Error("Unexpected repository call."
 
 const trip: TripDetail = {
   budget: { amountMinor: 250_000, currency: "USD", style: "midrange" },
+  planningPreferences: null,
   createdAt: "2026-07-28T10:00:00.000Z",
   dateFlexibility: { daysAfter: 0, daysBefore: 0 },
   days: [],

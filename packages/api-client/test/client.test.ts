@@ -422,4 +422,112 @@ describe("Roavia API client", () => {
       { method: "GET", url: `https://api.roavia.test/shared-trips/${token}` },
     ]);
   });
+
+  test("uses the planner, destination, and cancellation workflow contracts", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const placeId = "22222222-2222-4222-8222-222222222222";
+    const destinationId = "33333333-3333-4333-8333-333333333333";
+    const generationRunId = "44444444-4444-4444-8444-444444444444";
+    const jobId = "55555555-5555-4555-8555-555555555555";
+    const requests: Request[] = [];
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request.clone());
+        if (request.url.endsWith("/planner/extract")) {
+          return Response.json({
+            data: {
+              assumptions: [],
+              intent: {
+                budget: { amountMinor: null, currency: "SGD", style: "budget" },
+                constraints: {
+                  accessibility: [],
+                  dietary: [],
+                  mustAvoid: [],
+                  mustDo: [],
+                },
+                dateFlexibility: { daysAfter: 0, daysBefore: 0 },
+                destinations: [
+                  {
+                    candidates: [
+                      {
+                        canonicalName: "Singapore",
+                        countryCode: "SG",
+                        hierarchy: [],
+                        id: placeId,
+                        localizedNames: {},
+                        placeType: "country",
+                      },
+                    ],
+                    query: "Singapore",
+                    selectedPlaceId: placeId,
+                  },
+                ],
+                endDate: "2030-08-12",
+                interests: ["food"],
+                pace: "balanced",
+                startDate: "2030-08-10",
+                title: "Singapore food break",
+                travelers: { adults: 1, children: 0, infants: 0 },
+              },
+              issues: [],
+              status: "ready",
+            },
+            meta: { requestId },
+          });
+        }
+        if (request.url.endsWith("/destinations")) {
+          return Response.json({
+            data: {
+              destination: {
+                arrivalAt: null,
+                departureAt: null,
+                id: destinationId,
+                orderIndex: 0,
+                placeId,
+                tripId: trip.id,
+              },
+              tripRevision: 4,
+            },
+            meta: { requestId },
+          });
+        }
+        return Response.json({
+          data: { generationRunId, jobId, status: "cancelled" },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    await client.extractTripIntent({
+      locale: "en-SG",
+      prompt: "Plan a budget food trip to Singapore from August 10 to 12 for me.",
+      timeZone: "Asia/Singapore",
+    });
+    await client.createTripDestination(trip.id, {
+      arrivalAt: null,
+      departureAt: null,
+      expectedTripRevision: 3,
+      orderIndex: 0,
+      placeId,
+    });
+    await client.cancelTripGeneration(trip.id, { generationRunId, jobId });
+
+    expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([
+      { method: "POST", url: "https://api.roavia.test/planner/extract" },
+      { method: "POST", url: `https://api.roavia.test/trips/${trip.id}/destinations` },
+      {
+        method: "POST",
+        url: `https://api.roavia.test/trips/${trip.id}/generation/cancel`,
+      },
+    ]);
+    expect(
+      requests.every(
+        (request) => request.headers.get("authorization") === "Bearer valid-access-token",
+      ),
+    ).toBe(true);
+  });
 });

@@ -52,6 +52,7 @@ function toInput(values: FormValues): TripCreateInput {
     dateFlexibility: { daysAfter: 0, daysBefore: 0 },
     endDate: values.endDate,
     originPlaceId: null,
+    planningPreferences: null,
     startDate: values.startDate,
     status: "draft",
     title: values.title.trim(),

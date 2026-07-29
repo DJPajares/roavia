@@ -4,6 +4,7 @@ import {
   destinationSearchResponseSchema,
   healthResponseSchema,
   itineraryGenerationQueuedResponseSchema,
+  itineraryGenerationCancelledResponseSchema,
   itineraryGenerationStatusResponseSchema,
   profileResponseSchema,
   shareLinkCreateResponseSchema,
@@ -11,6 +12,8 @@ import {
   shareLinkRevokeResponseSchema,
   sharedTripResponseSchema,
   tripDeleteResponseSchema,
+  tripDestinationMutationResponseSchema,
+  tripIntentExtractionResponseSchema,
   tripChildDeleteResponseSchema,
   tripItemMutationResponseSchema,
   tripListResponseSchema,
@@ -21,6 +24,8 @@ import {
   type DestinationSearchResponse,
   type HealthResponse,
   type ItineraryGenerationQueuedResponse,
+  type ItineraryGenerationCancelInput,
+  type ItineraryGenerationCancelledResponse,
   type ItineraryGenerationRequestInput,
   type ItineraryGenerationStatusResponse,
   type ProfileResponse,
@@ -35,6 +40,9 @@ import {
   type TripChildDeleteInput,
   type TripChildDeleteResponse,
   type TripCreateInput,
+  type TripDestinationCreateInput,
+  type TripIntentExtractionInput,
+  type TripIntentExtractionResponse,
   type TripListQuery,
   type TripListResponse,
   type TripResponse,
@@ -50,6 +58,8 @@ export type {
   DestinationSearchResponse,
   HealthResponse,
   ItineraryGenerationQueuedResponse,
+  ItineraryGenerationCancelInput,
+  ItineraryGenerationCancelledResponse,
   ItineraryGenerationRequestInput,
   ItineraryGenerationStatusResponse,
   Profile,
@@ -67,6 +77,9 @@ export type {
   TripChildDeleteInput,
   TripChildDeleteResponse,
   TripCreateInput,
+  TripDestinationCreateInput,
+  TripIntentExtractionInput,
+  TripIntentExtractionResponse,
   TripListQuery,
   TripListResponse,
   TripResponse,
@@ -115,6 +128,15 @@ export interface RoaviaApiClient {
     input: ItineraryGenerationRequestInput,
   ): Promise<ItineraryGenerationQueuedResponse>;
   getTripGeneration(tripId: string): Promise<ItineraryGenerationStatusResponse>;
+  cancelTripGeneration(
+    tripId: string,
+    input: ItineraryGenerationCancelInput,
+  ): Promise<ItineraryGenerationCancelledResponse>;
+  extractTripIntent(input: TripIntentExtractionInput): Promise<TripIntentExtractionResponse>;
+  createTripDestination(
+    tripId: string,
+    input: TripDestinationCreateInput,
+  ): Promise<import("@roavia/contracts").TripDestinationMutationResponse>;
   listShareLinks(tripId: string): Promise<ShareLinkListResponse>;
   createShareLink(tripId: string, input: ShareLinkCreateInput): Promise<ShareLinkCreateResponse>;
   revokeShareLink(tripId: string, shareLinkId: string): Promise<ShareLinkRevokeResponse>;
@@ -267,6 +289,27 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         `/trips/${encodeURIComponent(tripId)}/generation`,
         itineraryGenerationStatusResponseSchema,
         { authenticated: true },
+      );
+    },
+    async cancelTripGeneration(tripId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/generation/cancel`,
+        itineraryGenerationCancelledResponseSchema,
+        { authenticated: true, body: input, method: "POST" },
+      );
+    },
+    async extractTripIntent(input) {
+      return request("/planner/extract", tripIntentExtractionResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "POST",
+      });
+    },
+    async createTripDestination(tripId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/destinations`,
+        tripDestinationMutationResponseSchema,
+        { authenticated: true, body: input, method: "POST" },
       );
     },
     async listShareLinks(tripId) {

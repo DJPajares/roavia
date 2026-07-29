@@ -38,6 +38,9 @@ function app(service?: ItineraryGenerationApiService) {
 
 function generationServiceFixture(): ItineraryGenerationApiService {
   return {
+    cancelGeneration: vi
+      .fn<NonNullable<ItineraryGenerationApiService["cancelGeneration"]>>()
+      .mockResolvedValue({ generationRunId: runId, jobId, status: "cancelled" }),
     getGeneration: vi
       .fn<ItineraryGenerationApiService["getGeneration"]>()
       .mockResolvedValue(summary),
@@ -114,5 +117,25 @@ describe("itinerary generation API routes", () => {
       data: { id: runId, status: "queued", tripRevision: 4 },
     });
     expect(generationService.getGeneration).toHaveBeenCalledWith(authUserId, tripId);
+  });
+
+  test("cancels only a validated owned generation reference", async () => {
+    const generationService = generationServiceFixture();
+    const api = app(generationService);
+    const response = await api.request(`/trips/${tripId}/generation/cancel`, {
+      body: JSON.stringify({ generationRunId: runId, jobId }),
+      headers,
+      method: "POST",
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: { generationRunId: runId, jobId, status: "cancelled" },
+      meta: { requestId },
+    });
+    expect(generationService.cancelGeneration).toHaveBeenCalledWith(authUserId, tripId, {
+      generationRunId: runId,
+      jobId,
+    });
   });
 });

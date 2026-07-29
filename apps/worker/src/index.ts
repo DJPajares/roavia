@@ -1,4 +1,14 @@
 import {
+  GroundingRetriever,
+  ItineraryGenerationEngine,
+  ItineraryGenerationService,
+} from "@roavia/ai";
+import {
+  PostgresGroundingDataSource,
+  PostgresItineraryGenerationStore,
+  createVercelGatewayAiGateway,
+} from "@roavia/ai/server";
+import {
   createDatabaseClient,
   ingestDestinationCatalog,
   mvpLaunchDestinationCatalog,
@@ -6,11 +16,18 @@ import {
 import {
   MemoryReferenceEffectStore,
   createDestinationCatalogIngestionJob,
+  createItineraryGenerationJob,
   createReferenceJob,
 } from "@roavia/jobs";
 import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
 
 import { formatJobTelemetry } from "./telemetry.js";
+
+try {
+  loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+}
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required to start the Roavia worker.");
@@ -33,6 +50,26 @@ runtime.register(
     }),
   }),
 );
+if (
+  process.env.AI_PROVIDER === "vercel-gateway" &&
+  process.env.AI_API_KEY &&
+  process.env.AI_MODEL
+) {
+  const gateway = createVercelGatewayAiGateway({
+    apiKey: process.env.AI_API_KEY,
+    model: process.env.AI_MODEL,
+  });
+  const store = new PostgresItineraryGenerationStore(database.db);
+  runtime.register(
+    createItineraryGenerationJob(
+      new ItineraryGenerationService({
+        engine: new ItineraryGenerationEngine(gateway),
+        retriever: new GroundingRetriever([new PostgresGroundingDataSource(database.db)]),
+        store,
+      }),
+    ),
+  );
+}
 await runtime.start();
 console.log(JSON.stringify({ event: "ready", releaseSha, service: "roavia-worker" }));
 
@@ -45,3 +82,5 @@ async function shutdown(signal: string) {
 
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
+import { loadEnvFile } from "node:process";
+import { fileURLToPath } from "node:url";

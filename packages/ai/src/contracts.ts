@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-export type AiOperation = "assistant" | "itinerary";
+export type AiOperation = "assistant" | "itinerary" | "trip_intent";
 
 export type AiFinishReason =
   "stop" | "length" | "content-filter" | "tool-calls" | "error" | "other";

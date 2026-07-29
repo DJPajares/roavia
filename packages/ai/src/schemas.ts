@@ -222,3 +222,58 @@ export const assistantOutputV1Schema = z
   });
 
 export type AssistantOutputV1 = z.infer<typeof assistantOutputV1Schema>;
+
+export const TRIP_INTENT_OUTPUT_SCHEMA_VERSION = "roavia.trip-intent.v1" as const;
+
+const tripIntentAssumptionSchema = z
+  .object({
+    field: identifier,
+    summary: shortText,
+  })
+  .strict();
+
+export const tripIntentOutputV1Schema = z
+  .object({
+    schemaVersion: z.literal(TRIP_INTENT_OUTPUT_SCHEMA_VERSION),
+    title: z.string().trim().min(1).max(200).nullable(),
+    destinations: z.array(z.string().trim().min(1).max(100)).max(10),
+    startDate: localDate.nullable(),
+    endDate: localDate.nullable(),
+    dateFlexibility: z
+      .object({
+        daysBefore: z.number().int().min(0).max(365),
+        daysAfter: z.number().int().min(0).max(365),
+      })
+      .strict(),
+    travelers: z
+      .object({
+        adults: z.number().int().min(0).max(50),
+        children: z.number().int().min(0).max(50),
+        infants: z.number().int().min(0).max(10),
+      })
+      .strict()
+      .nullable(),
+    budget: z
+      .object({
+        amountMinor: z.number().int().min(0).max(100_000_000_000).nullable(),
+        currency: z.string().regex(/^[A-Z]{3}$/),
+        style: z.enum(["budget", "midrange", "premium", "luxury"]),
+      })
+      .strict()
+      .nullable(),
+    pace: z.enum(["slow", "balanced", "fast"]).nullable(),
+    interests: z.array(z.string().trim().min(1).max(100)).max(20),
+    constraints: z
+      .object({
+        accessibility: z.array(z.string().trim().min(1).max(200)).max(20),
+        dietary: z.array(z.string().trim().min(1).max(200)).max(20),
+        mustAvoid: z.array(z.string().trim().min(1).max(200)).max(20),
+        mustDo: z.array(z.string().trim().min(1).max(200)).max(20),
+      })
+      .strict(),
+    assumptions: z.array(tripIntentAssumptionSchema).max(30),
+    unsupportedRequests: z.array(shortText).max(20),
+  })
+  .strict();
+
+export type TripIntentOutputV1 = z.infer<typeof tripIntentOutputV1Schema>;
