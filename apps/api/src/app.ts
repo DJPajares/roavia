@@ -2,11 +2,13 @@ import {
   API_CONTRACT_VERSION,
   authSessionResponseSchema,
   destinationSearchQuerySchema,
+  destinationDetailResponseSchema,
   destinationSearchResponseSchema,
   healthResponseSchema,
   requestIdSchema,
   type DestinationSearchQuery,
   type DestinationSearchResponse,
+  type DestinationDetailResponse,
 } from "@roavia/contracts";
 import {
   AssistantActionConflictError,
@@ -44,6 +46,7 @@ export interface CreateAppOptions {
   searchDestinations?: (
     query: DestinationSearchQuery,
   ) => Promise<DestinationSearchResponse["data"]>;
+  getDestinationDetail?: (placeId: string) => Promise<DestinationDetailResponse["data"] | null>;
   searchRateLimiter?: RateLimiter;
   assistantRateLimiter?: RateLimiter;
   profileRepository?: ProfileRepository;
@@ -155,6 +158,25 @@ export function createApp(options: CreateAppOptions = {}) {
     const data = await options.searchDestinations(parsedQuery.data);
     return context.json(
       destinationSearchResponseSchema.parse({
+        data,
+        meta: { requestId: context.get("requestId") },
+      }),
+    );
+  });
+
+  app.get("/destinations/:placeId", async (context) => {
+    if (!options.getDestinationDetail) {
+      return errorResponse(
+        context,
+        503,
+        "search_unavailable",
+        "Destination details are temporarily unavailable.",
+      );
+    }
+    const data = await options.getDestinationDetail(context.req.param("placeId"));
+    if (!data) return errorResponse(context, 404, "not_found", "Destination not found.");
+    return context.json(
+      destinationDetailResponseSchema.parse({
         data,
         meta: { requestId: context.get("requestId") },
       }),

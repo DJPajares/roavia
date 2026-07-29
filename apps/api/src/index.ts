@@ -22,6 +22,7 @@ import {
   createProfileRepository,
   createShareRepository,
   createTripRepository,
+  getDestinationDetail,
   searchDestinations,
 } from "@roavia/db";
 import {
@@ -58,6 +59,24 @@ const aiGateway =
     : undefined;
 const destinationResolver = database
   ? (query: Parameters<typeof searchDestinations>[1]) => searchDestinations(database.db, query)
+  : undefined;
+const destinationDetailResolver = database
+  ? async (placeId: string) => {
+      const detail = await getDestinationDetail(database.db, placeId);
+      return (
+        detail && {
+          ...detail,
+          content: detail.content.map((record) => ({
+            ...record,
+            refreshedAt: record.refreshedAt.toISOString(),
+            sources: record.sources.map((source) => ({
+              ...source,
+              retrievedAt: source.retrievedAt.toISOString(),
+            })),
+          })),
+        }
+      );
+    }
   : undefined;
 const tripPlannerService =
   aiGateway && destinationResolver
@@ -103,6 +122,7 @@ const app = createApp({
   corsOrigins: corsOrigins && corsOrigins.length > 0 ? corsOrigins : undefined,
   verifyAccessToken: createAccessTokenVerifierFromEnvironment(process.env),
   searchDestinations: destinationResolver,
+  getDestinationDetail: destinationDetailResolver,
   profileRepository: database ? createProfileRepository(database.db) : undefined,
   shareRepository: database ? createShareRepository(database.db) : undefined,
   tripRepository,

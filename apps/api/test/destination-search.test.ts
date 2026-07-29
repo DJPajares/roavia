@@ -7,8 +7,59 @@ import { createFixedWindowRateLimiter } from "../src/rate-limit.js";
 const countryId = "11111111-1111-4111-8111-111111111111";
 const regionId = "22222222-2222-4222-8222-222222222222";
 const cityId = "33333333-3333-4333-8333-333333333333";
+const contentId = "44444444-4444-4444-8444-444444444444";
+const sourceId = "55555555-5555-4555-8555-555555555555";
 
 describe("destination search API", () => {
+  test("returns only structured, source-aware destination detail", async () => {
+    const app = createApp({
+      getDestinationDetail: async (placeId) => {
+        expect(placeId).toBe(cityId);
+        return {
+          place: {
+            id: cityId,
+            canonicalName: "Singapore",
+            localizedNames: {},
+            placeType: "city",
+            countryCode: "SG",
+            timezone: "Asia/Singapore",
+            summary: "A curated launch destination.",
+            hierarchy: [{ id: countryId, name: "Singapore", type: "country" }],
+          },
+          content: [
+            {
+              id: contentId,
+              type: "practical",
+              data: { currency: "Singapore dollar" },
+              freshness: "fresh",
+              refreshedAt: "2026-07-29T00:00:00.000Z",
+              sources: [
+                {
+                  id: sourceId,
+                  title: "Visit Singapore",
+                  url: "https://www.visitsingapore.com/",
+                  kind: "official_authority",
+                  attribution: "Source: Visit Singapore",
+                  license: "official-site-terms",
+                  licenseUrl: "https://www.visitsingapore.com/terms-of-use/",
+                  retrievedAt: "2026-07-29T00:00:00.000Z",
+                },
+              ],
+            },
+          ],
+        };
+      },
+    });
+    const response = await app.request(`/destinations/${cityId}`);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        place: { canonicalName: "Singapore" },
+        content: [{ sources: [{ kind: "official_authority" }] }],
+      },
+    });
+  });
+
   test("validates, forwards filters, and returns the typed paginated response", async () => {
     const app = createApp({
       searchDestinations: async (query) => {

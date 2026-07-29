@@ -21,6 +21,7 @@ export {
 } from "./authorization.js";
 export {
   getDestinationContentProvenance,
+  getDestinationDetail,
   listGroundingContent,
   listDestinationContentByState,
   searchDestinations,

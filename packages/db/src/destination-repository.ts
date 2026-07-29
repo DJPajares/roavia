@@ -32,6 +32,30 @@ export interface DestinationSearchPage {
   pagination: { page: number; limit: number; total: number; nextPage: number | null };
 }
 
+export interface DestinationDetail {
+  place: DestinationSearchPage["results"][number] & {
+    timezone: string | null;
+    summary: string | null;
+  };
+  content: Array<{
+    id: string;
+    type: string;
+    data: Record<string, unknown>;
+    freshness: "fresh" | "stale";
+    refreshedAt: Date;
+    sources: Array<{
+      id: string;
+      title: string | null;
+      url: string;
+      kind: GroundingContentSource["kind"];
+      attribution: string | null;
+      license: string | null;
+      licenseUrl: string | null;
+      retrievedAt: Date;
+    }>;
+  }>;
+}
+
 export interface GroundingContentQuery {
   placeIds: readonly string[];
   locale?: string;
@@ -190,6 +214,94 @@ export async function searchDestinations(
       total: ranked.length,
       nextPage: start + query.limit < ranked.length ? query.page + 1 : null,
     },
+  };
+}
+
+/** Public, curated detail data. Draft, rejected, and expired records never leave the server. */
+export async function getDestinationDetail(
+  db: Database,
+  placeId: string,
+  now = new Date(),
+): Promise<DestinationDetail | null> {
+  const placeRows = await db
+    .select({
+      id: places.id,
+      parentPlaceId: places.parentPlaceId,
+      placeType: places.placeType,
+      canonicalName: places.canonicalName,
+      localizedNames: places.localizedNames,
+      countryCode: places.countryCode,
+      timezone: places.timezone,
+      summary: places.summary,
+    })
+    .from(places)
+    .where(and(eq(places.id, placeId), eq(places.status, "active")));
+  const place = placeRows[0];
+  if (!place) return null;
+  const all = await db
+    .select({
+      id: places.id,
+      parentPlaceId: places.parentPlaceId,
+      placeType: places.placeType,
+      canonicalName: places.canonicalName,
+      localizedNames: places.localizedNames,
+      countryCode: places.countryCode,
+    })
+    .from(places)
+    .where(eq(places.status, "active"));
+  const hierarchy = hierarchyFor(
+    {
+      ...place,
+      placeType: place.placeType as DestinationPlaceType,
+      localizedNames: localizedNameMap(place.localizedNames),
+    },
+    new Map(
+      all.map((row) => [
+        row.id,
+        {
+          ...row,
+          placeType: row.placeType as DestinationPlaceType,
+          localizedNames: localizedNameMap(row.localizedNames),
+        },
+      ]),
+    ),
+  );
+  const records = await listGroundingContent(db, {
+    placeIds: [placeId],
+    maxDepth: 0,
+    maxRecords: 50,
+    now,
+  });
+  return {
+    place: {
+      id: place.id,
+      canonicalName: place.canonicalName,
+      localizedNames: localizedNameMap(place.localizedNames),
+      placeType: place.placeType as DestinationPlaceType,
+      countryCode: place.countryCode,
+      hierarchy,
+      timezone: place.timezone,
+      summary: place.summary,
+    },
+    content: records
+      .filter((record) => record.freshnessState !== "expired")
+      .map((record) => ({
+        id: record.id,
+        type: record.contentType,
+        data: record.content,
+        freshness: record.freshnessState === "stale" ? "stale" : "fresh",
+        refreshedAt: record.refreshedAt,
+        sources: record.sources.map((source) => ({
+          id: source.id,
+          title: source.title,
+          url: source.url,
+          kind: source.kind,
+          attribution: source.attributionText,
+          license: source.license,
+          licenseUrl: source.licenseUrl,
+          retrievedAt: source.retrievedAt,
+        })),
+      })),
   };
 }
 
