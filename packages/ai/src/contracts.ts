@@ -111,6 +111,7 @@ export interface AiGatewayMetadata {
   cost?: AiCost;
   durationMs: number;
   finishReason?: AiFinishReason;
+  generationId: string;
   model: string;
   operation: AiOperation;
   promptVersion: string;

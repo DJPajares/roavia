@@ -47,6 +47,7 @@ describe("provider-neutral AI gateway", () => {
     expect(result.metadata).toMatchObject({
       cost: { amountMicros: 250, currency: "USD" },
       finishReason: "stop",
+      generationId: expect.any(String),
       model: "fixture-structured-v1",
       operation: "itinerary",
       promptVersion: "itinerary-v1",
@@ -62,6 +63,7 @@ describe("provider-neutral AI gateway", () => {
     ]);
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
+      generationId: result.metadata.generationId,
       model: "fixture-structured-v1",
       outcome: "success",
       provider: "fixture",

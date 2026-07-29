@@ -2,7 +2,11 @@ import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, test } from "vitest";
 
 import { assistantOutputV1Schema } from "../src/index.js";
-import { AiSdkAdapter } from "../src/server/index.js";
+import {
+  AiSdkAdapter,
+  aiTokenPricingFromEnvironment,
+  createAiCostCalculator,
+} from "../src/server/index.js";
 import { assistantOutputV1Fixture } from "../src/testing.js";
 
 function mockModel(text: string, finishReason: "content-filter" | "stop" = "stop") {
@@ -41,6 +45,25 @@ function request() {
 }
 
 describe("AI SDK server adapter", () => {
+  test("calculates micro-USD estimates from explicit current model pricing", () => {
+    const calculate = createAiCostCalculator({
+      inputUsdPerMillion: 2.5,
+      outputUsdPerMillion: 10,
+    });
+
+    expect(calculate({ inputTokens: 10, outputTokens: 20, totalTokens: 30 })).toEqual({
+      amountMicros: 225,
+      currency: "USD",
+    });
+    expect(aiTokenPricingFromEnvironment({})).toBeUndefined();
+    expect(() => aiTokenPricingFromEnvironment({ AI_INPUT_COST_PER_MILLION_USD: "2.5" })).toThrow(
+      "required together",
+    );
+    expect(() =>
+      createAiCostCalculator({ inputUsdPerMillion: -1, outputUsdPerMillion: 1 }),
+    ).toThrow("non-negative");
+  });
+
   test("generates and validates structured output without a live provider call", async () => {
     const adapter = new AiSdkAdapter({
       calculateCost: (tokenUsage) => ({

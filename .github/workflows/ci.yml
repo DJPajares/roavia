@@ -83,6 +83,9 @@ jobs:
       - name: Reset and migrate test database
         run: pnpm db:reset:test
 
+      - name: Run AI evaluation release gate
+        run: pnpm ai:evaluate
+
       - name: Test
         run: pnpm test
 

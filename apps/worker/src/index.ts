@@ -6,9 +6,11 @@ import {
 import {
   PostgresGroundingDataSource,
   PostgresItineraryGenerationStore,
+  aiTokenPricingFromEnvironment,
   createVercelGatewayAiGateway,
 } from "@roavia/ai/server";
 import {
+  createAiTelemetryRepository,
   createDatabaseClient,
   ingestDestinationCatalog,
   mvpLaunchDestinationCatalog,
@@ -34,6 +36,7 @@ if (!connectionString) throw new Error("DATABASE_URL is required to start the Ro
 
 const releaseSha = process.env.RENDER_GIT_COMMIT ?? "local";
 const database = createDatabaseClient(connectionString);
+const aiTelemetry = createAiTelemetryRepository(database.db);
 const runtime = new PgBossJobRuntime({
   connectionString,
   releaseSha,
@@ -58,8 +61,10 @@ if (
   const gateway = createVercelGatewayAiGateway({
     apiKey: process.env.AI_API_KEY,
     model: process.env.AI_MODEL,
+    pricing: aiTokenPricingFromEnvironment(process.env),
+    telemetry: (event) => aiTelemetry.recordGeneration(event),
   });
-  const store = new PostgresItineraryGenerationStore(database.db);
+  const store = new PostgresItineraryGenerationStore(database.db, aiTelemetry);
   runtime.register(
     createItineraryGenerationJob(
       new ItineraryGenerationService({

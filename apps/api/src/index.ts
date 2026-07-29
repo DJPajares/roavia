@@ -12,9 +12,11 @@ import {
 import {
   PostgresGroundingDataSource,
   PostgresItineraryGenerationStore,
+  aiTokenPricingFromEnvironment,
   createVercelGatewayAiGateway,
 } from "@roavia/ai/server";
 import {
+  createAiTelemetryRepository,
   createDatabaseClient,
   createAssistantActionRepository,
   createProfileRepository,
@@ -44,11 +46,14 @@ const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 const database = process.env.DATABASE_URL
   ? createDatabaseClient(process.env.DATABASE_URL)
   : undefined;
+const aiTelemetry = database ? createAiTelemetryRepository(database.db) : undefined;
 const aiGateway =
   process.env.AI_PROVIDER === "vercel-gateway" && process.env.AI_API_KEY && process.env.AI_MODEL
     ? createVercelGatewayAiGateway({
         apiKey: process.env.AI_API_KEY,
         model: process.env.AI_MODEL,
+        pricing: aiTokenPricingFromEnvironment(process.env),
+        telemetry: aiTelemetry ? (event) => aiTelemetry.recordGeneration(event) : undefined,
       })
     : undefined;
 const destinationResolver = database
@@ -67,10 +72,13 @@ const assistantService =
           aiGateway,
           new GroundingRetriever([new PostgresGroundingDataSource(database.db)]),
         ),
+        telemetry: aiTelemetry,
         trips: tripRepository,
       })
     : undefined;
-const generationStore = database ? new PostgresItineraryGenerationStore(database.db) : undefined;
+const generationStore = database
+  ? new PostgresItineraryGenerationStore(database.db, aiTelemetry)
+  : undefined;
 const jobRuntime =
   process.env.DATABASE_URL && aiGateway && generationStore && database
     ? new PgBossJobRuntime({

@@ -9,6 +9,7 @@
     "pnpm": ">=11 <12"
   },
   "scripts": {
+    "ai:evaluate": "pnpm --filter @roavia/ai evaluate",
     "build": "turbo run build",
     "build:affected": "turbo run build --affected",
     "check": "turbo run lint typecheck test build",

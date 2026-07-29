@@ -74,6 +74,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 AI_PROVIDER
 AI_API_KEY
 AI_MODEL
+AI_INPUT_COST_PER_MILLION_USD
+AI_OUTPUT_COST_PER_MILLION_USD
 MAPS_PROVIDER
 MAPS_API_KEY
 WEATHER_PROVIDER
@@ -91,6 +93,10 @@ Natural-language planning and itinerary generation use Vercel AI Gateway when
 `AI_PROVIDER=vercel-gateway`; set `AI_MODEL` to a Gateway model ID and keep
 `AI_API_KEY` server-only. Without all three values, the API reports the planner
 and generator as unavailable instead of accepting work it cannot process.
+Set both token-pricing variables to the current model's USD-per-million-token
+rates to record estimated cost. If either value is omitted, generation remains
+available but telemetry marks the call as unpriced so release thresholds can flag
+the missing cost evidence.
 
 The launch map integration accepts `MAPS_PROVIDER=mapbox` and a server-only
 `MAPS_API_KEY`. Temporary geocodes are never cached; only calls made through the
@@ -126,6 +132,7 @@ pnpm dev              # Start web and API together
 pnpm dev:web          # Start only the Next.js application
 pnpm dev:api          # Start only the Hono API
 pnpm dev:worker       # Start the PostgreSQL-backed background worker
+pnpm ai:evaluate      # Run deterministic AI quality and cost release thresholds
 pnpm db:migrate       # Apply reviewed PostgreSQL migrations
 pnpm db:seed:destinations # Idempotently import the curated destination fixture
 pnpm format:check     # Verify repository formatting

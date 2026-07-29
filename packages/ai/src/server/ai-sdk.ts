@@ -15,6 +15,7 @@ import type {
   AiProviderFailure,
   AiProviderRequest,
   AiProviderResult,
+  AiTelemetrySink,
   AiTokenUsage,
 } from "../contracts.js";
 import { AiGateway } from "../gateway.js";
@@ -26,17 +27,69 @@ export interface AiSdkAdapterOptions {
   provider: string;
 }
 
-export function createVercelGatewayAiGateway(input: { apiKey: string; model: string }) {
+export interface AiTokenPricing {
+  inputUsdPerMillion: number;
+  outputUsdPerMillion: number;
+}
+
+export function createAiCostCalculator(pricing: AiTokenPricing) {
+  if (
+    !Number.isFinite(pricing.inputUsdPerMillion) ||
+    pricing.inputUsdPerMillion < 0 ||
+    !Number.isFinite(pricing.outputUsdPerMillion) ||
+    pricing.outputUsdPerMillion < 0
+  ) {
+    throw new RangeError("AI token pricing must use non-negative finite USD rates.");
+  }
+  return (tokenUsage: AiTokenUsage): AiCost | undefined => {
+    if (tokenUsage.inputTokens === undefined && tokenUsage.outputTokens === undefined) {
+      return undefined;
+    }
+    return {
+      amountMicros: Math.round(
+        (tokenUsage.inputTokens ?? 0) * pricing.inputUsdPerMillion +
+          (tokenUsage.outputTokens ?? 0) * pricing.outputUsdPerMillion,
+      ),
+      currency: "USD",
+    };
+  };
+}
+
+export function aiTokenPricingFromEnvironment(
+  environment: NodeJS.ProcessEnv,
+): AiTokenPricing | undefined {
+  const input = environment.AI_INPUT_COST_PER_MILLION_USD;
+  const output = environment.AI_OUTPUT_COST_PER_MILLION_USD;
+  if (input === undefined && output === undefined) return undefined;
+  if (input === undefined || output === undefined) {
+    throw new Error("Both AI input and output token pricing variables are required together.");
+  }
+  const pricing = {
+    inputUsdPerMillion: Number(input),
+    outputUsdPerMillion: Number(output),
+  };
+  createAiCostCalculator(pricing);
+  return pricing;
+}
+
+export function createVercelGatewayAiGateway(input: {
+  apiKey: string;
+  model: string;
+  pricing?: AiTokenPricing;
+  telemetry?: AiTelemetrySink;
+}) {
   if (!input.apiKey.trim() || !input.model.trim()) {
     throw new Error("Vercel AI Gateway requires an API key and model identifier.");
   }
   const provider = createGateway({ apiKey: input.apiKey });
   return new AiGateway(
     new AiSdkAdapter({
+      calculateCost: input.pricing ? createAiCostCalculator(input.pricing) : undefined,
       languageModel: provider(input.model),
       model: input.model,
       provider: "vercel-gateway",
     }),
+    { telemetry: input.telemetry },
   );
 }
 

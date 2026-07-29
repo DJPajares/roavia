@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { z } from "zod";
 
 import {
@@ -59,6 +61,7 @@ function gatewayError(code: AiGatewayErrorCode, retryable: boolean): AiGatewayEr
 
 interface AiGatewayOptions {
   clock?: () => Date;
+  createGenerationId?: () => string;
   defaultTimeoutMs?: number;
   telemetry?: AiTelemetrySink;
 }
@@ -74,12 +77,14 @@ interface GenerationDefinition<TOutput> {
 export class AiGateway {
   private readonly adapter: AiProviderAdapter;
   private readonly clock: () => Date;
+  private readonly createGenerationId: () => string;
   private readonly defaultTimeoutMs: number;
   private readonly telemetry?: AiTelemetrySink;
 
   constructor(adapter: AiProviderAdapter, options: AiGatewayOptions = {}) {
     this.adapter = adapter;
     this.clock = options.clock ?? (() => new Date());
+    this.createGenerationId = options.createGenerationId ?? randomUUID;
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.telemetry = options.telemetry;
     this.assertTimeout(this.defaultTimeoutMs);
@@ -129,6 +134,7 @@ export class AiGateway {
     definition: GenerationDefinition<TOutput>,
   ): Promise<AiGatewayResult<TOutput>> {
     const startedAt = this.clock();
+    const generationId = this.createGenerationId();
     const timeoutMs = input.timeoutMs ?? this.defaultTimeoutMs;
     if (
       !this.isValidTimeout(timeoutMs) ||
@@ -140,6 +146,7 @@ export class AiGateway {
         definition.operation,
         input,
         startedAt,
+        generationId,
       );
     }
 
@@ -199,6 +206,7 @@ export class AiGateway {
         definition.operation,
         input,
         startedAt,
+        generationId,
         providerResult,
       );
     }
@@ -209,6 +217,7 @@ export class AiGateway {
         definition.operation,
         input,
         startedAt,
+        generationId,
         providerResult,
       );
     }
@@ -220,6 +229,7 @@ export class AiGateway {
         definition.operation,
         input,
         startedAt,
+        generationId,
         providerResult,
       );
     }
@@ -230,6 +240,7 @@ export class AiGateway {
         definition.operation,
         input,
         startedAt,
+        generationId,
         {
           ...providerResult,
           safety: { blocked: true, category: "structured-refusal" },
@@ -237,7 +248,13 @@ export class AiGateway {
       );
     }
 
-    const metadata = this.metadata(definition.operation, input, startedAt, providerResult);
+    const metadata = this.metadata(
+      definition.operation,
+      input,
+      startedAt,
+      generationId,
+      providerResult,
+    );
     const result: AiGatewayResult<TOutput> = {
       metadata,
       output: parsed.data,
@@ -257,9 +274,10 @@ export class AiGateway {
     operation: AiOperation,
     input: AiGenerationRequest,
     startedAt: Date,
+    generationId: string,
     providerResult?: AiProviderResult<unknown>,
   ): AiGatewayResult<never> {
-    const metadata = this.metadata(operation, input, startedAt, providerResult);
+    const metadata = this.metadata(operation, input, startedAt, generationId, providerResult);
     this.emit({
       ...metadata,
       errorCode: error.code,
@@ -274,12 +292,14 @@ export class AiGateway {
     operation: AiOperation,
     input: AiGenerationRequest,
     startedAt: Date,
+    generationId: string,
     providerResult?: AiProviderResult<unknown>,
   ): AiGatewayMetadata {
     return {
       cost: providerResult?.cost,
       durationMs: Math.max(0, this.clock().getTime() - startedAt.getTime()),
       finishReason: providerResult?.finishReason,
+      generationId,
       model: this.adapter.model,
       operation,
       promptVersion: input.promptVersion,

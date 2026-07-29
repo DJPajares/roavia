@@ -572,6 +572,7 @@ export interface ItineraryGenerationAttemptAudit {
   attemptNumber: number;
   cost?: AiGatewayMetadata["cost"];
   durationMs: number;
+  generationId: string;
   issueCodes: string[];
   kind: "initial" | "repair";
   model: string;
@@ -806,6 +807,7 @@ export class ItineraryGenerationEngine {
         attemptNumber: attemptOffset + attempts.length + 1,
         cost: result.metadata.cost,
         durationMs: result.metadata.durationMs,
+        generationId: result.metadata.generationId,
         kind,
         model: result.metadata.model,
         promptVersion: result.metadata.promptVersion,

@@ -5,7 +5,7 @@ import type {
   AssistantQueryInput,
   TripDetail,
 } from "@roavia/contracts";
-import type { AssistantActionRepository, TripRepository } from "@roavia/db";
+import type { AiTelemetryRepository, AssistantActionRepository, TripRepository } from "@roavia/db";
 import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
@@ -181,9 +181,11 @@ describe("assistant API", () => {
       payload: preview.payload,
       tripId: TRIP_ID,
     });
-    const cancel = vi
-      .fn<AssistantActionRepository["cancel"]>()
-      .mockResolvedValue({ actionId: ACTION_ID, tripId: TRIP_ID });
+    const cancel = vi.fn<AssistantActionRepository["cancel"]>().mockResolvedValue({
+      actionId: ACTION_ID,
+      correlationId: REQUEST_ID,
+      tripId: TRIP_ID,
+    });
     const resolve = vi.fn<AssistantActionRepository["resolve"]>().mockResolvedValue(undefined);
     const actions = {
       cancel,
@@ -201,7 +203,15 @@ describe("assistant API", () => {
         >()
         .mockResolvedValue({ actionPayloads: [preview.payload], answer }),
     };
-    const service = createAssistantApiService({ actions, assistant, trips });
+    const recordAssistantAction = vi
+      .fn<AiTelemetryRepository["recordAssistantAction"]>()
+      .mockResolvedValue(undefined);
+    const service = createAssistantApiService({
+      actions,
+      assistant,
+      telemetry: { recordAssistantAction },
+      trips,
+    });
 
     const queried = await service.query(input, {
       authUserId: AUTH_USER_ID,
@@ -238,6 +248,18 @@ describe("assistant API", () => {
       signal: new AbortController().signal,
     });
     expect(cancel).toHaveBeenCalledWith(AUTH_USER_ID, ACTION_ID);
+    expect(recordAssistantAction).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ actionCount: 1, outcome: "offered" }),
+    );
+    expect(recordAssistantAction).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ actionCount: 1, outcome: "confirmed" }),
+    );
+    expect(recordAssistantAction).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ actionCount: 1, outcome: "cancelled" }),
+    );
   });
 
   test("routes add, replace, remove, and reorder confirmations through trip mutations", async () => {
