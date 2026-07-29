@@ -34,6 +34,18 @@ export const tripGenerationStateSchema = z.enum([
   "ready",
   "failed",
 ]);
+export const itineraryGenerationRunStatusSchema = z.enum([
+  "queued",
+  "retrieving",
+  "generating",
+  "validating",
+  "repairing",
+  "persisting",
+  "succeeded",
+  "failed",
+  "cancelled",
+]);
+export const itineraryGenerationGroundingStatusSchema = z.enum(["complete", "partial", "empty"]);
 export const tripItemTypeSchema = z.enum(["activity", "food", "lodging", "transport", "note"]);
 export const tripLocalDateSchema = z
   .string()
@@ -367,9 +379,69 @@ export const tripDaySchema = z.object({
   items: z.array(tripItemSchema),
 });
 
+export const itineraryGenerationAssumptionSchema = z.object({
+  code: z.string().trim().min(1).max(128),
+  needsConfirmation: z.boolean(),
+  summary: z.string().trim().min(1).max(500),
+});
+
+export const itineraryGenerationWarningSchema = z.object({
+  candidateIds: z.array(z.string().trim().min(1).max(128)).max(20),
+  code: z.string().trim().min(1).max(128),
+  severity: z.enum(["info", "warning", "blocking"]),
+  summary: z.string().trim().min(1).max(500),
+});
+
+export const itineraryGenerationSourceSchema = z.object({
+  official: z.boolean(),
+  retrievedAt: z.string().datetime({ offset: true }),
+  sourceId: z.string().trim().min(1).max(128),
+  title: z.string().trim().min(1).max(240),
+  url: z.string().url(),
+  validUntil: z.string().datetime({ offset: true }).nullable(),
+});
+
+export const itineraryGenerationSummarySchema = z.object({
+  assumptions: z.array(itineraryGenerationAssumptionSchema).max(30),
+  completedAt: z.string().datetime({ offset: true }).nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  failureCode: z.string().trim().min(1).max(200).nullable(),
+  groundingStatus: itineraryGenerationGroundingStatusSchema.nullable(),
+  id: z.string().uuid(),
+  maxRepairAttempts: z.number().int().min(0).max(3),
+  overallConfidence: z.number().min(0).max(1).nullable(),
+  repairAttempts: z.number().int().min(0).max(3),
+  sources: z.array(itineraryGenerationSourceSchema).max(100),
+  status: itineraryGenerationRunStatusSchema,
+  tripRevision: tripRevisionSchema,
+  warnings: z.array(itineraryGenerationWarningSchema).max(50),
+});
+
+export const itineraryGenerationRequestInputSchema = z.object({
+  expectedTripRevision: tripRevisionSchema,
+});
+
+export const itineraryGenerationQueuedSchema = z.object({
+  generationRunId: z.string().uuid(),
+  jobId: z.string().uuid(),
+  status: z.literal("queued"),
+  tripRevision: tripRevisionSchema,
+});
+
+export const itineraryGenerationQueuedResponseSchema = z.object({
+  data: itineraryGenerationQueuedSchema,
+  meta: tripApiMetaSchema,
+});
+
+export const itineraryGenerationStatusResponseSchema = z.object({
+  data: itineraryGenerationSummarySchema.nullable(),
+  meta: tripApiMetaSchema,
+});
+
 export const tripDetailSchema = tripSchema.extend({
   destinations: z.array(tripDestinationSchema),
   days: z.array(tripDaySchema),
+  generation: itineraryGenerationSummarySchema.nullable(),
 });
 
 export const tripListDataSchema = z.object({
@@ -432,3 +504,12 @@ export type ItineraryCoordinates = z.infer<typeof itineraryCoordinatesSchema>;
 export type ItineraryItemSourceSnapshot = z.infer<typeof itineraryItemSourceSnapshotSchema>;
 export type ItineraryRouteSnapshot = z.infer<typeof itineraryRouteSnapshotSchema>;
 export type ItinerarySource = z.infer<typeof itinerarySourceSchema>;
+export type ItineraryGenerationSummary = z.infer<typeof itineraryGenerationSummarySchema>;
+export type ItineraryGenerationRequestInput = z.infer<typeof itineraryGenerationRequestInputSchema>;
+export type ItineraryGenerationQueued = z.infer<typeof itineraryGenerationQueuedSchema>;
+export type ItineraryGenerationQueuedResponse = z.infer<
+  typeof itineraryGenerationQueuedResponseSchema
+>;
+export type ItineraryGenerationStatusResponse = z.infer<
+  typeof itineraryGenerationStatusResponseSchema
+>;

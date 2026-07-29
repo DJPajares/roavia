@@ -14,6 +14,7 @@ import {
   tripListQuerySchema,
   tripMoneySchema,
   tripUpdateInputSchema,
+  itineraryGenerationSummarySchema,
   type Trip,
   type TripChildDeleteInput,
   type TripCreateInput,
@@ -28,6 +29,7 @@ import {
   type TripItem,
   type TripItemCreateInput,
   type TripItemUpdateInput,
+  type ItineraryGenerationSummary,
   type TripListData,
   type TripListQuery,
   type TripUpdateInput,
@@ -40,6 +42,7 @@ import type { Database } from "./client.js";
 import {
   auditEvents,
   itineraryDays,
+  itineraryGenerationRuns,
   itineraryItems,
   places,
   tripDestinations,
@@ -52,6 +55,7 @@ type TripRow = typeof trips.$inferSelect;
 type TripDestinationRow = typeof tripDestinations.$inferSelect;
 type TripDayRow = typeof itineraryDays.$inferSelect;
 type TripItemRow = typeof itineraryItems.$inferSelect;
+type ItineraryGenerationRunRow = typeof itineraryGenerationRuns.$inferSelect;
 
 const ORDER_OFFSET = 100_000;
 const MOVED_ORDER_INDEX = 200_000;
@@ -246,6 +250,24 @@ function serializeDay(row: TripDayRow, items: TripItem[] = []): TripDay {
     orderIndex: row.orderIndex,
     items,
   };
+}
+
+function serializeGenerationRun(row: ItineraryGenerationRunRow): ItineraryGenerationSummary {
+  return itineraryGenerationSummarySchema.parse({
+    assumptions: row.assumptions,
+    completedAt: row.completedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    failureCode: row.failureCode,
+    groundingStatus: row.groundingStatus,
+    id: row.id,
+    maxRepairAttempts: row.maxRepairAttempts,
+    overallConfidence: row.overallConfidence,
+    repairAttempts: row.repairAttempts,
+    sources: row.sources,
+    status: row.status,
+    tripRevision: row.tripRevision,
+    warnings: row.warnings,
+  });
 }
 
 function encodeCursor(row: TripRow): string {
@@ -477,6 +499,12 @@ async function loadTripDetail(
     .innerJoin(itineraryDays, eq(itineraryItems.itineraryDayId, itineraryDays.id))
     .where(eq(itineraryDays.tripId, tripId))
     .orderBy(asc(itineraryDays.orderIndex), asc(itineraryItems.orderIndex), asc(itineraryItems.id));
+  const [generationRun] = await executor
+    .select()
+    .from(itineraryGenerationRuns)
+    .where(eq(itineraryGenerationRuns.tripId, tripId))
+    .orderBy(desc(itineraryGenerationRuns.createdAt), desc(itineraryGenerationRuns.id))
+    .limit(1);
   const itemsByDay = new Map<string, TripItem[]>();
   for (const { item } of itemRows) {
     const dayItems = itemsByDay.get(item.itineraryDayId) ?? [];
@@ -488,6 +516,7 @@ async function loadTripDetail(
     ...serializeTrip(ownedTrip.trip),
     destinations: destinationRows.map(serializeDestination),
     days: dayRows.map((day) => serializeDay(day, itemsByDay.get(day.id) ?? [])),
+    generation: generationRun ? serializeGenerationRun(generationRun) : null,
   };
 }
 
@@ -559,7 +588,7 @@ export function createTripRepository(db: Database): TripRepository {
             visibility: input.visibility,
           })
           .returning();
-        return { ...serializeTrip(trip!), destinations: [], days: [] };
+        return { ...serializeTrip(trip!), destinations: [], days: [], generation: null };
       });
     },
 

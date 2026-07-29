@@ -167,6 +167,7 @@ const trip: TripDetail = {
   destinations: [],
   endDate: "2099-08-02",
   generationState: "ready" as const,
+  generation: null,
   id: tripId,
   originPlaceId: null,
   revision: 4,

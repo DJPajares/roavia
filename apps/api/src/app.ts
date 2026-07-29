@@ -22,6 +22,10 @@ import { HTTPException } from "hono/http-exception";
 
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
 import { type ApiEnvironment, errorResponse } from "./http.js";
+import {
+  registerItineraryGenerationRoutes,
+  type ItineraryGenerationApiService,
+} from "./itinerary-generation.js";
 import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
 import { registerProfileRoutes } from "./profiles.js";
 import { registerShareRoutes } from "./sharing.js";
@@ -41,6 +45,7 @@ export interface CreateAppOptions {
   profileRepository?: ProfileRepository;
   shareRepository?: ShareRepository;
   tripRepository?: TripRepository;
+  itineraryGenerationService?: ItineraryGenerationApiService;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -191,6 +196,7 @@ export function createApp(options: CreateAppOptions = {}) {
   );
 
   registerTripRoutes(app, options.tripRepository);
+  registerItineraryGenerationRoutes(app, options.itineraryGenerationService);
   registerShareRoutes(app, options.shareRepository);
   registerProfileRoutes(app, options.profileRepository);
 
@@ -207,6 +213,10 @@ export function createApp(options: CreateAppOptions = {}) {
 
     if (error instanceof TripDomainInputError) {
       return errorResponse(context, 400, "bad_request", error.message);
+    }
+
+    if (error instanceof Error && "code" in error && error.code === "generation_state_conflict") {
+      return errorResponse(context, 409, "conflict", error.message);
     }
 
     if (error instanceof HTTPException && error.status < 500) {

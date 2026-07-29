@@ -45,6 +45,22 @@ so both queue redelivery and scheduled refresh are safe to repeat. Producers
 should use an idempotency key that includes the catalog key and source revision or
 refresh window, for example `destination:mvp-launch-v1:refresh:2026-07-28`.
 
+## Itinerary generation
+
+`itinerary.generate.v1` carries only the generation-run ID, trip ID, and immutable
+trip revision. `enqueueItineraryGeneration()` first creates owner-scoped product
+state, submits an idempotent job keyed by trip revision, and marks the run failed
+if queue reservation fails. The worker handler delegates to the provider-neutral
+generation service and returns only run/attempt counts; prompts, traveler fields,
+grounding content, and generated itinerary data never enter the queue payload or
+job result.
+
+Generation stages and repair attempts live in the product database. Provider and
+retrieval calls happen outside database transactions, while a validated draft is
+rechecked and replaced atomically at persistence time. A concrete AI adapter must
+be injected at the worker composition root; provider credentials never belong in
+job definitions or API clients.
+
 ## Operator recovery
 
 `listJobs()` provides a bounded, status-filtered view of queued, running, retrying, and dead-lettered application records without exposing queue tables. `listDeadLetters()` returns terminal failure metadata. `redrive()` revalidates the current payload schema and creates a new job ID/idempotency key. `discard()` marks the application record terminal. Both recovery operations require an operator ID and reason and append an immutable `job_operator_actions` audit record.

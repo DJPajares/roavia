@@ -195,7 +195,7 @@ const groundingGapSchema = z
   .strict();
 
 const groundingContextItemSchema = groundingCandidateSchema
-  .omit({ facts: true, keywords: true, sources: true })
+  .omit({ keywords: true, sources: true })
   .extend({
     rankScore: z.number().min(0).max(1),
     sourceIds: z.array(identifierSchema).min(1).max(20),
@@ -598,6 +598,7 @@ export class GroundingRetriever {
       confidence: candidate.confidence,
       content: candidate.content,
       destinationIds: candidate.destinationIds,
+      facts: candidate.facts,
       freshness: candidate.freshness,
       kind: candidate.kind,
       rankScore,
