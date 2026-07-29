@@ -53,5 +53,12 @@ describe("versioned AI output schemas", () => {
     assistant.safety.officialSourceRequired = true;
     assistant.sources[0]!.official = false;
     expect(assistantOutputV1Schema.safeParse(assistant).success).toBe(false);
+
+    expect(
+      assistantOutputV1Schema.safeParse({
+        ...assistantOutputV1Fixture,
+        safety: { ...assistantOutputV1Fixture.safety, classification: "refusal" },
+      }).success,
+    ).toBe(false);
   });
 });

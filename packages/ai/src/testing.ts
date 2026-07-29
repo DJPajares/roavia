@@ -170,6 +170,7 @@ export const assistantOutputV1Fixture: AssistantOutputV1 = {
       summary: "Add Asakusa to the itinerary.",
       requiresConfirmation: true,
       parameters: { placeId: "place-asakusa" },
+      sourceIds: ["source-tokyo-official"],
     },
   ],
 };

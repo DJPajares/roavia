@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import {
   GroundingRetriever,
+  GroundedAssistantService,
   ItineraryGenerationEngine,
   ItineraryGenerationService,
   TripIntentExtractionService,
@@ -15,6 +16,7 @@ import {
 } from "@roavia/ai/server";
 import {
   createDatabaseClient,
+  createAssistantActionRepository,
   createProfileRepository,
   createShareRepository,
   createTripRepository,
@@ -27,6 +29,7 @@ import {
 import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
 
 import { createApp } from "./app.js";
+import { createAssistantApiService } from "./assistant.js";
 import { createAccessTokenVerifierFromEnvironment } from "./auth.js";
 
 try {
@@ -55,6 +58,18 @@ const tripPlannerService =
   aiGateway && destinationResolver
     ? new TripIntentExtractionService(aiGateway, destinationResolver)
     : undefined;
+const tripRepository = database ? createTripRepository(database.db) : undefined;
+const assistantService =
+  aiGateway && database && tripRepository
+    ? createAssistantApiService({
+        actions: createAssistantActionRepository(database.db),
+        assistant: new GroundedAssistantService(
+          aiGateway,
+          new GroundingRetriever([new PostgresGroundingDataSource(database.db)]),
+        ),
+        trips: tripRepository,
+      })
+    : undefined;
 const generationStore = database ? new PostgresItineraryGenerationStore(database.db) : undefined;
 const jobRuntime =
   process.env.DATABASE_URL && aiGateway && generationStore && database
@@ -82,7 +97,8 @@ const app = createApp({
   searchDestinations: destinationResolver,
   profileRepository: database ? createProfileRepository(database.db) : undefined,
   shareRepository: database ? createShareRepository(database.db) : undefined,
-  tripRepository: database ? createTripRepository(database.db) : undefined,
+  tripRepository,
+  assistantService,
   tripPlannerService,
   itineraryGenerationService:
     jobRuntime && generationStore
