@@ -530,4 +530,70 @@ describe("Roavia API client", () => {
       ),
     ).toBe(true);
   });
+
+  test("asks the assistant and sends separate explicit action decisions", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const actionId = "88888888-8888-4888-8888-888888888888";
+    const requests: Request[] = [];
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request.clone());
+        expect(request.headers.get("authorization")).toBe("Bearer valid-access-token");
+        if (request.url.endsWith("/assistant/query")) {
+          return Response.json({
+            data: {
+              actions: [],
+              answer: "Use the current official guidance.",
+              claims: [],
+              evidence: { gaps: [], status: "empty" },
+              safety: {
+                classification: "general",
+                disclaimer: null,
+                explanation: "No evidence was available.",
+                officialSourceRequired: false,
+              },
+              sources: [],
+              status: "insufficient_evidence",
+              uncertainty: { explanation: "Evidence is unavailable.", level: "high" },
+            },
+            meta: { requestId },
+          });
+        }
+        const cancelled = request.url.endsWith("/cancel");
+        return Response.json({
+          data: {
+            actionId,
+            status: cancelled ? "cancelled" : "applied",
+            tripId: trip.id,
+            tripRevision: cancelled ? null : 4,
+          },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    await client.askAssistant({
+      context: { tripId: trip.id, type: "trip" },
+      locale: "en",
+      question: "What should I check before this trip?",
+    });
+    await client.confirmAssistantAction(actionId);
+    await client.cancelAssistantAction(actionId);
+
+    expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([
+      { method: "POST", url: "https://api.roavia.test/assistant/query" },
+      {
+        method: "POST",
+        url: `https://api.roavia.test/assistant/actions/${actionId}/confirm`,
+      },
+      {
+        method: "POST",
+        url: `https://api.roavia.test/assistant/actions/${actionId}/cancel`,
+      },
+    ]);
+  });
 });

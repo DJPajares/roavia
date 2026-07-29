@@ -48,6 +48,7 @@ describeDatabase("database migration baseline", () => {
 
     expect(tables.rows.map(({ table_name }) => table_name)).toEqual([
       "application_jobs",
+      "assistant_actions",
       "audit_events",
       "destination_content",
       "destination_content_sources",
@@ -76,7 +77,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(20);
+    expect(idDefaults.rows).toHaveLength(21);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -100,6 +101,8 @@ describeDatabase("database migration baseline", () => {
     const names = new Set(indexes.rows.map(({ indexname }) => indexname));
 
     for (const expected of [
+      "assistant_actions_owner_trip_created_idx",
+      "assistant_actions_pending_expiry_idx",
       "audit_events_actor_occurred_id_idx",
       "audit_events_expires_at_idx",
       "audit_events_subject_occurred_idx",
@@ -134,6 +137,7 @@ describeDatabase("database migration baseline", () => {
 
   test("enables ownership RLS and revokes direct access to private tables", async () => {
     const protectedTables = [
+      "assistant_actions",
       "audit_events",
       "itinerary_days",
       "itinerary_generation_attempts",
@@ -147,6 +151,7 @@ describeDatabase("database migration baseline", () => {
       "users",
     ];
     const expectedPolicies = [
+      "assistant_actions_owner_access",
       "audit_events_actor_access",
       "itinerary_days_owner_access",
       "itinerary_generation_attempts_owner_access",

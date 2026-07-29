@@ -180,10 +180,13 @@ describe("provider-neutral AI gateway", () => {
   test("normalizes a schema-valid structured refusal", async () => {
     const structuredRefusal = {
       ...assistantOutputV1Fixture,
+      claims: [],
       safety: {
         ...assistantOutputV1Fixture.safety,
         classification: "refusal" as const,
       },
+      sources: [],
+      suggestedActions: [],
     };
     const result = await new AiGateway(successfulProvider(structuredRefusal)).generateAssistant({
       prompt: "Answer a question.",

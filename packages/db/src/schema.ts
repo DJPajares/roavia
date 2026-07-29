@@ -1,5 +1,7 @@
 import type { Buffer } from "node:buffer";
 
+import type { AssistantActionPayload } from "@roavia/contracts";
+
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -922,6 +924,81 @@ export const itineraryItems = pgTable(
     check(
       "itinerary_items_confidence_range_chk",
       sql`${table.confidence} is null or ${table.confidence} between 0 and 1`,
+    ),
+  ],
+);
+
+export const assistantActions = pgTable(
+  "assistant_actions",
+  {
+    id: uuidPrimaryKey(),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tripId: uuid("trip_id").notNull(),
+    tripRevision: integer("trip_revision").notNull(),
+    kind: text("kind", {
+      enum: ["add_place", "replace_item", "remove_item", "reorder_item", "save_note"],
+    }).notNull(),
+    payload: jsonb("payload_json").$type<AssistantActionPayload>().notNull(),
+    status: text("status", {
+      enum: ["pending", "confirmed", "applied", "cancelled", "failed"],
+    })
+      .notNull()
+      .default("pending"),
+    correlationId: uuid("correlation_id").notNull(),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    confirmedAt: timestamp("confirmed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }),
+    resolvedAt: timestamp("resolved_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    foreignKey({
+      name: "assistant_actions_trip_owner_fk",
+      columns: [table.tripId, table.ownerUserId],
+      foreignColumns: [trips.id, trips.ownerUserId],
+    }).onDelete("cascade"),
+    index("assistant_actions_owner_trip_created_idx").on(
+      table.ownerUserId,
+      table.tripId,
+      table.createdAt.desc(),
+    ),
+    index("assistant_actions_pending_expiry_idx")
+      .on(table.ownerUserId, table.expiresAt)
+      .where(sql`${table.status} = 'pending'`),
+    check("assistant_actions_revision_positive_chk", sql`${table.tripRevision} > 0`),
+    check(
+      "assistant_actions_kind_chk",
+      sql`${table.kind} in ('add_place', 'replace_item', 'remove_item', 'reorder_item', 'save_note')`,
+    ),
+    check("assistant_actions_payload_object_chk", sql`jsonb_typeof(${table.payload}) = 'object'`),
+    check(
+      "assistant_actions_status_chk",
+      sql`${table.status} in ('pending', 'confirmed', 'applied', 'cancelled', 'failed')`,
+    ),
+    check(
+      "assistant_actions_expiry_order_chk",
+      sql`${table.expiresAt} > ${table.createdAt} and ${table.expiresAt} <= ${table.createdAt} + interval '24 hours'`,
+    ),
+    check(
+      "assistant_actions_transition_timestamps_chk",
+      sql`(${table.status} = 'pending' and ${table.confirmedAt} is null and ${table.resolvedAt} is null)
+        or (${table.status} = 'confirmed' and ${table.confirmedAt} is not null and ${table.resolvedAt} is null)
+        or (${table.status} in ('applied', 'failed') and ${table.confirmedAt} is not null and ${table.resolvedAt} is not null)
+        or (${table.status} = 'cancelled' and ${table.confirmedAt} is null and ${table.resolvedAt} is not null)`,
     ),
   ],
 );

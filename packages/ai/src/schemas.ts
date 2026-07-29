@@ -156,10 +156,11 @@ const assistantActionParameterSchema = z.union([
 const assistantActionSchema = z
   .object({
     actionId: identifier,
-    kind: z.enum(["add_place", "replace_item", "save_note"]),
+    kind: z.enum(["add_place", "remove_item", "reorder_item", "replace_item", "save_note"]),
     summary: shortText,
     requiresConfirmation: z.literal(true),
     parameters: z.record(z.string().min(1).max(80), assistantActionParameterSchema),
+    sourceIds: z.array(identifier).min(1).max(20),
   })
   .strict();
 
@@ -177,8 +178,8 @@ export const assistantOutputV1Schema = z
   .object({
     schemaVersion: z.literal(ASSISTANT_OUTPUT_SCHEMA_VERSION),
     answer: z.string().trim().min(1).max(8_000),
-    claims: z.array(assistantClaimSchema).min(1).max(50),
-    sources: z.array(aiSourceReferenceSchema).min(1).max(100),
+    claims: z.array(assistantClaimSchema).max(50),
+    sources: z.array(aiSourceReferenceSchema).max(100),
     uncertainty: z
       .object({
         level: z.enum(["low", "medium", "high"]),
@@ -190,6 +191,28 @@ export const assistantOutputV1Schema = z
   })
   .strict()
   .superRefine((output, context) => {
+    const refusal = output.safety.classification === "refusal";
+    if (
+      refusal &&
+      (output.claims.length > 0 ||
+        output.sources.length > 0 ||
+        output.suggestedActions.length > 0 ||
+        output.safety.officialSourceRequired)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Assistant refusals cannot include claims, sources, actions, or source requirements.",
+        path: ["safety", "classification"],
+      });
+    }
+    if (!refusal && (output.claims.length === 0 || output.sources.length === 0)) {
+      context.addIssue({
+        code: "custom",
+        message: "Assistant answers require at least one sourced claim.",
+        path: [output.claims.length === 0 ? "claims" : "sources"],
+      });
+    }
     const knownSourceIds = new Set<string>();
     for (const [index, source] of output.sources.entries()) {
       if (knownSourceIds.has(source.sourceId)) {
@@ -211,6 +234,24 @@ export const assistantOutputV1Schema = z
           });
         }
       }
+    }
+    for (const [actionIndex, action] of output.suggestedActions.entries()) {
+      for (const [sourceIndex, sourceId] of action.sourceIds.entries()) {
+        if (!knownSourceIds.has(sourceId)) {
+          context.addIssue({
+            code: "custom",
+            message: "Assistant action references an unknown source.",
+            path: ["suggestedActions", actionIndex, "sourceIds", sourceIndex],
+          });
+        }
+      }
+    }
+    if (output.safety.classification === "high_stakes" && !output.safety.officialSourceRequired) {
+      context.addIssue({
+        code: "custom",
+        message: "High-stakes output must require an official source.",
+        path: ["safety", "officialSourceRequired"],
+      });
     }
     if (output.safety.officialSourceRequired && !output.sources.some((source) => source.official)) {
       context.addIssue({

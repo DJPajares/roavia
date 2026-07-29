@@ -55,5 +55,12 @@ export {
   type ShareMutationContext,
   type ShareRepository,
 } from "./share-repository.js";
+export {
+  AssistantActionConflictError,
+  createAssistantActionRepository,
+  type AssistantActionContext,
+  type AssistantActionRepository,
+  type ClaimedAssistantAction,
+} from "./assistant-action-repository.js";
 export { mvpLaunchDestinationCatalog } from "./fixtures/mvp-launch-destinations.js";
 export * from "./schema.js";

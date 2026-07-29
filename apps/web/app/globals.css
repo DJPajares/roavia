@@ -101,7 +101,9 @@ body {
 }
 button,
 a,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 a {
@@ -109,7 +111,9 @@ a {
 }
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
@@ -1880,6 +1884,249 @@ input:focus-visible {
 }
 .itinerary-workspace > .roavia-trust-notice {
   margin-top: 1rem;
+}
+.assistant-workspace {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 68rem;
+}
+.assistant-hero {
+  max-width: 52rem;
+}
+.assistant-hero h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.9rem, 8vw, 6rem);
+  font-weight: 500;
+  letter-spacing: -0.065em;
+  line-height: 0.94;
+}
+.assistant-hero > p:not(.eyebrow) {
+  max-width: 42rem;
+  margin: 1.2rem 0 0;
+  color: var(--ink-soft);
+  font-size: 1.02rem;
+}
+.assistant-hero > span {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+.assistant-composer {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+.assistant-composer label {
+  margin-top: 0.4rem;
+  color: var(--ink-soft);
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.assistant-composer select,
+.assistant-composer textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.assistant-composer select {
+  min-height: 3rem;
+  padding: 0.65rem 0.75rem;
+}
+.assistant-composer textarea {
+  min-height: 8rem;
+  padding: 0.85rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+.assistant-composer__footer {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+}
+.assistant-composer__footer span {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+.assistant-message {
+  display: block;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--moss);
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  background: color-mix(in srgb, var(--moss) 10%, transparent);
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+.assistant-message.is-warning {
+  border-left-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+.assistant-result {
+  display: grid;
+  gap: 1.25rem;
+}
+.assistant-answer,
+.assistant-sources,
+.assistant-actions {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+.assistant-answer.is-insufficient_evidence,
+.assistant-answer.is-partial,
+.assistant-answer.is-refused {
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--line));
+}
+.assistant-answer__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.assistant-answer__status span,
+.assistant-source-meta > span,
+.assistant-action > div:first-child > span,
+.assistant-action__status {
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.assistant-answer h2,
+.assistant-section-heading h2 {
+  margin: 0.85rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.assistant-answer > p:not(.assistant-answer__uncertainty) {
+  margin: 0.75rem 0 0;
+  font-size: 1.02rem;
+}
+.assistant-answer__uncertainty,
+.assistant-section-heading > p:not(.eyebrow) {
+  margin: 0.75rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+}
+.assistant-answer__safety {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+.assistant-answer__safety p {
+  margin: 0.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+.assistant-answer details {
+  margin-top: 1rem;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+.assistant-sources ul,
+.assistant-actions ul {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.assistant-sources li,
+.assistant-action {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+}
+.assistant-sources li > div,
+.assistant-action > div:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+.assistant-sources a {
+  width: fit-content;
+  font-weight: 800;
+  text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  text-underline-offset: 0.2rem;
+}
+.assistant-sources li > div:first-child > span,
+.assistant-source-meta time,
+.assistant-action small {
+  color: var(--ink-soft);
+  font-size: 0.73rem;
+}
+.assistant-source-meta {
+  align-content: start;
+}
+.assistant-source-meta > span.is-stale,
+.assistant-source-meta > span.is-unknown {
+  color: var(--warning);
+}
+.assistant-action > div:first-child > span {
+  width: fit-content;
+  color: var(--accent-strong);
+}
+.assistant-action strong {
+  font-size: 0.94rem;
+}
+.assistant-action__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+.assistant-action__status {
+  width: fit-content;
+  height: fit-content;
+}
+.assistant-action__status.is-applied {
+  color: var(--moss);
+}
+.assistant-action__status.is-cancelled,
+.assistant-action__status.is-failed {
+  color: var(--warning);
+}
+.assistant-workspace > .roavia-trust-notice {
+  margin-top: 0.5rem;
+}
+@media (min-width: 48rem) {
+  .assistant-composer,
+  .assistant-answer,
+  .assistant-sources,
+  .assistant-actions {
+    padding: 1.6rem;
+  }
+  .assistant-sources li,
+  .assistant-action {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .assistant-source-meta {
+    justify-items: end;
+  }
+  .assistant-action__controls {
+    justify-content: end;
+  }
 }
 .trip-sharing,
 .shared-trip__day {

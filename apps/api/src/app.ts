@@ -9,6 +9,7 @@ import {
   type DestinationSearchResponse,
 } from "@roavia/contracts";
 import {
+  AssistantActionConflictError,
   AuthorizedResourceNotFoundError,
   TripConcurrencyError,
   TripDomainInputError,
@@ -21,6 +22,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
+import { registerAssistantRoutes, type AssistantApiService } from "./assistant.js";
 import { type ApiEnvironment, errorResponse } from "./http.js";
 import {
   registerItineraryGenerationRoutes,
@@ -43,11 +45,13 @@ export interface CreateAppOptions {
     query: DestinationSearchQuery,
   ) => Promise<DestinationSearchResponse["data"]>;
   searchRateLimiter?: RateLimiter;
+  assistantRateLimiter?: RateLimiter;
   profileRepository?: ProfileRepository;
   shareRepository?: ShareRepository;
   tripRepository?: TripRepository;
   itineraryGenerationService?: ItineraryGenerationApiService;
   tripPlannerService?: TripPlannerApiService;
+  assistantService?: AssistantApiService;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -66,6 +70,8 @@ export function createApp(options: CreateAppOptions = {}) {
   const corsOrigins = options.corsOrigins ?? ["http://localhost:3000"];
   const verifyAccessToken = options.verifyAccessToken ?? unavailableVerifier;
   const searchRateLimiter = options.searchRateLimiter ?? createFixedWindowRateLimiter();
+  const assistantRateLimiter =
+    options.assistantRateLimiter ?? createFixedWindowRateLimiter({ limit: 20 });
   const app = new Hono<ApiEnvironment>();
 
   app.use(
@@ -186,6 +192,7 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use("/trips", requireAuthentication);
   app.use("/trips/*", requireAuthentication);
   app.use("/planner/*", requireAuthentication);
+  app.use("/assistant/*", requireAuthentication);
 
   app.get("/auth/session", (context) =>
     context.json(
@@ -201,6 +208,7 @@ export function createApp(options: CreateAppOptions = {}) {
   registerTripRoutes(app, options.tripRepository);
   registerItineraryGenerationRoutes(app, options.itineraryGenerationService);
   registerTripPlannerRoutes(app, options.tripPlannerService);
+  registerAssistantRoutes(app, options.assistantService, assistantRateLimiter);
   registerShareRoutes(app, options.shareRepository);
   registerProfileRoutes(app, options.profileRepository);
 
@@ -213,6 +221,10 @@ export function createApp(options: CreateAppOptions = {}) {
 
     if (error instanceof TripConcurrencyError) {
       return errorResponse(context, 409, "conflict", error.message);
+    }
+
+    if (error instanceof AssistantActionConflictError) {
+      return errorResponse(context, 409, "assistant_action_conflict", error.message);
     }
 
     if (error instanceof TripDomainInputError) {

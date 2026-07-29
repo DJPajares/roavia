@@ -1,5 +1,7 @@
 import {
   apiErrorResponseSchema,
+  assistantActionMutationResponseSchema,
+  assistantQueryResponseSchema,
   authSessionResponseSchema,
   destinationSearchResponseSchema,
   healthResponseSchema,
@@ -19,6 +21,9 @@ import {
   tripListResponseSchema,
   tripResponseSchema,
   type ApiErrorCode,
+  type AssistantActionMutationResponse,
+  type AssistantQueryInput,
+  type AssistantQueryResponse,
   type AuthSessionResponse,
   type DestinationSearchQuery,
   type DestinationSearchResponse,
@@ -87,6 +92,9 @@ export type {
   TripItemMutationResponse,
   TripItemUpdateInput,
   TripUpdateInput,
+  AssistantActionMutationResponse,
+  AssistantQueryInput,
+  AssistantQueryResponse,
 } from "@roavia/contracts";
 
 export interface ApiClientOptions {
@@ -154,6 +162,9 @@ export interface RoaviaApiClient {
   ): Promise<TripChildDeleteResponse>;
   getProfile(): Promise<ProfileResponse>;
   updateProfile(input: ProfileUpdateInput): Promise<ProfileResponse>;
+  askAssistant(input: AssistantQueryInput): Promise<AssistantQueryResponse>;
+  confirmAssistantAction(actionId: string): Promise<AssistantActionMutationResponse>;
+  cancelAssistantAction(actionId: string): Promise<AssistantActionMutationResponse>;
 }
 
 export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClient {
@@ -366,6 +377,27 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         body: input,
         method: "PATCH",
       });
+    },
+    async askAssistant(input) {
+      return request("/assistant/query", assistantQueryResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "POST",
+      });
+    },
+    async confirmAssistantAction(actionId) {
+      return request(
+        `/assistant/actions/${encodeURIComponent(actionId)}/confirm`,
+        assistantActionMutationResponseSchema,
+        { authenticated: true, method: "POST" },
+      );
+    },
+    async cancelAssistantAction(actionId) {
+      return request(
+        `/assistant/actions/${encodeURIComponent(actionId)}/cancel`,
+        assistantActionMutationResponseSchema,
+        { authenticated: true, method: "POST" },
+      );
     },
   };
 }
