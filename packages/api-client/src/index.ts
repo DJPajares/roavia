@@ -4,6 +4,7 @@ import {
   assistantQueryResponseSchema,
   authSessionResponseSchema,
   destinationSearchResponseSchema,
+  destinationDetailResponseSchema,
   healthResponseSchema,
   itineraryGenerationQueuedResponseSchema,
   itineraryGenerationCancelledResponseSchema,
@@ -27,6 +28,7 @@ import {
   type AuthSessionResponse,
   type DestinationSearchQuery,
   type DestinationSearchResponse,
+  type DestinationDetailResponse,
   type HealthResponse,
   type ItineraryGenerationQueuedResponse,
   type ItineraryGenerationCancelInput,
@@ -61,6 +63,7 @@ export type {
   AuthSessionResponse,
   DestinationSearchQuery,
   DestinationSearchResponse,
+  DestinationDetailResponse,
   HealthResponse,
   ItineraryGenerationQueuedResponse,
   ItineraryGenerationCancelInput,
@@ -122,6 +125,7 @@ export interface RoaviaApiClient {
   health(): Promise<HealthResponse>;
   session(): Promise<AuthSessionResponse>;
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
+  getDestination(placeId: string): Promise<DestinationDetailResponse>;
   listTrips(query: TripListQuery): Promise<TripListResponse>;
   createTrip(input: TripCreateInput): Promise<TripResponse>;
   updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
@@ -242,6 +246,12 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       }
 
       return request(`/destinations/search?${params.toString()}`, destinationSearchResponseSchema);
+    },
+    async getDestination(placeId: string): Promise<DestinationDetailResponse> {
+      return request(
+        `/destinations/${encodeURIComponent(placeId)}`,
+        destinationDetailResponseSchema,
+      );
     },
     async listTrips(query: TripListQuery): Promise<TripListResponse> {
       const params = new URLSearchParams({ limit: String(query.limit) });

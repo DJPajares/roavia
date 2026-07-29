@@ -2,6 +2,7 @@
 
 import type { DestinationPlaceType, DestinationSearchResponse } from "@roavia/contracts";
 import { Button, ExperienceState } from "@roavia/ui";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { roaviaApi } from "../lib/api";
@@ -250,7 +251,11 @@ export function DestinationSearch() {
           <ol>
             {result.results.map((place) => (
               <li key={place.id}>
-                <article className="destination-card">
+                <Link
+                  aria-label={`Open destination guide for ${place.canonicalName}`}
+                  className="destination-card"
+                  href={`/destinations/${place.id}`}
+                >
                   <div>
                     <p className="destination-card__type">{placeTypeLabels[place.placeType]}</p>
                     <h2>{place.canonicalName}</h2>
@@ -266,7 +271,7 @@ export function DestinationSearch() {
                     </p>
                   </div>
                   <span aria-hidden="true">↗</span>
-                </article>
+                </Link>
               </li>
             ))}
           </ol>

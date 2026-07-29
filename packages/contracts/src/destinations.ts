@@ -59,6 +59,54 @@ export const destinationSearchResponseSchema = z.object({
   meta: destinationApiMetaSchema,
 });
 
+const destinationSourceSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().nullable(),
+  url: z.string().url(),
+  kind: z.enum([
+    "official_authority",
+    "official_operator",
+    "licensed_provider",
+    "reviewed_editorial",
+  ]),
+  attribution: z.string().nullable(),
+  license: z.string().nullable(),
+  licenseUrl: z.string().url().nullable(),
+  retrievedAt: z.string().datetime(),
+});
+
+export const destinationDetailDataSchema = z.object({
+  place: z.object({
+    id: z.string().uuid(),
+    canonicalName: z.string().min(1),
+    localizedNames: z.record(z.string(), z.string()),
+    placeType: destinationPlaceTypeSchema,
+    countryCode: z
+      .string()
+      .regex(/^[A-Z]{2}$/)
+      .nullable(),
+    timezone: z.string().nullable(),
+    summary: z.string().nullable(),
+    hierarchy: z.array(destinationHierarchyItemSchema),
+  }),
+  content: z.array(
+    z.object({
+      id: z.string().uuid(),
+      type: z.string().min(1),
+      data: z.record(z.string(), z.unknown()),
+      freshness: z.enum(["fresh", "stale"]),
+      refreshedAt: z.string().datetime(),
+      sources: z.array(destinationSourceSchema),
+    }),
+  ),
+});
+
+export const destinationDetailResponseSchema = z.object({
+  data: destinationDetailDataSchema,
+  meta: destinationApiMetaSchema,
+});
+
 export type DestinationPlaceType = z.infer<typeof destinationPlaceTypeSchema>;
 export type DestinationSearchQuery = z.infer<typeof destinationSearchQuerySchema>;
 export type DestinationSearchResponse = z.infer<typeof destinationSearchResponseSchema>;
+export type DestinationDetailResponse = z.infer<typeof destinationDetailResponseSchema>;

@@ -144,6 +144,108 @@ textarea:focus-visible {
   margin: 0 auto;
   padding: 2.75rem 1.25rem 7rem;
 }
+.destination-detail {
+  max-width: 70rem;
+  margin: 0 auto;
+}
+.destination-detail__crumbs {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+.destination-detail__crumbs a {
+  text-underline-offset: 0.2em;
+}
+.destination-detail__hero {
+  max-width: 46rem;
+  padding: clamp(2rem, 7vw, 5rem);
+  border-radius: var(--radius-sheet);
+  color: var(--feature-ink);
+  background: linear-gradient(
+    135deg,
+    var(--feature-surface),
+    color-mix(in srgb, var(--feature-surface) 65%, var(--moss))
+  );
+  box-shadow: var(--shadow-raised);
+}
+.destination-detail__hero h1 {
+  margin: 0.1rem 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 9vw, 6.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
+}
+.destination-detail__hero p:last-of-type {
+  max-width: 62ch;
+  color: var(--feature-soft);
+  font-size: 1.1rem;
+}
+.destination-detail__local {
+  color: var(--feature-kicker);
+  margin: 0.45rem 0 1rem;
+}
+.destination-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+.destination-detail__actions a {
+  border-radius: var(--radius-control);
+  padding: 0.7rem 1rem;
+  background: var(--feature-ink);
+  color: var(--feature-surface);
+  font-weight: 750;
+  text-decoration: none;
+}
+.destination-detail__actions a + a {
+  background: transparent;
+  border: 1px solid var(--feature-line);
+  color: var(--feature-ink);
+}
+.destination-detail__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.2rem;
+  margin: 1.2rem 0 2rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.destination-detail__content {
+  display: grid;
+  gap: 1rem;
+}
+.destination-detail__section {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+.destination-detail__section h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+}
+.destination-detail__section p {
+  max-width: 68ch;
+  margin: 0;
+}
+.destination-detail__section footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.destination-detail__section footer a {
+  color: var(--ink);
+  text-underline-offset: 0.2em;
+}
 .mobile-nav {
   position: fixed;
   z-index: 20;
