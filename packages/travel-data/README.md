@@ -54,6 +54,42 @@ const providers = createLaunchMapsProviderBundle(readLaunchMapsConfig(process.en
 cover launch-city success, ambiguity, unavailable routes, timeout, quota,
 stale-cache revalidation, and explicit fallback without live API usage.
 
+## Launch weather, calendar, advisory, closure, and currency data
+
+WDL-61 adds concrete, server-only launch adapters without enabling a metered
+provider by default:
+
+```ts
+import {
+  createLaunchPracticalDataProviderBundle,
+  readLaunchPracticalDataConfig,
+} from "@roavia/travel-data/server";
+
+const providers = createLaunchPracticalDataProviderBundle(
+  readLaunchPracticalDataConfig(process.env),
+);
+```
+
+- Open-Meteo forecast and climate adapters request explicit metric units,
+  preserve model series independently, and carry CC BY attribution. Paid
+  customer keys remain gated on the WDL-28 contract, retention, and budget
+  approvals.
+- Calendarific holidays are marked provisional, online-only, and use a no-cache
+  operation until written storage and redistribution rights exist. Nager.Date
+  is not selected automatically as a production fallback.
+- GOV.UK Content API advice is official, source-only guidance for GB travelers.
+  Other traveler nationalities return `unsupported_coverage` rather than
+  inheriting UK-specific advice.
+- The reviewed official-source registry supplies event, holiday, closure,
+  weather-alert, visa, and emergency links for all seven launch destinations.
+  It does not synthesize missing facts.
+- ECB daily reference rates cover the seven launch currencies, retain one
+  common as-of date, use deterministic decimal cross-rates and half-up minor
+  unit conversion, and become unavailable to caching after two business days.
+
+See [the integration runbook](../../docs/integrations/launch-practical-data.md)
+for freshness, licensing, configuration, and limitations.
+
 Import `FixtureTravelDataAdapter` from `@roavia/travel-data/testing` to exercise
 success, invalid output, timeout, quota, outage, retry, stale-cache, circuit,
 and fallback behavior without live credentials or provider quota.

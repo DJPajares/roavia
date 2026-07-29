@@ -1,0 +1,21 @@
+{
+  "meta": { "code": 200 },
+  "response": {
+    "holidays": [
+      {
+        "name": "Marine Day",
+        "description": "A national holiday fixture requiring official verification.",
+        "date": { "iso": "2026-07-20", "datetime": { "year": 2026, "month": 7, "day": 20 } },
+        "type": ["National holiday"],
+        "uuid": "calendarific-jp-2026-marine-day"
+      },
+      {
+        "name": "Tokyo fixture observance",
+        "description": "A local evaluation-only fixture.",
+        "date": { "iso": "2026-08-01", "datetime": { "year": 2026, "month": 8, "day": 1 } },
+        "type": ["Local holiday", "Observance"],
+        "uuid": "calendarific-jp-2026-tokyo-observance"
+      }
+    ]
+  }
+}

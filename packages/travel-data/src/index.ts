@@ -3,5 +3,6 @@ export * from "./cache.js";
 export * from "./contracts.js";
 export * from "./coordinator.js";
 export * from "./maps.js";
+export * from "./practical.js";
 export * from "./resilience.js";
 export * from "./validation.js";

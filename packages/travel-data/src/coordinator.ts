@@ -263,7 +263,7 @@ export class TravelDataCoordinator<TInput, TValue> {
             adapter.provider,
             adapter.operation,
             "invalid_response",
-            "Provider success was already outside its source validity window.",
+            "Provider success was already outside its source freshness window.",
             true,
           );
           return this.finishFailure(adapter, invalid, requestId, attempts, circuitKey);
@@ -574,8 +574,11 @@ export class TravelDataCoordinator<TInput, TValue> {
   ): TravelDataFreshness | undefined {
     const now = this.clock().getTime();
     const policy = this.operation.cachePolicy;
+    // validUntil describes when a fact or historical series applies. It may be
+    // in the past while the retrieved record remains current and cacheable.
+    // expiresAt alone limits the source's technical freshness window.
     const sourceExpiry = result.sources
-      .flatMap((source) => [source.validUntil, source.expiresAt])
+      .map((source) => source.expiresAt)
       .filter((value): value is string => value !== undefined)
       .map(Date.parse)
       .reduce((earliest, value) => Math.min(earliest, value), Number.POSITIVE_INFINITY);
