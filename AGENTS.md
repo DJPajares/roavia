@@ -21,8 +21,6 @@ Do not create local task files or duplicate Linear state.
 
 ## Lean Issue Startup
 
-Use a fresh Codex thread for each issue.
-
 1. Fetch the target Linear issue once, including its relations.
 2. Trust blocker statuses included in the response. Fetch a blocker separately only when its status is missing, unclear, reopened, not Done, or its implementation details are required.
 3. Do not read issue comments unless the issue is reopened, references a decision in comments, contains conflicting scope, or has a prior failed attempt.
