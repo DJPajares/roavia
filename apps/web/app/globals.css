@@ -1987,6 +1987,373 @@ textarea:focus-visible {
 .itinerary-workspace > .roavia-trust-notice {
   margin-top: 1rem;
 }
+.offline-package-panel {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  margin: 1.4rem 0 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: var(--radius-panel);
+  background:
+    linear-gradient(125deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 48%),
+    var(--surface);
+  box-shadow: 0 12px 32px rgb(22 54 49 / 6%);
+}
+.offline-package-panel__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.offline-package-panel__heading h2 {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.offline-package-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--moss) 13%, var(--surface));
+  color: var(--moss);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.offline-package-status.is-stale {
+  background: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  color: var(--warning);
+}
+.offline-package-metadata,
+.offline-library__storage,
+.offline-library-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+.offline-package-metadata div,
+.offline-library__storage div,
+.offline-library-card dl div {
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface-muted) 55%, transparent);
+}
+.offline-package-metadata dt,
+.offline-library__storage dt,
+.offline-library-card dt {
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.offline-package-metadata dd,
+.offline-library__storage dd,
+.offline-library-card dd {
+  overflow-wrap: anywhere;
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.offline-package-panel__intro,
+.offline-package-panel__limits,
+.offline-package-panel__connection {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+.offline-package-panel__limits {
+  padding-left: 0.8rem;
+  border-left: 0.22rem solid var(--warning);
+}
+.offline-package-panel__connection {
+  color: var(--warning);
+  font-weight: 700;
+}
+.offline-package-actions,
+.offline-library__actions,
+.offline-library-card__actions,
+.offline-package-confirmation > div,
+.offline-library-card__confirm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.offline-package-progress {
+  display: grid;
+  gap: 0.65rem;
+}
+.offline-package-progress label {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.offline-package-progress progress {
+  width: 100%;
+  height: 0.65rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  accent-color: var(--accent);
+}
+.offline-package-message,
+.offline-library__message {
+  display: block;
+  color: var(--moss);
+  font-size: 0.86rem;
+}
+.offline-package-message.is-error {
+  color: var(--danger);
+}
+.offline-package-confirmation,
+.offline-library-card__confirm {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  gap: 0.8rem;
+  padding: 1.4rem;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  backdrop-filter: blur(8px);
+}
+.offline-package-confirmation h3,
+.offline-library-card__confirm h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+.offline-package-confirmation p,
+.offline-library-card__confirm p {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--ink-soft);
+}
+.offline-package-remove {
+  min-height: 2.7rem;
+  padding: 0.62rem 0.9rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-control);
+  background: var(--danger);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.offline-package-remove:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.offline-itinerary,
+.offline-library {
+  max-width: 76rem;
+}
+.offline-itinerary__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+.offline-itinerary__hero h1,
+.offline-library__intro h1 {
+  max-width: 14ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 8vw, 5.6rem);
+  font-weight: 500;
+  letter-spacing: -0.065em;
+  line-height: 0.92;
+}
+.offline-itinerary__hero p:not(.eyebrow),
+.offline-library__intro > p:not(.eyebrow) {
+  max-width: 44rem;
+  margin: 1rem 0 0;
+  color: var(--ink-soft);
+}
+.offline-itinerary__hero > span {
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--moss) 13%, var(--surface));
+  color: var(--moss);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.offline-itinerary-days,
+.offline-guidance__list,
+.offline-library__list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.offline-itinerary-day,
+.offline-guidance__list article,
+.offline-library-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgb(22 54 49 / 5%);
+}
+.offline-itinerary-day > header {
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-muted) 52%, transparent);
+}
+.offline-itinerary-day > header p,
+.offline-itinerary-day > header span {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+.offline-itinerary-day > header h2,
+.offline-guidance__heading h2,
+.offline-library-card h2 {
+  margin: 0.2rem 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.offline-itinerary-day ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.offline-itinerary-day li {
+  display: grid;
+  grid-template-columns: minmax(5rem, 0.18fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.offline-itinerary-day li:last-child {
+  border-bottom: 0;
+}
+.offline-itinerary-item__time {
+  display: grid;
+  align-content: start;
+  gap: 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.offline-itinerary-item__time span,
+.offline-itinerary-item__coordinates,
+.offline-itinerary-item__boundary {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+.offline-itinerary-day h3 {
+  margin: 0.1rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+.offline-itinerary-day address,
+.offline-itinerary-day li p {
+  margin: 0.25rem 0;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+  font-style: normal;
+}
+.offline-itinerary-item__boundary {
+  display: inline-flex;
+  margin-top: 0.55rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  font-weight: 750;
+}
+.offline-itinerary-day__empty {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  color: var(--ink-soft);
+}
+.offline-guidance {
+  margin-top: 2.5rem;
+}
+.offline-guidance__list article {
+  padding: 1.15rem;
+}
+.offline-guidance__status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.offline-guidance__status span:first-child {
+  color: var(--accent-strong);
+}
+.offline-guidance dl {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+.offline-guidance dl div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.25fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.offline-guidance dt {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.offline-guidance dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.offline-guidance__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+.offline-guidance__sources a {
+  color: var(--accent-strong);
+  font-weight: 750;
+}
+.offline-itinerary > .roavia-trust-notice,
+.offline-library > .roavia-trust-notice {
+  margin-top: 1rem;
+}
+.offline-library__intro > span {
+  display: block;
+  margin-top: 0.65rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+.offline-library__actions {
+  margin-top: 1.5rem;
+}
+.offline-library__storage {
+  margin-top: 1.25rem;
+}
+.offline-library__message {
+  margin-top: 1rem;
+}
+.offline-library-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+}
+.offline-library-card > div:first-child > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
 .assistant-workspace {
   display: grid;
   gap: 1.5rem;
@@ -2395,6 +2762,19 @@ textarea:focus-visible {
   margin-top: 0.5rem;
 }
 @media (max-width: 35rem) {
+  .offline-package-metadata,
+  .offline-library__storage,
+  .offline-library-card dl {
+    grid-template-columns: 1fr;
+  }
+  .offline-itinerary-day li,
+  .offline-guidance dl div {
+    grid-template-columns: 1fr;
+  }
+  .offline-package-actions .roavia-button,
+  .offline-library-card__actions .roavia-button {
+    width: 100%;
+  }
   .trip-sharing__heading,
   .trip-sharing__create,
   .trip-sharing__links li {

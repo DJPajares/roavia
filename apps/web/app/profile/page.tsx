@@ -16,7 +16,7 @@ export default async function ProfilePage() {
     <div className="profile-page">
       <ProfilePreferences email={session.identity.email} />
       <div className="profile-page__sign-out">
-        <SignOutButton />
+        <SignOutButton ownerId={session.identity.userId} />
       </div>
     </div>
   );

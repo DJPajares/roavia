@@ -353,6 +353,9 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
         <Link className="roavia-button roavia-button--accent" href="/plan">
           Plan a trip
         </Link>
+        <Link className="roavia-button roavia-button--quiet" href="/offline">
+          Offline downloads
+        </Link>
         <Button disabled={state === "loading"} onClick={() => void loadTrips()} tone="quiet">
           Refresh list
         </Button>

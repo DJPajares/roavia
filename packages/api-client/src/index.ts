@@ -150,7 +150,10 @@ export interface RoaviaApiClient {
     tripId: string,
     input: ItineraryGenerationCancelInput,
   ): Promise<ItineraryGenerationCancelledResponse>;
-  createOfflinePackage(tripId: string): Promise<OfflinePackageMutationResponse>;
+  createOfflinePackage(
+    tripId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<OfflinePackageMutationResponse>;
   getOfflinePackage(tripId: string): Promise<OfflinePackageResponse>;
   extractTripIntent(input: TripIntentExtractionInput): Promise<TripIntentExtractionResponse>;
   createTripDestination(
@@ -191,6 +194,7 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       authenticated?: boolean;
       body?: unknown;
       method?: "DELETE" | "GET" | "PATCH" | "POST";
+      signal?: AbortSignal;
     } = {},
   ): Promise<T> {
     const requestId = createRequestId();
@@ -203,6 +207,7 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         "x-request-id": requestId,
       },
       method: requestOptions.method ?? "GET",
+      signal: requestOptions.signal,
       ...(requestOptions.body === undefined ? {} : { body: JSON.stringify(requestOptions.body) }),
     });
     const body: unknown = await response.json();
@@ -327,11 +332,11 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         { authenticated: true, body: input, method: "POST" },
       );
     },
-    async createOfflinePackage(tripId) {
+    async createOfflinePackage(tripId, callOptions) {
       return request(
         `/trips/${encodeURIComponent(tripId)}/offline-package`,
         offlinePackageMutationResponseSchema,
-        { authenticated: true, method: "POST" },
+        { authenticated: true, method: "POST", signal: callOptions?.signal },
       );
     },
     async getOfflinePackage(tripId) {

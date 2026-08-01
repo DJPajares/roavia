@@ -14,5 +14,11 @@ export default async function ItineraryPage({
     redirect(`/auth/sign-in?next=${encodeURIComponent(`/trips/${tripId}`)}&reason=missing`);
   }
 
-  return <ItineraryWorkspace email={session.identity.email} tripId={tripId} />;
+  return (
+    <ItineraryWorkspace
+      email={session.identity.email}
+      ownerId={session.identity.userId}
+      tripId={tripId}
+    />
+  );
 }

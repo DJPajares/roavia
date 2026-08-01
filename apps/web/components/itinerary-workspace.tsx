@@ -11,12 +11,15 @@ import {
   type TripDetail,
   type TripItem,
 } from "@roavia/contracts";
+import { getOfflinePackage, type StoredOfflinePackage } from "@roavia/offline/browser";
 import { Button, ExperienceState, TrustNotice } from "@roavia/ui";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "../lib/supabase/client";
 import { ItineraryItemEditor, type ItemDraft, type ItemEditorMode } from "./itinerary-item-editor";
+import { OfflineItinerary } from "./offline-itinerary";
+import { OfflinePackageControls } from "./offline-package-controls";
 import { TripShareControls } from "./trip-share-controls";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8787";
@@ -645,9 +648,11 @@ function MapContext({
 
 export function ItineraryWorkspace({
   email,
+  ownerId,
   tripId,
-}: Readonly<{ email: string | undefined; tripId: string }>) {
+}: Readonly<{ email: string | undefined; ownerId: string; tripId: string }>) {
   const [trip, setTrip] = useState<TripDetail | null>(null);
+  const [offlinePackage, setOfflinePackage] = useState<StoredOfflinePackage | null>(null);
   const [state, setState] = useState<LoadState>("loading");
   const [message, setMessage] = useState("");
   const [offline, setOffline] = useState(false);
@@ -678,6 +683,7 @@ export function ItineraryWorkspace({
       const days = sortedDays(response.data);
       tripRef.current = response.data;
       setTrip(response.data);
+      setOfflinePackage(null);
       setSelectedDayId((current) =>
         days.some(({ id }) => id === current) ? current : (days[0]?.id ?? ""),
       );
@@ -688,6 +694,16 @@ export function ItineraryWorkspace({
         setMessage(detail);
         setState("ready");
       } else {
+        const canUseOfflinePackage = !(error instanceof ApiClientError) || error.status >= 500;
+        const savedPackage = canUseOfflinePackage
+          ? await getOfflinePackage(ownerId, tripId).catch(() => null)
+          : null;
+        if (savedPackage) {
+          setOfflinePackage(savedPackage);
+          setOffline(true);
+          setState("ready");
+          return;
+        }
         setMessage(detail);
         setState(
           error instanceof ApiClientError && (error.status === 401 || error.status === 403)
@@ -696,7 +712,7 @@ export function ItineraryWorkspace({
         );
       }
     }
-  }, [api, tripId]);
+  }, [api, ownerId, tripId]);
 
   useEffect(() => {
     tripRef.current = trip;
@@ -726,6 +742,10 @@ export function ItineraryWorkspace({
         title="Loading itinerary"
       />
     );
+  }
+
+  if (offlinePackage && !trip) {
+    return <OfflineItinerary initialPackage={offlinePackage} ownerId={ownerId} />;
   }
 
   if ((state === "error" || state === "permission") && !trip) {
@@ -771,6 +791,7 @@ export function ItineraryWorkspace({
           title="This itinerary has no days yet"
         />
         <TripShareControls tripId={trip.id} />
+        <OfflinePackageControls ownerId={ownerId} tripId={trip.id} tripRevision={trip.revision} />
       </section>
     );
   }
@@ -998,6 +1019,8 @@ export function ItineraryWorkspace({
       </header>
 
       <TripShareControls tripId={trip.id} />
+
+      <OfflinePackageControls ownerId={ownerId} tripId={trip.id} tripRevision={trip.revision} />
 
       {offline ? (
         <output className="itinerary-workspace__notice is-offline">
