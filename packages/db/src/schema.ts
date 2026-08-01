@@ -317,6 +317,66 @@ export const sources = pgTable(
   ],
 );
 
+export const seasonalInsights = pgTable(
+  "seasonal_insights",
+  {
+    id: uuidPrimaryKey(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => places.id, { onDelete: "cascade" }),
+    periodKey: text("period_key").notNull(),
+    periodKind: text("period_kind", { enum: ["month", "date_range"] }).notNull(),
+    periodStart: date("period_start", { mode: "string" }).notNull(),
+    periodEnd: date("period_end", { mode: "string" }).notNull(),
+    computedInsight: jsonb("computed_insight_json").$type<JsonObject>().notNull(),
+    computedHash: text("computed_hash").notNull(),
+    sourceIds: jsonb("source_ids_json")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    refreshedAt: timestamp("refreshed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    reviewedOverride: jsonb("reviewed_override_json").$type<JsonObject>(),
+    reviewedAt: timestamp("reviewed_at", { mode: "date", precision: 3, withTimezone: true }),
+    reviewedBy: text("reviewed_by"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    unique("seasonal_insights_place_period_unique").on(table.placeId, table.periodKey),
+    index("seasonal_insights_place_period_idx").on(
+      table.placeId,
+      table.periodStart,
+      table.periodEnd,
+    ),
+    index("seasonal_insights_refreshed_at_idx").on(table.refreshedAt),
+    check("seasonal_insights_period_kind_chk", sql`${table.periodKind} in ('month', 'date_range')`),
+    check("seasonal_insights_period_order_chk", sql`${table.periodEnd} >= ${table.periodStart}`),
+    check(
+      "seasonal_insights_period_key_chk",
+      sql`${table.periodKey} ~ '^(month:[0-9]{4}-(0[1-9]|1[0-2])|range:[0-9]{4}-[0-9]{2}-[0-9]{2}:[0-9]{4}-[0-9]{2}-[0-9]{2})$'`,
+    ),
+    check(
+      "seasonal_insights_computed_object_chk",
+      sql`jsonb_typeof(${table.computedInsight}) = 'object'`,
+    ),
+    check("seasonal_insights_sources_array_chk", sql`jsonb_typeof(${table.sourceIds}) = 'array'`),
+    check("seasonal_insights_hash_chk", sql`${table.computedHash} ~ '^[a-f0-9]{64}$'`),
+    check(
+      "seasonal_insights_override_object_chk",
+      sql`${table.reviewedOverride} is null or jsonb_typeof(${table.reviewedOverride}) = 'object'`,
+    ),
+    check(
+      "seasonal_insights_review_pair_chk",
+      sql`(${table.reviewedAt} is null and ${table.reviewedBy} is null and ${table.reviewedOverride} is null)
+        or (${table.reviewedAt} is not null and ${table.reviewedBy} is not null and ${table.reviewedOverride} is not null)`,
+    ),
+  ],
+);
+
 export const freshnessPolicies = pgTable(
   "freshness_policies",
   {
@@ -1475,6 +1535,7 @@ export const coreTables = {
   offlinePackages,
   placeProviderIds,
   places,
+  seasonalInsights,
   shareLinks,
   sources,
   travelProfiles,
