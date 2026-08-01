@@ -296,10 +296,11 @@ describe("holiday, advisory, and official-source adapters", () => {
       }),
     });
     const operation = createHolidayOperation();
-    const result = await new TravelDataCoordinator(operation, { primary: adapter }).execute(
-      holidayInput,
-      { region: "JP" },
-    );
+    const result = await new TravelDataCoordinator(
+      operation,
+      { primary: adapter },
+      { clock: () => fixtureNow },
+    ).execute(holidayInput, { region: "JP" });
 
     expect(operation.cachePolicy.mode).toBe("none");
     expect(result.status).toBe("success");
@@ -351,9 +352,11 @@ describe("holiday, advisory, and official-source adapters", () => {
       clock: () => fixtureNow,
       fetch: fixtureFetch(() => jsonResponse(advisoryFixture)),
     });
-    const result = await new TravelDataCoordinator(travelAdvisoryOperation, {
-      primary: adapter,
-    }).execute({ destination: "bangkok", travelerCountryCode: "GB" });
+    const result = await new TravelDataCoordinator(
+      travelAdvisoryOperation,
+      { primary: adapter },
+      { clock: () => fixtureNow },
+    ).execute({ destination: "bangkok", travelerCountryCode: "GB" });
 
     expect(result.status).toBe("success");
     expect(result.status === "success" && result.value).toMatchObject({
@@ -421,9 +424,11 @@ describe("ECB launch currency adapter", () => {
         return textResponse(ecbFixture);
       }),
     });
-    const result = await new TravelDataCoordinator(currencyRateOperation, {
-      primary: adapter,
-    }).execute({ baseCurrency: "USD", quoteCurrencies: ["JPY", "EUR", "THB"] });
+    const result = await new TravelDataCoordinator(
+      currencyRateOperation,
+      { primary: adapter },
+      { clock: () => fixtureNow },
+    ).execute({ baseCurrency: "USD", quoteCurrencies: ["JPY", "EUR", "THB"] });
 
     expect(result.status).toBe("success");
     expect(result.status === "success" && result.value).toMatchObject({
