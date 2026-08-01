@@ -41,6 +41,35 @@ const itineraryItem = {
 };
 
 describe("Roavia API client", () => {
+  test("forwards cancellation to offline package downloads", async () => {
+    const controller = new AbortController();
+    let receivedSignal: AbortSignal | null | undefined;
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: (_input, init) => {
+        receivedSignal = init?.signal;
+        return new Promise((_resolve, reject) => {
+          if (init?.signal?.aborted) {
+            reject(new DOMException("Aborted", "AbortError"));
+            return;
+          }
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        });
+      },
+    });
+
+    const request = client.createOfflinePackage(trip.id, { signal: controller.signal });
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ name: "AbortError" });
+    expect(receivedSignal).toBe(controller.signal);
+  });
+
   test("calls the API health endpoint through the shared contract", async () => {
     const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
     const client = createRoaviaApiClient({

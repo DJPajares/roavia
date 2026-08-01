@@ -6,6 +6,7 @@
   "description": "Offline manifest, serialization, cache, and sync contracts.",
   "exports": {
     ".": "./src/index.ts",
+    "./browser": "./src/browser.ts",
     "./server": "./src/server.ts"
   },
   "scripts": {
@@ -18,6 +19,7 @@
     "@roavia/contracts": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "24.13.2"
+    "@types/node": "24.13.2",
+    "fake-indexeddb": "6.2.5"
   }
 }

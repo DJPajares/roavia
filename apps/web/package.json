@@ -14,6 +14,7 @@
   "dependencies": {
     "@roavia/api-client": "workspace:*",
     "@roavia/contracts": "workspace:*",
+    "@roavia/offline": "workspace:*",
     "@roavia/ui": "workspace:*",
     "@supabase/ssr": "0.12.3",
     "@supabase/supabase-js": "2.110.9",

@@ -8,11 +8,24 @@ import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const api = vi.hoisted(() => ({
+  createOfflinePackage:
+    vi.fn<(tripId: string, options?: { signal?: AbortSignal }) => Promise<any>>(),
   createTripItem: vi.fn<(tripId: string, input: any) => Promise<any>>(),
   deleteTripItem: vi.fn<(tripId: string, itemId: string, input: any) => Promise<any>>(),
   getTrip: vi.fn<(tripId: string) => Promise<unknown>>(),
   listShareLinks: vi.fn<(tripId: string) => Promise<unknown>>(),
   updateTripItem: vi.fn<(tripId: string, itemId: string, input: any) => Promise<any>>(),
+}));
+
+const offlineStorage = vi.hoisted(() => ({
+  assertStorageCapacity: vi.fn<(estimate: unknown, requiredBytes: number) => void>(),
+  estimateOfflineStorage: vi.fn<() => Promise<unknown>>(),
+  getOfflinePackage: vi.fn<(ownerId: string, tripId: string) => Promise<unknown>>(),
+  removeOfflinePackage: vi.fn<(ownerId: string, tripId: string) => Promise<void>>(),
+  saveOfflinePackage:
+    vi.fn<
+      (ownerId: string, record: unknown, options?: { signal?: AbortSignal }) => Promise<unknown>
+    >(),
 }));
 
 vi.mock("@roavia/api-client", async (importOriginal) => ({
@@ -24,12 +37,18 @@ vi.mock("../lib/supabase/client", () => ({
   createClient: () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }),
 }));
 
+vi.mock("@roavia/offline/browser", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@roavia/offline/browser")>()),
+  ...offlineStorage,
+}));
+
 import { ApiClientError } from "@roavia/api-client";
 
 import { ItineraryWorkspace } from "../components/itinerary-workspace";
 
 const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
 const tripId = "11111111-1111-4111-8111-111111111111";
+const ownerId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const dayOneId = "22222222-2222-4222-8222-222222222222";
 const dayTwoId = "33333333-3333-4333-8333-333333333333";
 
@@ -181,10 +200,51 @@ const trip: TripDetail = {
   visibility: "private" as const,
 };
 
+const storedOfflinePackage = {
+  downloadedAt: "2026-07-29T12:01:00.000Z",
+  key: `${ownerId}:${tripId}`,
+  ownerId,
+  record: {
+    expiresAt: null,
+    generatedAt: "2026-07-29T12:00:00.000Z",
+    id: "99999999-9999-4999-8999-999999999999",
+    manifest: {
+      contentHash: "a".repeat(64),
+      generatedAt: "2026-07-29T12:00:00.000Z",
+      guidance: [],
+      licensing: { excludedContent: [] },
+      liveData: {
+        assistantResponses: "unavailable_offline" as const,
+        bookingAvailability: "unavailable_offline" as const,
+        closures: "unavailable_offline" as const,
+        prices: "unavailable_offline" as const,
+        weather: "unavailable_offline" as const,
+      },
+      packageVersion: 1,
+      schemaVersion: 1 as const,
+      sizeBytes: 1_024,
+      trip: {
+        days: [],
+        destinations: [],
+        endDate: trip.endDate,
+        id: tripId,
+        revision: trip.revision,
+        startDate: trip.startDate,
+        title: "Kyoto saved for restart",
+      },
+    },
+    sizeBytes: 1_024,
+    tripId,
+    version: 1,
+  },
+  tripId,
+};
+
 describe("ItineraryWorkspace", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
+    api.createOfflinePackage.mockReset();
     api.createTripItem.mockReset();
     api.deleteTripItem.mockReset();
     api.getTrip.mockReset();
@@ -192,6 +252,17 @@ describe("ItineraryWorkspace", () => {
     api.updateTripItem.mockReset();
     api.getTrip.mockResolvedValue({ data: trip, meta: { requestId } });
     api.listShareLinks.mockResolvedValue({ data: { links: [] }, meta: { requestId } });
+    offlineStorage.assertStorageCapacity.mockReset();
+    offlineStorage.estimateOfflineStorage.mockReset();
+    offlineStorage.getOfflinePackage.mockReset();
+    offlineStorage.removeOfflinePackage.mockReset();
+    offlineStorage.saveOfflinePackage.mockReset();
+    offlineStorage.getOfflinePackage.mockResolvedValue(null);
+    offlineStorage.estimateOfflineStorage.mockResolvedValue({
+      availableBytes: 1_000_000,
+      quotaBytes: 2_000_000,
+      usageBytes: 1_000_000,
+    });
     api.createTripItem.mockImplementation(async (_requestedTripId, input) => ({
       data: {
         item: {
@@ -219,7 +290,7 @@ describe("ItineraryWorkspace", () => {
 
   test("coordinates ordered itinerary details with equivalent map and text controls", async () => {
     const user = userEvent.setup();
-    render(createElement(ItineraryWorkspace, { email: "traveler@roavia.test", tripId }));
+    render(createElement(ItineraryWorkspace, { email: "traveler@roavia.test", ownerId, tripId }));
 
     expect(await screen.findByRole("heading", { name: "Kyoto slow days" })).toBeDefined();
     const itemHeadings = screen.getAllByRole("heading", { level: 3 });
@@ -249,7 +320,7 @@ describe("ItineraryWorkspace", () => {
     };
     api.getTrip.mockResolvedValue({ data: unavailableTrip, meta: { requestId } });
     const user = userEvent.setup();
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
 
     await screen.findByRole("heading", { name: "Kyoto slow days" });
     await user.click(screen.getByRole("tab", { name: /Day 2/ }));
@@ -262,6 +333,19 @@ describe("ItineraryWorkspace", () => {
     expect(screen.getByRole("heading", { name: "Nishiki Market" })).toBeDefined();
   });
 
+  test("restores the downloaded package after an offline restart", async () => {
+    api.getTrip.mockRejectedValue(new TypeError("Failed to fetch"));
+    offlineStorage.getOfflinePackage.mockResolvedValue(storedOfflinePackage);
+    Object.defineProperty(window.navigator, "onLine", { configurable: true, value: false });
+
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
+
+    expect(await screen.findByRole("heading", { name: "Kyoto saved for restart" })).toBeDefined();
+    expect(screen.getByText(/viewing the downloaded package/i)).toBeDefined();
+    expect(api.getTrip).toHaveBeenCalledWith(tripId);
+    expect(offlineStorage.getOfflinePackage).toHaveBeenCalledWith(ownerId, tripId);
+  });
+
   test("shows permission recovery without exposing itinerary details", async () => {
     api.getTrip.mockRejectedValue(
       new ApiClientError({
@@ -271,7 +355,7 @@ describe("ItineraryWorkspace", () => {
         status: 401,
       }),
     );
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
 
     expect(await screen.findByRole("heading", { name: "Itinerary access needed" })).toBeDefined();
     expect(screen.getByRole("link", { name: "Sign in again" })).toBeDefined();
@@ -280,7 +364,7 @@ describe("ItineraryWorkspace", () => {
 
   test("has no detectable accessibility violations", async () => {
     const { container } = render(
-      createElement(ItineraryWorkspace, { email: "traveler@roavia.test", tripId }),
+      createElement(ItineraryWorkspace, { email: "traveler@roavia.test", ownerId, tripId }),
     );
     await screen.findByRole("heading", { name: "Kyoto slow days" });
 
@@ -292,7 +376,7 @@ describe("ItineraryWorkspace", () => {
 
   test("preserves the loaded itinerary after a refresh failure", async () => {
     const user = userEvent.setup();
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     await screen.findByRole("heading", { name: "Kyoto slow days" });
     api.getTrip.mockRejectedValueOnce(new Error("The route service timed out."));
 
@@ -306,7 +390,7 @@ describe("ItineraryWorkspace", () => {
 
   test("adds and validates complete itinerary item metadata", async () => {
     const user = userEvent.setup();
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     await screen.findByRole("heading", { name: "Kyoto slow days" });
 
     await user.click(screen.getByRole("button", { name: "+ Add item" }));
@@ -350,7 +434,7 @@ describe("ItineraryWorkspace", () => {
 
   test("edits, replaces, and duplicates items without discarding saved metadata", async () => {
     const user = userEvent.setup();
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     const heading = await screen.findByRole("heading", { name: "Morning walk" });
     const card = heading.closest("article")!;
 
@@ -401,7 +485,7 @@ describe("ItineraryWorkspace", () => {
 
   test("reorders and removes items with button alternatives and optimistic reconciliation", async () => {
     const user = userEvent.setup();
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     const morning = await screen.findByRole("heading", { name: "Morning walk" });
     const morningCard = morning.closest("article")!;
 
@@ -429,7 +513,7 @@ describe("ItineraryWorkspace", () => {
   });
 
   test("reorders items with pointer drag and drop", async () => {
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     const source = await screen.findByRole("button", {
       name: "Drag Morning walk to reorder; current position 1",
     });
@@ -451,7 +535,7 @@ describe("ItineraryWorkspace", () => {
   test("restores failed optimistic edits, retains the draft, and reloads concurrent changes", async () => {
     const user = userEvent.setup();
     api.updateTripItem.mockRejectedValueOnce(new Error("Network unavailable."));
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     const card = (await screen.findByRole("heading", { name: "Morning walk" })).closest("article")!;
     await user.click(within(card).getByRole("button", { name: "Edit" }));
     const dialog = screen.getByRole("dialog", { name: "Edit itinerary item" });
@@ -478,7 +562,7 @@ describe("ItineraryWorkspace", () => {
 
   test("explains validation errors before sending a mutation", async () => {
     const user = userEvent.setup();
-    render(createElement(ItineraryWorkspace, { email: undefined, tripId }));
+    render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     await screen.findByRole("heading", { name: "Kyoto slow days" });
     await user.click(screen.getByRole("button", { name: "+ Add item" }));
     const dialog = screen.getByRole("dialog", { name: "Add itinerary item" });
