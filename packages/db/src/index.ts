@@ -40,6 +40,12 @@ export {
   type DestinationIngestionSummary,
 } from "./destination-ingestion.js";
 export {
+  getSeasonalInsight,
+  upsertSeasonalInsight,
+  type PersistedSeasonalInsight,
+  type SeasonalInsightRefreshResult,
+} from "./seasonal-insight-repository.js";
+export {
   TripConcurrencyError,
   TripDomainInputError,
   createTripRepository,

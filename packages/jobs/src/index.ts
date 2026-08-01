@@ -5,3 +5,4 @@ export * from "./itinerary-generation.js";
 export * from "./memory.js";
 export * from "./port.js";
 export * from "./reference.js";
+export * from "./seasonal-insights.js";

@@ -65,6 +65,7 @@ describeDatabase("database migration baseline", () => {
       "offline_packages",
       "place_provider_ids",
       "places",
+      "seasonal_insights",
       "share_links",
       "sources",
       "travel_profiles",
@@ -80,7 +81,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(24);
+    expect(idDefaults.rows).toHaveLength(25);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -135,6 +136,8 @@ describeDatabase("database migration baseline", () => {
       "place_provider_ids_place_provider_idx",
       "places_parent_type_name_idx",
       "places_parent_place_id_idx",
+      "seasonal_insights_place_period_idx",
+      "seasonal_insights_refreshed_at_idx",
       "share_links_active_trip_idx",
       "share_links_trip_id_idx",
       "travel_profiles_user_id_uidx",
@@ -159,6 +162,7 @@ describeDatabase("database migration baseline", () => {
       "itinerary_generation_runs",
       "itinerary_items",
       "offline_packages",
+      "seasonal_insights",
       "share_links",
       "travel_profiles",
       "trip_destinations",
