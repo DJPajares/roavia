@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { createDatabaseClient } from "../src/client.js";
-import { getSeasonalInsight, upsertSeasonalInsight } from "../src/seasonal-insight-repository.js";
+import {
+  getSeasonalInsight,
+  listSeasonalInsights,
+  upsertSeasonalInsight,
+} from "../src/seasonal-insight-repository.js";
 import { places, seasonalInsights } from "../src/schema.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -84,6 +88,7 @@ describeDatabase("seasonal insight repository", () => {
       });
       const refreshed = await upsertSeasonalInsight(client.db, refreshedInsight);
       const stored = await getSeasonalInsight(client.db, placeId, refreshedInsight.periodKey);
+      const listed = await listSeasonalInsights(client.db, placeId);
 
       expect(refreshed).toMatchObject({
         outcome: "updated",
@@ -96,6 +101,8 @@ describeDatabase("seasonal insight repository", () => {
         reviewedOverride: { explanation: "Reviewed local nuance." },
         sourceIds: ["source:tokyo-climate", "source:tokyo-crowds"],
       });
+      expect(listed).toHaveLength(1);
+      expect(listed[0]).toMatchObject({ id: created.recordId, sourceIds: stored?.sourceIds });
     } finally {
       await client.db.delete(seasonalInsights).where(eq(seasonalInsights.placeId, placeId));
       await client.db.delete(places).where(eq(places.id, placeId));

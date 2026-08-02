@@ -3,6 +3,7 @@ import {
   assistantActionMutationResponseSchema,
   assistantQueryResponseSchema,
   authSessionResponseSchema,
+  destinationSeasonalityResponseSchema,
   destinationSearchResponseSchema,
   destinationDetailResponseSchema,
   healthResponseSchema,
@@ -31,6 +32,8 @@ import {
   type DestinationSearchQuery,
   type DestinationSearchResponse,
   type DestinationDetailResponse,
+  type DestinationSeasonalityQuery,
+  type DestinationSeasonalityResponse,
   type HealthResponse,
   type ItineraryGenerationQueuedResponse,
   type ItineraryGenerationCancelInput,
@@ -68,6 +71,8 @@ export type {
   DestinationSearchQuery,
   DestinationSearchResponse,
   DestinationDetailResponse,
+  DestinationSeasonalityQuery,
+  DestinationSeasonalityResponse,
   HealthResponse,
   ItineraryGenerationQueuedResponse,
   ItineraryGenerationCancelInput,
@@ -132,6 +137,10 @@ export interface RoaviaApiClient {
   session(): Promise<AuthSessionResponse>;
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
   getDestination(placeId: string): Promise<DestinationDetailResponse>;
+  getDestinationSeasonality(
+    placeId: string,
+    priorities?: DestinationSeasonalityQuery,
+  ): Promise<DestinationSeasonalityResponse>;
   listTrips(query: TripListQuery): Promise<TripListResponse>;
   createTrip(input: TripCreateInput): Promise<TripResponse>;
   updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
@@ -264,6 +273,17 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       return request(
         `/destinations/${encodeURIComponent(placeId)}`,
         destinationDetailResponseSchema,
+      );
+    },
+    async getDestinationSeasonality(placeId, priorities = {}) {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(priorities)) {
+        if (value !== undefined) params.set(key, String(value));
+      }
+      const query = params.size > 0 ? `?${params.toString()}` : "";
+      return request(
+        `/destinations/${encodeURIComponent(placeId)}/seasonality${query}`,
+        destinationSeasonalityResponseSchema,
       );
     },
     async listTrips(query: TripListQuery): Promise<TripListResponse> {

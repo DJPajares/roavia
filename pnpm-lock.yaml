@@ -47,6 +47,9 @@ importers:
       '@roavia/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@roavia/travel-data':
+        specifier: workspace:*
+        version: link:../../packages/travel-data
       hono:
         specifier: 4.12.32
         version: 4.12.32

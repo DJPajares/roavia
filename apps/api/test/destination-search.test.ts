@@ -1,4 +1,7 @@
-import { destinationSearchResponseSchema } from "@roavia/contracts";
+import {
+  destinationSeasonalityResponseSchema,
+  destinationSearchResponseSchema,
+} from "@roavia/contracts";
 import { describe, expect, test } from "vitest";
 
 import { createApp } from "../src/app.js";
@@ -58,6 +61,34 @@ describe("destination search API", () => {
         content: [{ sources: [{ kind: "official_authority" }] }],
       },
     });
+  });
+
+  test("returns seasonal records with validated traveler priorities", async () => {
+    const app = createApp({
+      getDestinationSeasonality: async (placeId, priorities) => {
+        expect(placeId).toBe(cityId);
+        expect(priorities).toEqual({ budget: 2, crowds: 4, weather: 5 });
+        return { insights: [] };
+      },
+    });
+    const response = await app.request(
+      `/destinations/${cityId}/seasonality?weather=5&budget=2&crowds=4`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(destinationSeasonalityResponseSchema.parse(await response.json())).toMatchObject({
+      data: { insights: [] },
+    });
+  });
+
+  test("rejects unsafe seasonal priority values", async () => {
+    const app = createApp({
+      getDestinationSeasonality: async () => ({ insights: [] }),
+    });
+    const response = await app.request(`/destinations/${cityId}/seasonality?weather=6`);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "bad_request" } });
   });
 
   test("validates, forwards filters, and returns the typed paginated response", async () => {

@@ -41,6 +41,35 @@ const itineraryItem = {
 };
 
 describe("Roavia API client", () => {
+  test("requests seasonality with only the selected priorities", async () => {
+    const requests: string[] = [];
+    const client = createRoaviaApiClient({
+      baseUrl: "https://api.roavia.test",
+      fetch: (input) => {
+        requests.push(String(input));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: { insights: [] },
+              meta: { requestId: "b3bb5b6d-5e99-410a-9e99-d297dd387263" },
+            }),
+            { headers: { "content-type": "application/json" } },
+          ),
+        );
+      },
+    });
+
+    await expect(
+      client.getDestinationSeasonality(trip.id, { budget: 4, weather: 2 }),
+    ).resolves.toEqual({
+      data: { insights: [] },
+      meta: { requestId: "b3bb5b6d-5e99-410a-9e99-d297dd387263" },
+    });
+    expect(requests).toEqual([
+      `https://api.roavia.test/destinations/${trip.id}/seasonality?budget=4&weather=2`,
+    ]);
+  });
+
   test("forwards cancellation to offline package downloads", async () => {
     const controller = new AbortController();
     let receivedSignal: AbortSignal | null | undefined;

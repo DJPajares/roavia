@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 
 import type { Database } from "./client.js";
 import { seasonalInsights } from "./schema.js";
@@ -141,4 +141,21 @@ export async function getSeasonalInsight(db: Database, placeId: string, periodKe
     .from(seasonalInsights)
     .where(and(eq(seasonalInsights.placeId, placeId), eq(seasonalInsights.periodKey, periodKey)));
   return rows[0] ?? null;
+}
+
+/** Returns all stored periods in calendar order without applying or replacing editorial overrides. */
+export async function listSeasonalInsights(db: Database, placeId: string) {
+  return db
+    .select({
+      computedInsight: seasonalInsights.computedInsight,
+      id: seasonalInsights.id,
+      refreshedAt: seasonalInsights.refreshedAt,
+      reviewedAt: seasonalInsights.reviewedAt,
+      reviewedBy: seasonalInsights.reviewedBy,
+      reviewedOverride: seasonalInsights.reviewedOverride,
+      sourceIds: seasonalInsights.sourceIds,
+    })
+    .from(seasonalInsights)
+    .where(eq(seasonalInsights.placeId, placeId))
+    .orderBy(asc(seasonalInsights.periodStart), asc(seasonalInsights.periodEnd));
 }

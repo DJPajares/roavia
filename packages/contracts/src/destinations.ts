@@ -2,6 +2,91 @@ import { z } from "zod";
 
 const destinationApiMetaSchema = z.object({ requestId: z.string().uuid() });
 
+export const seasonalPrioritySchema = z.object({
+  budget: z.coerce.number().min(0).max(5).optional(),
+  closures: z.coerce.number().min(0).max(5).optional(),
+  crowds: z.coerce.number().min(0).max(5).optional(),
+  festivals: z.coerce.number().min(0).max(5).optional(),
+  weather: z.coerce.number().min(0).max(5).optional(),
+});
+
+export const destinationSeasonalityQuerySchema = seasonalPrioritySchema;
+
+const seasonalSignalSchema = z.enum([
+  "weather",
+  "rainfall",
+  "temperature",
+  "crowds",
+  "prices",
+  "festivals",
+  "holidays",
+  "closures",
+]);
+
+const seasonalSignalEvidenceSchema = z.object({
+  confidence: z.number().min(0).max(1),
+  favorability: z.number().min(0).max(1).nullable(),
+  precision: z.enum(["estimated", "measured", "qualitative"]),
+  refreshedAt: z.string().datetime({ offset: true }),
+  signal: seasonalSignalSchema,
+  sourceId: z.string().min(1),
+  staleAt: z.string().datetime({ offset: true }).optional(),
+  summary: z.string().min(1),
+});
+
+const seasonalSignalInsightSchema = z.object({
+  confidence: z.number().min(0).max(1).nullable(),
+  evidence: z.array(seasonalSignalEvidenceSchema),
+  favorability: z.number().min(0).max(1).nullable(),
+  refreshedAt: z.string().datetime({ offset: true }).nullable(),
+  sourceIds: z.array(z.string().min(1)),
+  state: z.enum(["available", "conflicting", "missing", "stale"]),
+});
+
+export const destinationSeasonalInsightSchema = z.object({
+  confidence: z.number().min(0).max(1),
+  explanation: z.object({
+    caveats: z.array(z.string().min(1)),
+    summary: z.string().min(1),
+    tradeoffs: z.array(z.string().min(1)),
+  }),
+  period: z.discriminatedUnion("kind", [
+    z.object({
+      endDate: z.string().date(),
+      kind: z.literal("date_range"),
+      startDate: z.string().date(),
+    }),
+    z.object({
+      kind: z.literal("month"),
+      month: z.number().int().min(1).max(12),
+      year: z.number().int(),
+    }),
+  ]),
+  periodKey: z.string().min(1),
+  placeId: z.string().uuid(),
+  priorities: z.object({
+    budget: z.number().min(0).max(5),
+    closures: z.number().min(0).max(5),
+    crowds: z.number().min(0).max(5),
+    festivals: z.number().min(0).max(5),
+    weather: z.number().min(0).max(5),
+  }),
+  rating: z.enum(["challenging", "favorable", "insufficient_evidence", "mixed", "very_favorable"]),
+  refreshedAt: z.string().datetime({ offset: true }),
+  score: z.number().min(0).max(1).nullable(),
+  signals: z.record(seasonalSignalSchema, seasonalSignalInsightSchema),
+  sourceIds: z.array(z.string().min(1)),
+});
+
+export const destinationSeasonalityDataSchema = z.object({
+  insights: z.array(destinationSeasonalInsightSchema),
+});
+
+export const destinationSeasonalityResponseSchema = z.object({
+  data: destinationSeasonalityDataSchema,
+  meta: destinationApiMetaSchema,
+});
+
 export const destinationPlaceTypeSchema = z.enum([
   "country",
   "region",
@@ -110,3 +195,6 @@ export type DestinationPlaceType = z.infer<typeof destinationPlaceTypeSchema>;
 export type DestinationSearchQuery = z.infer<typeof destinationSearchQuerySchema>;
 export type DestinationSearchResponse = z.infer<typeof destinationSearchResponseSchema>;
 export type DestinationDetailResponse = z.infer<typeof destinationDetailResponseSchema>;
+export type DestinationSeasonalInsight = z.infer<typeof destinationSeasonalInsightSchema>;
+export type DestinationSeasonalityQuery = z.infer<typeof destinationSeasonalityQuerySchema>;
+export type DestinationSeasonalityResponse = z.infer<typeof destinationSeasonalityResponseSchema>;
