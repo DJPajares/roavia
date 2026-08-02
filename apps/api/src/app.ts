@@ -31,6 +31,8 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
+import { registerAccountRoutes } from "./accounts.js";
+import type { AccountLifecycleService } from "./account-lifecycle.js";
 import { registerAssistantRoutes, type AssistantApiService } from "./assistant.js";
 import {
   registerDisruptionRecommendationRoutes,
@@ -61,6 +63,8 @@ export interface CreateAppOptions {
   getDestinationDetail?: (placeId: string) => Promise<DestinationDetailResponse["data"] | null>;
   searchRateLimiter?: RateLimiter;
   assistantRateLimiter?: RateLimiter;
+  accountExportRateLimiter?: RateLimiter;
+  accountLifecycleService?: AccountLifecycleService;
   profileRepository?: ProfileRepository;
   offlinePackageRepository?: OfflinePackageRepository;
   shareRepository?: ShareRepository;
@@ -91,14 +95,23 @@ export function createApp(options: CreateAppOptions = {}) {
   const searchRateLimiter = options.searchRateLimiter ?? createFixedWindowRateLimiter();
   const assistantRateLimiter =
     options.assistantRateLimiter ?? createFixedWindowRateLimiter({ limit: 20 });
+  const accountExportRateLimiter =
+    options.accountExportRateLimiter ??
+    createFixedWindowRateLimiter({ limit: 3, windowMs: 24 * 60 * 60 * 1_000 });
   const app = new Hono<ApiEnvironment>();
 
   app.use(
     "*",
     cors({
-      allowHeaders: ["Authorization", "Content-Type", "Traceparent", "X-Request-Id"],
+      allowHeaders: [
+        "Authorization",
+        "Content-Type",
+        "Traceparent",
+        "X-Request-Id",
+        "X-Roavia-Export-Grant",
+      ],
       allowMethods: ["DELETE", "GET", "OPTIONS", "PATCH", "POST"],
-      exposeHeaders: ["Traceparent", "X-Request-Id"],
+      exposeHeaders: ["Content-Disposition", "Traceparent", "X-Request-Id"],
       origin: (origin) => (corsOrigins.includes(origin) ? origin : ""),
     }),
   );
@@ -259,7 +272,19 @@ export function createApp(options: CreateAppOptions = {}) {
     }
 
     try {
-      context.set("authSession", await verifyAccessToken(accessToken));
+      const session = await verifyAccessToken(accessToken);
+      context.set("accessToken", accessToken);
+      context.set("authSession", session);
+      const deletion = await options.accountLifecycleService?.findDeletion(session.identity.userId);
+      const deletionRoute = context.req.path === "/me/deletion";
+      if (deletion && !deletionRoute) {
+        return errorResponse(
+          context,
+          401,
+          "account_deleted",
+          "This account has been deleted and cannot access Roavia data.",
+        );
+      }
     } catch (error) {
       if (error instanceof AuthVerificationError) {
         return errorResponse(context, 401, error.code, error.message);
@@ -298,6 +323,7 @@ export function createApp(options: CreateAppOptions = {}) {
   registerDisruptionRecommendationRoutes(app, options.disruptionRecommendationService);
   registerShareRoutes(app, options.shareRepository);
   registerProfileRoutes(app, options.profileRepository);
+  registerAccountRoutes(app, options.accountLifecycleService, accountExportRateLimiter);
 
   app.notFound((context) => errorResponse(context, 404, "not_found", "Route not found."));
 

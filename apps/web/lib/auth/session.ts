@@ -22,6 +22,8 @@ export async function getAuthSession(): Promise<AuthSession | null> {
       email: typeof claims.email === "string" ? claims.email : undefined,
     },
     expiresAt: new Date(claims.exp * 1000).toISOString(),
+    issuedAt:
+      typeof claims.iat === "number" ? new Date(claims.iat * 1000).toISOString() : undefined,
   });
 
   return result.success ? result.data : null;

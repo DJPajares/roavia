@@ -18,6 +18,7 @@ import {
 } from "@roavia/ai/server";
 import {
   createAiTelemetryRepository,
+  createAccountLifecycleRepository,
   createDatabaseClient,
   createAssistantActionRepository,
   createDisruptionRecommendationRepository,
@@ -37,6 +38,8 @@ import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
 import { RuntimeObservability, readObservabilityConfig } from "@roavia/observability";
 
 import { createApp } from "./app.js";
+import { createSupabaseAccountIdentityAdmin } from "./account-identity.js";
+import { createAccountLifecycleService } from "./account-lifecycle.js";
 import { createAssistantActionMutationService, createAssistantApiService } from "./assistant.js";
 import { createAccessTokenVerifierFromEnvironment } from "./auth.js";
 import { createDisruptionRecommendationApiService } from "./disruptions.js";
@@ -187,7 +190,7 @@ const generationStore = database
   ? new PostgresItineraryGenerationStore(database.db, aiTelemetry)
   : undefined;
 const jobRuntime =
-  process.env.DATABASE_URL && aiGateway && generationStore && database
+  process.env.DATABASE_URL && database
     ? new PgBossJobRuntime({
         applicationName: "roavia-api",
         connectionString: process.env.DATABASE_URL,
@@ -202,12 +205,29 @@ if (jobRuntime && aiGateway && generationStore && database) {
     store: generationStore,
   });
   jobRuntime.register(createItineraryGenerationJob(generationService));
-  await jobRuntime.start({ workers: false });
 }
+await jobRuntime?.start({ workers: false });
+const accountLifecycleService =
+  database &&
+  jobRuntime &&
+  process.env.ACCOUNT_LIFECYCLE_SECRET &&
+  process.env.SUPABASE_URL &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createAccountLifecycleService({
+        identityAdmin: createSupabaseAccountIdentityAdmin({
+          serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          url: process.env.SUPABASE_URL,
+        }),
+        jobs: jobRuntime,
+        repository: createAccountLifecycleRepository(database.db),
+        secret: process.env.ACCOUNT_LIFECYCLE_SECRET,
+      })
+    : undefined;
 const corsOrigins = process.env.CORS_ORIGINS?.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 const app = createApp({
+  accountLifecycleService,
   corsOrigins: corsOrigins && corsOrigins.length > 0 ? corsOrigins : undefined,
   verifyAccessToken: createAccessTokenVerifierFromEnvironment(process.env),
   searchDestinations: destinationResolver,

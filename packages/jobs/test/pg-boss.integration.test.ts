@@ -76,4 +76,29 @@ describeDatabase("pg-boss job runtime", () => {
     expect(cancelled.status).toBe("cancelled");
     expect(await runtime.listJobs({ statuses: ["queued"] })).not.toContainEqual(cancelled);
   });
+
+  test("cancels and scrubs deferred work for a deleted account idempotently", async () => {
+    const requesterId = `deleted-user-${crypto.randomUUID()}`;
+    const receiptId = crypto.randomUUID();
+    const queued = await runtime.enqueue({
+      correlationId,
+      idempotencyKey: `reference:deleted:${crypto.randomUUID()}`,
+      notBefore: new Date(Date.now() + 60_000),
+      payload: { effectKey: "sensitive-effect", revision: 1 },
+      requestedBy: { id: requesterId, kind: "user" },
+      subjectId: "sensitive-subject",
+      type: "system.reference-effect.v1",
+    });
+
+    await expect(runtime.cancelByRequester(requesterId, receiptId)).resolves.toBe(1);
+    await expect(runtime.cancelByRequester(requesterId, receiptId)).resolves.toBe(0);
+    await expect(runtime.get(queued.envelope.jobId)).resolves.toMatchObject({
+      envelope: {
+        payload: {},
+        requestedBy: { id: receiptId, kind: "system" },
+        subjectId: receiptId,
+      },
+      status: "cancelled",
+    });
+  });
 });

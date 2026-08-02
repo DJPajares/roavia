@@ -11,6 +11,7 @@ import {
 } from "@roavia/ai/server";
 import {
   createAiTelemetryRepository,
+  createAccountLifecycleRepository,
   createDatabaseClient,
   ingestDestinationCatalog,
   mvpLaunchDestinationCatalog,
@@ -29,7 +30,11 @@ import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
 import { RuntimeObservability, readObservabilityConfig } from "@roavia/observability";
 import { OpenMeteoForecastAdapter, OpenMeteoLiveConditionSource } from "@roavia/travel-data/server";
 
-import { createWorkerJobTelemetry, startJobHealthMonitor } from "./telemetry.js";
+import {
+  createWorkerJobTelemetry,
+  startAccountRetentionMonitor,
+  startJobHealthMonitor,
+} from "./telemetry.js";
 
 try {
   loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
@@ -140,6 +145,10 @@ if (
 }
 await runtime.start();
 const stopJobHealthMonitor = startJobHealthMonitor(runtime, observability);
+const stopAccountRetentionMonitor = startAccountRetentionMonitor(
+  createAccountLifecycleRepository(database.db),
+  observability,
+);
 observability.logger.log({
   event: "worker_ready",
   level: "info",
@@ -148,6 +157,7 @@ observability.logger.log({
 });
 
 async function shutdown(signal: string) {
+  stopAccountRetentionMonitor();
   stopJobHealthMonitor();
   observability.logger.log({
     event: "shutdown_started",

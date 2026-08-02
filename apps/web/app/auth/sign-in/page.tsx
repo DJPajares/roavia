@@ -13,15 +13,17 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   const parameters = await searchParams;
   const nextPath = parameters.next?.startsWith("/") ? parameters.next : "/trips";
   const notice =
-    parameters.status === "signed-out"
-      ? "You are signed out on this device."
-      : parameters.reason === "invalid"
-        ? "Your session ended. Sign in again to continue."
-        : parameters.reason === "configuration"
-          ? "Authentication is not configured in this environment."
-          : parameters.reason === "missing"
-            ? "Sign in to continue to your Roavia workspace."
-            : null;
+    parameters.status === "account-deleted"
+      ? "Your Roavia account is deleted and all active sessions are revoked."
+      : parameters.status === "signed-out"
+        ? "You are signed out on this device."
+        : parameters.reason === "invalid"
+          ? "Your session ended. Sign in again to continue."
+          : parameters.reason === "configuration"
+            ? "Authentication is not configured in this environment."
+            : parameters.reason === "missing"
+              ? "Sign in to continue to your Roavia workspace."
+              : null;
 
   return (
     <section className="auth-layout">

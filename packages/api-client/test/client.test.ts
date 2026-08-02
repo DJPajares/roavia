@@ -41,6 +41,62 @@ const itineraryItem = {
 };
 
 describe("Roavia API client", () => {
+  test("keeps account export grants in headers and confirms deletion explicitly", async () => {
+    const requests: Request[] = [];
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const exportId = "22222222-2222-4222-8222-222222222222";
+    const grantToken = "g".repeat(43);
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request.clone());
+        if (request.url.endsWith("/download")) {
+          return new Response("zip", {
+            headers: {
+              "content-disposition": 'attachment; filename="roavia-export.zip"',
+              "content-type": "application/zip",
+            },
+          });
+        }
+        return Response.json({
+          data: {
+            backupDeletionBy: "2026-09-02T00:00:00.000Z",
+            completedAt: "2026-08-02T00:01:00.000Z",
+            confirmedAt: "2026-08-02T00:00:00.000Z",
+            failureCodes: [],
+            liveDeletionBy: "2026-08-03T00:00:00.000Z",
+            policyVersion: "2026-07-28.v1",
+            receiptId: "33333333-3333-4333-8333-333333333333",
+            status: "completed",
+            steps: {
+              authIdentityDeletion: "succeeded",
+              jobCancellation: "succeeded",
+              liveDataDeletion: "succeeded",
+              sessionRevocation: "succeeded",
+            },
+          },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    await expect(client.downloadAccountExport(exportId, grantToken)).resolves.toMatchObject({
+      filename: "roavia-export.zip",
+    });
+    await expect(client.confirmAccountDeletion({ confirmation: "DELETE" })).resolves.toMatchObject({
+      data: { status: "completed" },
+    });
+
+    expect(requests[0]!.url).toBe(`https://api.roavia.test/me/exports/${exportId}/download`);
+    expect(requests[0]!.url).not.toContain(grantToken);
+    expect(requests[0]!.headers.get("x-roavia-export-grant")).toBe(grantToken);
+    expect(requests[0]!.headers.get("authorization")).toBe("Bearer valid-access-token");
+    expect(await requests[1]!.json()).toEqual({ confirmation: "DELETE" });
+  });
+
   test("forwards cancellation to offline package downloads", async () => {
     const controller = new AbortController();
     let receivedSignal: AbortSignal | null | undefined;

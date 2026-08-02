@@ -101,6 +101,14 @@ export {
   type AiTelemetryRepository,
 } from "./ai-telemetry-repository.js";
 export {
+  AccountExportUnavailableError,
+  createAccountLifecycleRepository,
+  hashAccountSubject,
+  type AccountExportArtifact,
+  type AccountExportGrantRecord,
+  type AccountLifecycleRepository,
+} from "./account-lifecycle-repository.js";
+export {
   createOfflinePackageRepository,
   type OfflinePackageGenerationContext,
   type OfflinePackageRepository,

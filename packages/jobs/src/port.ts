@@ -9,6 +9,7 @@ import type {
 
 export interface JobRuntime {
   cancel(jobId: string): Promise<JobRecord>;
+  cancelByRequester(requesterId: string, replacementSubjectId: string): Promise<number>;
   discard(deadLetterJobId: string, operatorId: string, reason: string): Promise<OperatorAction>;
   enqueue(input: EnqueueJobInput): Promise<JobRecord>;
   get(jobId: string): Promise<JobRecord | undefined>;

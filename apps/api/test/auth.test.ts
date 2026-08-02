@@ -56,6 +56,7 @@ describe("API authentication", () => {
     expect(authSessionResponseSchema.parse(await response.json()).data).toEqual({
       identity: { email, userId },
       expiresAt: new Date(expiresAt * 1000).toISOString(),
+      issuedAt: expect.any(String),
     });
   });
 

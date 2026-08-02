@@ -71,6 +71,8 @@ AUTH_PROVIDER
 SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY
+ACCOUNT_LIFECYCLE_SECRET
 AI_PROVIDER
 AI_API_KEY
 AI_MODEL
@@ -116,7 +118,7 @@ travelers, official registry links remain source-only, and ECB conversions are
 dated planning estimates rather than transaction rates. See
 [the launch practical-data runbook](./docs/integrations/launch-practical-data.md).
 
-For authentication, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is intentionally public project configuration. Never place a Supabase secret key, service-role key, or shared JWT secret in a `NEXT_PUBLIC_*` variable. The Hono API verifies asymmetric access tokens with `SUPABASE_URL` and the provider's public JWKS; it does not need an auth-admin secret.
+For authentication, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is intentionally public project configuration. Never place a Supabase secret key, service-role key, shared lifecycle secret, or shared JWT secret in a `NEXT_PUBLIC_*` variable. The Hono API verifies asymmetric access tokens with `SUPABASE_URL` and the provider's public JWKS. Account deletion additionally requires the server-only `SUPABASE_SERVICE_ROLE_KEY`, while encrypted export artifacts and opaque deletion tombstones require a stable `ACCOUNT_LIFECYCLE_SECRET` of at least 32 non-whitespace characters. Configure Supabase access-token expiry to 15 minutes or less. See the [account lifecycle runbook](./docs/operations/account-lifecycle.md).
 
 ## Local Setup
 
