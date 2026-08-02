@@ -3,7 +3,11 @@ import type { Context } from "hono";
 
 type ApiVariables = {
   authSession: AuthSession;
+  observabilityErrorCode: string | undefined;
+  observabilityRecorded: boolean;
+  observabilityStartedAt: number;
   requestId: string;
+  traceId: string;
 };
 
 export type ApiEnvironment = {
@@ -16,6 +20,7 @@ export function errorResponse(
   code: ApiErrorCode,
   message: string,
 ) {
+  context.set("observabilityErrorCode", code);
   return context.json(
     apiErrorResponseSchema.parse({
       error: {

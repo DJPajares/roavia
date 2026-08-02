@@ -203,6 +203,12 @@ The architecture supports:
 - logs, metrics, and alerting
 - safe database migrations and rollback
 
+The API and worker emit privacy-safe structured operational events through
+`@roavia/observability`. Configure a server-only
+`OBSERVABILITY_METRICS_TOKEN` to expose the API's authenticated OpenMetrics
+endpoint, and use the dashboard, alerts, retention rules, and first-response
+procedures in [the observability runbook](./docs/operations/observability.md).
+
 Production provisioning remains scoped to its dedicated Linear issue.
 
 The worker uses the versioned internal contracts in `@roavia/jobs` and the `pg-boss` adapter only at its composition root. Run `pnpm db:migrate` before `pnpm dev:worker`; local execution needs PostgreSQL but no production queue or provider credentials.

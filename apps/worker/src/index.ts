@@ -14,6 +14,7 @@ import {
   createDatabaseClient,
   ingestDestinationCatalog,
   mvpLaunchDestinationCatalog,
+  type AiTelemetryRepository,
 } from "@roavia/db";
 import {
   MemoryReferenceEffectStore,
@@ -25,9 +26,10 @@ import {
   createReferenceJob,
 } from "@roavia/jobs";
 import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
+import { RuntimeObservability, readObservabilityConfig } from "@roavia/observability";
 import { OpenMeteoForecastAdapter, OpenMeteoLiveConditionSource } from "@roavia/travel-data/server";
 
-import { formatJobTelemetry } from "./telemetry.js";
+import { createWorkerJobTelemetry, startJobHealthMonitor } from "./telemetry.js";
 
 try {
   loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
@@ -38,13 +40,51 @@ try {
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required to start the Roavia worker.");
 
-const releaseSha = process.env.RENDER_GIT_COMMIT ?? "local";
+const observabilityConfig = readObservabilityConfig(process.env);
+const observability = new RuntimeObservability({
+  environment: observabilityConfig.environment,
+  releaseSha: observabilityConfig.releaseSha,
+  service: "roavia-worker",
+});
 const database = createDatabaseClient(connectionString);
-const aiTelemetry = createAiTelemetryRepository(database.db);
+const persistentAiTelemetry = createAiTelemetryRepository(database.db);
+const aiTelemetry = {
+  aggregate: (query) => persistentAiTelemetry.aggregate(query),
+  pruneExpired: (now) => persistentAiTelemetry.pruneExpired(now),
+  async recordAssistantAction(input) {
+    observability.recordAiAction(input);
+    await persistentAiTelemetry.recordAssistantAction(input);
+  },
+  async recordGeneration(input) {
+    observability.recordAiGeneration({
+      costMicros: input.cost?.amountMicros,
+      durationMs: input.durationMs,
+      errorCode: input.errorCode,
+      inputTokens: input.usage?.inputTokens,
+      model: input.model,
+      operation: input.operation,
+      outcome: input.outcome,
+      outputTokens: input.usage?.outputTokens,
+      provider: input.provider,
+      requestId: input.requestId,
+    });
+    await persistentAiTelemetry.recordGeneration(input);
+  },
+  async recordQuality(input) {
+    observability.recordAiQuality({
+      correlationId: input.correlationId,
+      operation: "itinerary",
+      outcome: input.outcome,
+      repairCount: input.repairCount,
+      validationFailureCount: input.issueCodes.length,
+    });
+    await persistentAiTelemetry.recordQuality(input);
+  },
+} satisfies AiTelemetryRepository;
 const runtime = new PgBossJobRuntime({
   connectionString,
-  releaseSha,
-  telemetry: (event) => console.log(formatJobTelemetry(event, releaseSha)),
+  releaseSha: observabilityConfig.releaseSha,
+  telemetry: createWorkerJobTelemetry(observability),
 });
 
 runtime.register(createReferenceJob(new MemoryReferenceEffectStore()));
@@ -70,6 +110,7 @@ if (
         ...stores,
         source: new OpenMeteoLiveConditionSource(
           new OpenMeteoForecastAdapter({ apiKey: process.env.WEATHER_API_KEY }),
+          { telemetry: (event) => observability.recordProvider(event) },
         ),
       }),
     ),
@@ -98,13 +139,30 @@ if (
   );
 }
 await runtime.start();
-console.log(JSON.stringify({ event: "ready", releaseSha, service: "roavia-worker" }));
+const stopJobHealthMonitor = startJobHealthMonitor(runtime, observability);
+observability.logger.log({
+  event: "worker_ready",
+  level: "info",
+  operation: "worker.start",
+  outcome: "ready",
+});
 
 async function shutdown(signal: string) {
-  console.log(JSON.stringify({ event: "shutdown_started", service: "roavia-worker", signal }));
+  stopJobHealthMonitor();
+  observability.logger.log({
+    event: "shutdown_started",
+    level: "info",
+    operation: "worker.shutdown",
+    outcome: signal,
+  });
   await runtime.shutdown();
   await database.close();
-  console.log(JSON.stringify({ event: "shutdown_completed", service: "roavia-worker", signal }));
+  observability.logger.log({
+    event: "shutdown_completed",
+    level: "info",
+    operation: "worker.shutdown",
+    outcome: signal,
+  });
 }
 
 process.once("SIGINT", () => void shutdown("SIGINT"));

@@ -1,0 +1,19 @@
+{
+  "name": "@roavia/observability",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Privacy-safe structured logging, metrics, traces, and alert contracts.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "oxlint src test --deny-warnings",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2"
+  }
+}

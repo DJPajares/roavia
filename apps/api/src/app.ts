@@ -21,6 +21,11 @@ import {
   type ShareRepository,
   type TripRepository,
 } from "@roavia/db";
+import {
+  RuntimeObservability,
+  authorizeMetricsRequest,
+  createTraceContext,
+} from "@roavia/observability";
 import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
@@ -64,6 +69,8 @@ export interface CreateAppOptions {
   tripPlannerService?: TripPlannerApiService;
   assistantService?: AssistantApiService;
   disruptionRecommendationService?: DisruptionRecommendationApiService;
+  metricsToken?: string;
+  observability?: RuntimeObservability;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -89,18 +96,65 @@ export function createApp(options: CreateAppOptions = {}) {
   app.use(
     "*",
     cors({
-      allowHeaders: ["Authorization", "Content-Type", "X-Request-Id"],
+      allowHeaders: ["Authorization", "Content-Type", "Traceparent", "X-Request-Id"],
       allowMethods: ["DELETE", "GET", "OPTIONS", "PATCH", "POST"],
+      exposeHeaders: ["Traceparent", "X-Request-Id"],
       origin: (origin) => (corsOrigins.includes(origin) ? origin : ""),
     }),
   );
 
   app.use("*", async (context, next) => {
     const requestId = createRequestId(context.req.header("x-request-id"));
+    const trace = createTraceContext(context.req.header("traceparent"));
     context.set("requestId", requestId);
+    context.set("traceId", trace.traceId);
+    context.set("observabilityErrorCode", undefined);
+    context.set("observabilityRecorded", false);
+    context.set("observabilityStartedAt", Date.now());
     context.header("x-request-id", requestId);
-    await next();
+    context.header("traceparent", trace.traceparent);
+    options.observability?.apiRequestStarted({
+      correlationId: requestId,
+      method: context.req.method,
+      route: "request.pending",
+      traceId: trace.traceId,
+    });
+    let threw = false;
+    try {
+      await next();
+    } catch (error) {
+      threw = true;
+      throw error;
+    } finally {
+      if (!threw && !context.get("observabilityRecorded")) {
+        options.observability?.recordApiRequest({
+          correlationId: requestId,
+          durationMs: Math.max(0, Date.now() - context.get("observabilityStartedAt")),
+          errorCode: context.get("observabilityErrorCode"),
+          method: context.req.method,
+          route: context.req.routePath,
+          statusCode: context.res.status,
+          traceId: trace.traceId,
+        });
+        context.set("observabilityRecorded", true);
+      }
+    }
   });
+
+  const metricsToken = options.metricsToken;
+  const observability = options.observability;
+  if (metricsToken && observability) {
+    app.get("/internal/metrics", (context) => {
+      if (!authorizeMetricsRequest(context.req.header("authorization"), metricsToken)) {
+        context.set("observabilityErrorCode", "metrics_unauthorized");
+        return context.text("Unauthorized", 401);
+      }
+      return context.body(observability.metrics.renderOpenMetrics(), 200, {
+        "cache-control": "no-store",
+        "content-type": "application/openmetrics-text; version=1.0.0; charset=utf-8",
+      });
+    });
+  }
 
   app.get("/health", (context) =>
     context.json(
@@ -237,7 +291,7 @@ export function createApp(options: CreateAppOptions = {}) {
   );
 
   registerTripRoutes(app, options.tripRepository);
-  registerOfflinePackageRoutes(app, options.offlinePackageRepository);
+  registerOfflinePackageRoutes(app, options.offlinePackageRepository, options.observability);
   registerItineraryGenerationRoutes(app, options.itineraryGenerationService);
   registerTripPlannerRoutes(app, options.tripPlannerService);
   registerAssistantRoutes(app, options.assistantService, assistantRateLimiter);
@@ -248,35 +302,50 @@ export function createApp(options: CreateAppOptions = {}) {
   app.notFound((context) => errorResponse(context, 404, "not_found", "Route not found."));
 
   app.onError((error, context) => {
-    if (error instanceof AuthorizedResourceNotFoundError) {
-      return errorResponse(context, 404, "not_found", "Resource not found.");
-    }
+    const response = (() => {
+      if (error instanceof AuthorizedResourceNotFoundError) {
+        return errorResponse(context, 404, "not_found", "Resource not found.");
+      }
 
-    if (error instanceof TripConcurrencyError) {
-      return errorResponse(context, 409, "conflict", error.message);
-    }
+      if (error instanceof TripConcurrencyError) {
+        return errorResponse(context, 409, "conflict", error.message);
+      }
 
-    if (error instanceof AssistantActionConflictError) {
-      return errorResponse(context, 409, "assistant_action_conflict", error.message);
-    }
+      if (error instanceof AssistantActionConflictError) {
+        return errorResponse(context, 409, "assistant_action_conflict", error.message);
+      }
 
-    if (error instanceof DisruptionRecommendationConflictError) {
-      return errorResponse(context, 409, error.code, error.message);
-    }
+      if (error instanceof DisruptionRecommendationConflictError) {
+        return errorResponse(context, 409, error.code, error.message);
+      }
 
-    if (error instanceof TripDomainInputError) {
-      return errorResponse(context, 400, "bad_request", error.message);
-    }
+      if (error instanceof TripDomainInputError) {
+        return errorResponse(context, 400, "bad_request", error.message);
+      }
 
-    if (error instanceof Error && "code" in error && error.code === "generation_state_conflict") {
-      return errorResponse(context, 409, "conflict", error.message);
-    }
+      if (error instanceof Error && "code" in error && error.code === "generation_state_conflict") {
+        return errorResponse(context, 409, "conflict", error.message);
+      }
 
-    if (error instanceof HTTPException && error.status < 500) {
-      return errorResponse(context, 400, "bad_request", "Request could not be processed.");
-    }
+      if (error instanceof HTTPException && error.status < 500) {
+        return errorResponse(context, 400, "bad_request", "Request could not be processed.");
+      }
 
-    return errorResponse(context, 500, "internal_error", "An unexpected error occurred.");
+      return errorResponse(context, 500, "internal_error", "An unexpected error occurred.");
+    })();
+    if (!context.get("observabilityRecorded")) {
+      options.observability?.recordApiRequest({
+        correlationId: context.get("requestId"),
+        durationMs: Math.max(0, Date.now() - context.get("observabilityStartedAt")),
+        errorCode: context.get("observabilityErrorCode"),
+        method: context.req.method,
+        route: context.req.routePath,
+        statusCode: response.status,
+        traceId: context.get("traceId"),
+      });
+      context.set("observabilityRecorded", true);
+    }
+    return response;
   });
 
   return app;
