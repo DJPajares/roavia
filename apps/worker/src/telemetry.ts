@@ -1,4 +1,5 @@
 import type { JobRuntime, JobTelemetry } from "@roavia/jobs";
+import type { AccountLifecycleRepository } from "@roavia/db";
 import type { RuntimeObservability } from "@roavia/observability";
 
 export function createWorkerJobTelemetry(observability: RuntimeObservability) {
@@ -44,6 +45,42 @@ export function startJobHealthMonitor(
   };
   void sample();
   const timer = setInterval(() => void sample(), intervalMs);
+  timer.unref();
+  return () => {
+    stopped = true;
+    clearInterval(timer);
+  };
+}
+
+export function startAccountRetentionMonitor(
+  repository: Pick<AccountLifecycleRepository, "pruneExpired">,
+  observability: RuntimeObservability,
+  intervalMs = 15 * 60 * 1_000,
+) {
+  let stopped = false;
+  const prune = async () => {
+    try {
+      const result = await repository.pruneExpired();
+      if (stopped) return;
+      observability.logger.log({
+        actionCount: result.audits + result.exports + result.receipts + result.tombstones,
+        event: "account_retention_pruned",
+        level: "info",
+        operation: "account.retention",
+        outcome: "success",
+      });
+    } catch {
+      observability.logger.log({
+        errorCode: "account_retention_prune_failed",
+        event: "account_retention_prune_failed",
+        level: "error",
+        operation: "account.retention",
+        outcome: "error",
+      });
+    }
+  };
+  void prune();
+  const timer = setInterval(() => void prune(), intervalMs);
   timer.unref();
   return () => {
     stopped = true;

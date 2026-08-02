@@ -1,7 +1,7 @@
 import { RuntimeObservability } from "@roavia/observability";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
-import { createWorkerJobTelemetry } from "../src/telemetry.js";
+import { createWorkerJobTelemetry, startAccountRetentionMonitor } from "../src/telemetry.js";
 
 describe("worker telemetry", () => {
   test("contains correlation fields without job payload data", () => {
@@ -42,5 +42,36 @@ describe("worker telemetry", () => {
     expect(observability.metrics.sum("roavia_job_events_total", { event: "retry_scheduled" })).toBe(
       1,
     );
+  });
+
+  test("prunes lifecycle evidence on schedule and logs aggregate counts only", async () => {
+    const lines: string[] = [];
+    const observability = new RuntimeObservability({
+      clock: () => new Date("2026-08-02T00:00:00.000Z"),
+      environment: "test",
+      releaseSha: "abc123",
+      service: "roavia-worker",
+      sink: (line) => lines.push(line),
+    });
+    const pruneExpired = vi.fn<
+      () => Promise<{ audits: number; exports: number; receipts: number; tombstones: number }>
+    >(async () => ({
+      audits: 1,
+      exports: 2,
+      receipts: 3,
+      tombstones: 4,
+    }));
+
+    const stop = startAccountRetentionMonitor({ pruneExpired }, observability, 60_000);
+    await vi.waitFor(() => expect(pruneExpired).toHaveBeenCalledTimes(1));
+    stop();
+
+    expect(JSON.parse(lines[0]!)).toMatchObject({
+      actionCount: 10,
+      event: "account_retention_pruned",
+      operation: "account.retention",
+      outcome: "success",
+    });
+    expect(lines[0]).not.toContain("accountId");
   });
 });

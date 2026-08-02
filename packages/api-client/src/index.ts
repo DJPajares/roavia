@@ -1,4 +1,7 @@
 import {
+  accountDeletionPreviewResponseSchema,
+  accountDeletionResponseSchema,
+  accountExportResponseSchema,
   apiErrorResponseSchema,
   assistantActionMutationResponseSchema,
   assistantQueryResponseSchema,
@@ -26,6 +29,10 @@ import {
   tripListResponseSchema,
   tripResponseSchema,
   type ApiErrorCode,
+  type AccountDeletionConfirmInput,
+  type AccountDeletionPreviewResponse,
+  type AccountDeletionResponse,
+  type AccountExportResponse,
   type AssistantActionMutationResponse,
   type AssistantQueryInput,
   type AssistantQueryResponse,
@@ -68,7 +75,13 @@ import {
   type TripUpdateInput,
 } from "@roavia/contracts";
 
+export type { AccountDeletionReceipt } from "@roavia/contracts";
+
 export type {
+  AccountDeletionConfirmInput,
+  AccountDeletionPreviewResponse,
+  AccountDeletionResponse,
+  AccountExportResponse,
   AuthSessionResponse,
   DestinationSearchQuery,
   DestinationSearchResponse,
@@ -136,6 +149,14 @@ export class ApiClientError extends Error {
 }
 
 export interface RoaviaApiClient {
+  previewAccountDeletion(): Promise<AccountDeletionPreviewResponse>;
+  createAccountExport(): Promise<AccountExportResponse>;
+  downloadAccountExport(
+    exportId: string,
+    grantToken: string,
+  ): Promise<{ blob: Blob; filename: string }>;
+  confirmAccountDeletion(input: AccountDeletionConfirmInput): Promise<AccountDeletionResponse>;
+  getAccountDeletion(): Promise<AccountDeletionResponse>;
   health(): Promise<HealthResponse>;
   session(): Promise<AuthSessionResponse>;
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
@@ -253,7 +274,65 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
     return schema.parse(body);
   }
 
+  async function download(path: string, grantToken: string) {
+    const requestId = createRequestId();
+    const accessToken = await options.accessToken?.();
+    const response = await fetchImplementation(`${baseUrl}${path}`, {
+      headers: {
+        accept: "application/zip",
+        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        "x-request-id": requestId,
+        "x-roavia-export-grant": grantToken,
+      },
+    });
+    if (!response.ok) {
+      const body: unknown = await response.json();
+      const parsedError = apiErrorResponseSchema.safeParse(body);
+      if (parsedError.success) {
+        throw new ApiClientError({
+          code: parsedError.data.error.code,
+          message: parsedError.data.error.message,
+          requestId: parsedError.data.error.requestId,
+          status: response.status,
+        });
+      }
+      throw new ApiClientError({
+        code: "internal_error",
+        message: "The API returned an invalid error response.",
+        requestId,
+        status: response.status,
+      });
+    }
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? "roavia-account-export.zip";
+    return { blob: await response.blob(), filename };
+  }
+
   return {
+    async previewAccountDeletion() {
+      return request("/me/deletion-preview", accountDeletionPreviewResponseSchema, {
+        authenticated: true,
+      });
+    },
+    async createAccountExport() {
+      return request("/me/exports", accountExportResponseSchema, {
+        authenticated: true,
+        method: "POST",
+      });
+    },
+    async downloadAccountExport(exportId, grantToken) {
+      return download(`/me/exports/${encodeURIComponent(exportId)}/download`, grantToken);
+    },
+    async confirmAccountDeletion(input) {
+      return request("/me/deletion", accountDeletionResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "POST",
+      });
+    },
+    async getAccountDeletion() {
+      return request("/me/deletion", accountDeletionResponseSchema, { authenticated: true });
+    },
     async health(): Promise<HealthResponse> {
       return request("/health", healthResponseSchema);
     },

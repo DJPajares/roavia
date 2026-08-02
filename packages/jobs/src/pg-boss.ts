@@ -1,4 +1,4 @@
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { PgBoss, fromDrizzle, type JobResult, type JobWithMetadata } from "pg-boss";
 
 import {
@@ -171,6 +171,49 @@ export class PgBossJobRuntime implements JobRuntime {
     const cancelled = this.mapRow(row);
     await this.emit(cancelled, "cancelled");
     return cancelled;
+  }
+
+  async cancelByRequester(requesterId: string, replacementSubjectId: string) {
+    const rows = await this.database.db
+      .select()
+      .from(applicationJobs)
+      .where(
+        and(
+          eq(applicationJobs.requestedByKind, "user"),
+          eq(applicationJobs.requestedById, requesterId),
+        ),
+      );
+    for (const row of rows) {
+      if (row.status === "queued" || row.status === "retrying" || row.status === "running") {
+        await this.boss.cancel(row.type, row.id);
+      }
+      await this.boss.deleteJob(row.type, row.id);
+    }
+    if (rows.length > 0) {
+      const now = new Date();
+      await this.database.db
+        .update(applicationJobs)
+        .set({
+          completedAt: now,
+          errorCode: null,
+          errorSummary: null,
+          idempotencyKey: sql`'deleted:' || ${replacementSubjectId} || ':' || ${applicationJobs.id}::text`,
+          payload: {},
+          requestedById: replacementSubjectId,
+          requestedByKind: "system",
+          result: null,
+          status: sql`case when ${applicationJobs.status} in ('queued', 'running', 'retrying') then 'cancelled' else ${applicationJobs.status} end`,
+          subjectId: replacementSubjectId,
+          updatedAt: now,
+        })
+        .where(
+          inArray(
+            applicationJobs.id,
+            rows.map((row) => row.id),
+          ),
+        );
+    }
+    return rows.length;
   }
 
   async listDeadLetters() {

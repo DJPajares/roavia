@@ -11,10 +11,23 @@ const MAXIMUM_SHARE_LIFETIME_MS = 180 * DAY_MS;
 const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 export type AuditAction =
-  "share_link_created" | "share_link_revoked" | "resource_deleted" | "ai_action_applied";
+  | "share_link_created"
+  | "share_link_revoked"
+  | "resource_deleted"
+  | "ai_action_applied"
+  | "account_export_created"
+  | "account_export_downloaded"
+  | "account_deletion_requested"
+  | "account_deletion_completed";
 export type AuditOutcome = "succeeded" | "denied" | "failed";
 export type AuditSubjectType =
-  "account" | "trip" | "share_link" | "itinerary_item" | "assistant_action";
+  | "account"
+  | "trip"
+  | "share_link"
+  | "itinerary_item"
+  | "assistant_action"
+  | "account_export"
+  | "deletion_receipt";
 
 export type TripPrincipal = { kind: "user"; authUserId: string } | { kind: "share"; token: string };
 

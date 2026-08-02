@@ -8,6 +8,7 @@ export * from "./trip-planner";
 export * from "./assistant";
 export * from "./offline";
 export * from "./disruptions";
+export * from "./account";
 
 export const API_CONTRACT_VERSION = "v1" as const;
 
@@ -22,6 +23,8 @@ export const apiErrorCodeSchema = z.enum([
   "assistant_action_conflict",
   "assistant_generation_failed",
   "assistant_service_unavailable",
+  "account_deleted",
+  "account_service_unavailable",
   "disruption_recommendation_conflict",
   "disruption_service_unavailable",
   "bad_request",
@@ -34,6 +37,7 @@ export const apiErrorCodeSchema = z.enum([
   "not_found",
   "offline_service_unavailable",
   "profile_service_unavailable",
+  "reauthentication_required",
   "rate_limited",
   "search_unavailable",
   "session_expired",
@@ -74,6 +78,7 @@ export const authCredentialsSchema = z.object({
 
 export const authSessionDataSchema = z.object({
   identity: authIdentitySchema,
+  issuedAt: z.string().datetime({ offset: true }).optional(),
   expiresAt: z.string().datetime({ offset: true }),
 });
 

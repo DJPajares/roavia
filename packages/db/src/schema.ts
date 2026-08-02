@@ -1,6 +1,11 @@
 import type { Buffer } from "node:buffer";
 
-import type { AssistantActionPayload, DisruptionRecommendationSnapshot } from "@roavia/contracts";
+import type {
+  AccountDeletionStep,
+  AccountDeletionStepState,
+  AssistantActionPayload,
+  DisruptionRecommendationSnapshot,
+} from "@roavia/contracts";
 
 import { sql } from "drizzle-orm";
 import {
@@ -1505,11 +1510,28 @@ export const auditEvents = pgTable(
     id: uuidPrimaryKey(),
     actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
     action: text("action", {
-      enum: ["share_link_created", "share_link_revoked", "resource_deleted", "ai_action_applied"],
+      enum: [
+        "share_link_created",
+        "share_link_revoked",
+        "resource_deleted",
+        "ai_action_applied",
+        "account_export_created",
+        "account_export_downloaded",
+        "account_deletion_requested",
+        "account_deletion_completed",
+      ],
     }).notNull(),
     outcome: text("outcome", { enum: ["succeeded", "denied", "failed"] }).notNull(),
     subjectType: text("subject_type", {
-      enum: ["account", "trip", "share_link", "itinerary_item", "assistant_action"],
+      enum: [
+        "account",
+        "trip",
+        "share_link",
+        "itinerary_item",
+        "assistant_action",
+        "account_export",
+        "deletion_receipt",
+      ],
     }).notNull(),
     subjectId: uuid("subject_id").notNull(),
     correlationId: uuid("correlation_id").notNull(),
@@ -1534,14 +1556,150 @@ export const auditEvents = pgTable(
     index("audit_events_expires_at_idx").on(table.expiresAt),
     check(
       "audit_events_action_chk",
-      sql`${table.action} in ('share_link_created', 'share_link_revoked', 'resource_deleted', 'ai_action_applied')`,
+      sql`${table.action} in ('share_link_created', 'share_link_revoked', 'resource_deleted', 'ai_action_applied', 'account_export_created', 'account_export_downloaded', 'account_deletion_requested', 'account_deletion_completed')`,
     ),
     check("audit_events_outcome_chk", sql`${table.outcome} in ('succeeded', 'denied', 'failed')`),
     check(
       "audit_events_subject_type_chk",
-      sql`${table.subjectType} in ('account', 'trip', 'share_link', 'itinerary_item', 'assistant_action')`,
+      sql`${table.subjectType} in ('account', 'trip', 'share_link', 'itinerary_item', 'assistant_action', 'account_export', 'deletion_receipt')`,
     ),
     check("audit_events_expiry_order_chk", sql`${table.expiresAt} > ${table.occurredAt}`),
+  ],
+);
+
+export const accountExports = pgTable(
+  "account_exports",
+  {
+    id: uuidPrimaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    artifactCiphertext: bytea("artifact_ciphertext").notNull(),
+    encryptionIv: bytea("encryption_iv").notNull(),
+    encryptionTag: bytea("encryption_tag").notNull(),
+    grantHash: bytea("grant_hash").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    downloadedAt: timestamp("downloaded_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex("account_exports_grant_hash_uidx").on(table.grantHash),
+    index("account_exports_user_created_idx").on(table.userId, table.createdAt.desc()),
+    index("account_exports_expiry_idx").on(table.expiresAt),
+    check("account_exports_iv_length_chk", sql`octet_length(${table.encryptionIv}) = 12`),
+    check("account_exports_tag_length_chk", sql`octet_length(${table.encryptionTag}) = 16`),
+    check("account_exports_grant_hash_length_chk", sql`octet_length(${table.grantHash}) = 32`),
+    check("account_exports_size_positive_chk", sql`${table.sizeBytes} > 0`),
+    check(
+      "account_exports_expiry_order_chk",
+      sql`${table.expiresAt} > ${table.createdAt} and ${table.expiresAt} <= ${table.createdAt} + interval '24 hours'`,
+    ),
+  ],
+);
+
+type AccountDeletionChecklist = Record<AccountDeletionStep, AccountDeletionStepState>;
+
+export const accountDeletionReceipts = pgTable(
+  "account_deletion_receipts",
+  {
+    id: uuidPrimaryKey(),
+    policyVersion: text("policy_version").notNull().default("2026-07-28.v1"),
+    status: text("status", { enum: ["pending", "completed", "failed"] })
+      .notNull()
+      .default("pending"),
+    checklist: jsonb("checklist_json").$type<AccountDeletionChecklist>().notNull(),
+    failureCodes: jsonb("failure_codes_json")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    confirmedAt: timestamp("confirmed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    liveDeleteBy: timestamp("live_delete_by", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    backupDeleteBy: timestamp("backup_delete_by", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    completedAt: timestamp("completed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+  },
+  (table) => [
+    index("account_deletion_receipts_status_confirmed_idx").on(
+      table.status,
+      table.confirmedAt.desc(),
+    ),
+    index("account_deletion_receipts_expiry_idx").on(table.expiresAt),
+    check("account_deletion_receipts_policy_chk", sql`${table.policyVersion} = '2026-07-28.v1'`),
+    check(
+      "account_deletion_receipts_status_chk",
+      sql`${table.status} in ('pending', 'completed', 'failed')`,
+    ),
+    check(
+      "account_deletion_receipts_checklist_chk",
+      sql`jsonb_typeof(${table.checklist}) = 'object' and jsonb_typeof(${table.failureCodes}) = 'array'`,
+    ),
+    check(
+      "account_deletion_receipts_deadlines_chk",
+      sql`${table.liveDeleteBy} = ${table.confirmedAt} + interval '24 hours'
+        and ${table.backupDeleteBy} = ${table.confirmedAt} + interval '31 days'
+        and ${table.expiresAt} = ${table.confirmedAt} + interval '12 months'`,
+    ),
+    check(
+      "account_deletion_receipts_completion_chk",
+      sql`(${table.status} = 'completed') = (${table.completedAt} is not null)`,
+    ),
+  ],
+);
+
+export const accountDeletionTombstones = pgTable(
+  "account_deletion_tombstones",
+  {
+    subjectHash: bytea("subject_hash").primaryKey().notNull(),
+    deletionReceiptId: uuid("deletion_receipt_id")
+      .notNull()
+      .references(() => accountDeletionReceipts.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+    expiresAt: timestamp("expires_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("account_deletion_tombstones_receipt_uidx").on(table.deletionReceiptId),
+    index("account_deletion_tombstones_expiry_idx").on(table.expiresAt),
+    check(
+      "account_deletion_tombstones_hash_length_chk",
+      sql`octet_length(${table.subjectHash}) = 32`,
+    ),
+    check(
+      "account_deletion_tombstones_expiry_chk",
+      sql`${table.expiresAt} = ${table.createdAt} + interval '31 days'`,
+    ),
   ],
 );
 
@@ -1680,6 +1838,9 @@ export const jobOperatorActions = pgTable(
 );
 
 export const coreTables = {
+  accountDeletionReceipts,
+  accountDeletionTombstones,
+  accountExports,
   applicationJobs,
   auditEvents,
   destinationContent,

@@ -67,6 +67,8 @@ export function createSupabaseAccessTokenVerifier(
           email: typeof payload.email === "string" ? payload.email : undefined,
         }),
         expiresAt: new Date(payload.exp * 1000).toISOString(),
+        issuedAt:
+          typeof payload.iat === "number" ? new Date(payload.iat * 1000).toISOString() : undefined,
       });
     } catch (error) {
       if (error instanceof AuthVerificationError) {

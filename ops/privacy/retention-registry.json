@@ -1,0 +1,114 @@
+{
+  "registryVersion": "2026-07-28.v1",
+  "owner": "Roavia privacy and platform operations",
+  "policyDecision": "docs/architecture/decisions/0005-sensitive-data-lifecycle.md",
+  "stores": [
+    {
+      "id": "account-identity",
+      "resources": ["users", "travel_profiles", "supabase.auth.users", "supabase.auth.sessions"],
+      "classification": "sensitive-personal",
+      "activeRetention": "Account lifetime",
+      "export": "Account and travel-profile fields; authentication secrets and session material are excluded",
+      "deletion": "Sessions are revoked immediately; application rows and the Supabase identity are hard-deleted within 24 hours",
+      "backupDeletion": "No later than 31 days after confirmation",
+      "systemOwner": "Platform"
+    },
+    {
+      "id": "owned-travel-content",
+      "resources": [
+        "trips",
+        "trip_destinations",
+        "itinerary_days",
+        "itinerary_items",
+        "itinerary_generation_runs",
+        "itinerary_generation_attempts",
+        "assistant_actions",
+        "live_condition_impacts",
+        "disruption_recommendations"
+      ],
+      "classification": "sensitive-personal",
+      "activeRetention": "Account lifetime, subject to per-feature expiry constraints",
+      "export": "Canonical JSON plus trip CSV, itinerary JSON, assistant records, and source references",
+      "deletion": "Cascade-deleted with the owning account within 24 hours",
+      "backupDeletion": "No later than 31 days after confirmation",
+      "systemOwner": "Travel product"
+    },
+    {
+      "id": "sharing-and-offline",
+      "resources": ["share_links", "offline_packages", "browser.indexedDB", "browser.cacheStorage"],
+      "classification": "sensitive-personal",
+      "activeRetention": "Share links expire within 180 days; offline metadata follows the account",
+      "export": "Share and offline-package metadata only; link secrets and cached package payloads are excluded",
+      "deletion": "Server grants are revoked immediately; local data is cleared on the confirming device and denied after the next authorization check",
+      "backupDeletion": "Server records no later than 31 days; browser eviction timing outside the confirming device is user-agent controlled",
+      "systemOwner": "Travel product"
+    },
+    {
+      "id": "jobs",
+      "resources": ["application_jobs", "job_operator_actions", "pgboss.job", "pgboss.archive"],
+      "classification": "operational-sensitive",
+      "activeRetention": "Service lifetime until normal queue cleanup",
+      "export": "User-facing generation records are exported through their owning trip or assistant record",
+      "deletion": "Active jobs are cancelled and application and queue payloads, results, requester IDs, subject IDs, and errors are scrubbed immediately",
+      "backupDeletion": "No later than 31 days after confirmation",
+      "systemOwner": "Platform"
+    },
+    {
+      "id": "exports",
+      "resources": ["account_exports"],
+      "classification": "sensitive-personal-encrypted",
+      "activeRetention": "Single-purpose grant for 23 hours; artifact expires and is physically pruned within 24 hours",
+      "export": "Encrypted ZIP containing the versioned account export",
+      "deletion": "All outstanding grants and ciphertext are deleted immediately on confirmation",
+      "backupDeletion": "No later than 31 days after confirmation",
+      "systemOwner": "Platform"
+    },
+    {
+      "id": "deletion-evidence",
+      "resources": ["account_deletion_receipts", "account_deletion_tombstones"],
+      "classification": "content-free-operational",
+      "activeRetention": "Opaque subject tombstone for 31 days; receipt for 12 calendar months",
+      "export": "Not included in pre-deletion export",
+      "deletion": "The receipt contains only policy version, deadlines, step states, and normalized failure codes; no account or content linkage",
+      "backupDeletion": "Tombstone expires after 31 days; receipt expires after 12 calendar months",
+      "systemOwner": "Privacy operations"
+    },
+    {
+      "id": "audit-and-telemetry",
+      "resources": [
+        "audit_events",
+        "ai_telemetry_events",
+        "ai_evaluation_runs",
+        "ai_evaluation_case_results",
+        "application.logs",
+        "application.traces",
+        "application.metrics"
+      ],
+      "classification": "content-free-operational",
+      "activeRetention": "Audit events 12 months; AI telemetry 90 days; raw logs and traces at most 30 days; aggregate metrics at most 395 days",
+      "export": "Account-linked audit action metadata is included; aggregate and evaluation telemetry is excluded",
+      "deletion": "Account linkage is removed while content-free operational evidence follows its fixed expiry",
+      "backupDeletion": "No later than 31 days after each record's expiry",
+      "systemOwner": "Reliability and AI quality"
+    },
+    {
+      "id": "shared-catalog",
+      "resources": [
+        "places",
+        "place_provider_ids",
+        "sources",
+        "destination_content",
+        "destination_content_sources",
+        "destination_ingestion_quarantine",
+        "freshness_policies",
+        "seasonal_insights"
+      ],
+      "classification": "shared-reference-data",
+      "activeRetention": "Provider contract and freshness policy",
+      "export": "Only licensed source references connected to exported account content",
+      "deletion": "Not deleted with an account because records are not account-owned; quarantine payloads must not contain user data",
+      "backupDeletion": "Provider contract and operational backup policy",
+      "systemOwner": "Travel data"
+    }
+  ]
+}

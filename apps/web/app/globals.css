@@ -958,6 +958,116 @@ textarea:focus-visible {
 .profile-page__sign-out {
   margin-top: 1.5rem;
 }
+.account-privacy {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 58rem;
+  margin-top: clamp(3.5rem, 9vw, 6rem);
+  padding-top: clamp(2rem, 5vw, 3rem);
+  border-top: 1px solid var(--line);
+}
+.account-privacy__intro {
+  max-width: 44rem;
+}
+.account-privacy__intro h2 {
+  max-width: 18ch;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3.8rem);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+.account-privacy__intro > p:not(.eyebrow),
+.account-privacy__export p,
+.account-privacy__danger p,
+.account-privacy__hint,
+.account-privacy__receipt p {
+  color: var(--ink-soft);
+}
+.account-privacy__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.account-privacy__summary span {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+.account-privacy__controls,
+.account-privacy__export,
+.account-privacy__danger,
+.account-privacy__receipt {
+  display: grid;
+  gap: 1rem;
+}
+.account-privacy__controls > label,
+.account-privacy__danger > label {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 28rem;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+.account-privacy input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+  color: var(--ink);
+  font: inherit;
+}
+.account-privacy__hint {
+  max-width: 48rem;
+  margin: -0.4rem 0 0;
+  font-size: 0.82rem;
+}
+.account-privacy__export,
+.account-privacy__danger,
+.account-privacy__receipt {
+  padding: clamp(1.15rem, 3vw, 1.6rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+.account-privacy__export h3,
+.account-privacy__danger h3,
+.account-privacy__receipt h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+.account-privacy__export p,
+.account-privacy__danger p,
+.account-privacy__receipt p {
+  margin: 0.35rem 0 0;
+}
+.account-privacy__danger {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--line));
+}
+.account-privacy__danger ul,
+.account-privacy__receipt ul {
+  margin: 0.7rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--ink-soft);
+}
+.account-privacy__delete-button {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.account-privacy__message {
+  min-height: 1.5rem;
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
 .trip-planner-shell {
   width: 100%;
 }

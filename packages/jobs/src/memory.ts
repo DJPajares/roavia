@@ -149,6 +149,33 @@ export class MemoryJobRuntime implements JobRuntime {
     throw new Error(`Job ${jobId} cannot be cancelled from ${record.status}.`);
   }
 
+  async cancelByRequester(requesterId: string, replacementSubjectId: string) {
+    let scrubbed = 0;
+    for (const record of this.store.records.values()) {
+      if (
+        record.envelope.requestedBy.kind !== "user" ||
+        record.envelope.requestedBy.id !== requesterId
+      ) {
+        continue;
+      }
+      if (
+        record.status === "queued" ||
+        record.status === "retrying" ||
+        record.status === "running"
+      ) {
+        await this.cancel(record.envelope.jobId);
+      }
+      record.envelope.payload = {};
+      record.envelope.requestedBy = { id: replacementSubjectId, kind: "system" };
+      record.envelope.subjectId = replacementSubjectId;
+      record.errorCode = undefined;
+      record.errorSummary = undefined;
+      record.result = undefined;
+      scrubbed += 1;
+    }
+    return scrubbed;
+  }
+
   async listDeadLetters() {
     return [...this.store.records.values()]
       .filter((record): record is DeadLetterRecord => record.status === "dead_lettered")

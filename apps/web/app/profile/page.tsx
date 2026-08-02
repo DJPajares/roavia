@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { ProfilePreferences } from "../../components/profile-preferences";
+import { AccountPrivacyControls } from "../../components/account-privacy-controls";
 import { SignOutButton } from "../../components/sign-out-button";
 import { getAuthSession } from "../../lib/auth/session";
 
@@ -15,6 +16,7 @@ export default async function ProfilePage() {
   return (
     <div className="profile-page">
       <ProfilePreferences email={session.identity.email} />
+      <AccountPrivacyControls email={session.identity.email} ownerId={session.identity.userId} />
       <div className="profile-page__sign-out">
         <SignOutButton ownerId={session.identity.userId} />
       </div>

@@ -101,6 +101,27 @@ describe("job runtime contract", () => {
     expect(await runtime.runNext()).toBeUndefined();
   });
 
+  test("cancels and scrubs every job requested by a deleted account", async () => {
+    const runtime = new MemoryJobRuntime();
+    runtime.register(createReferenceJob(new MemoryReferenceEffectStore()));
+    const requestedByUser = await runtime.enqueue({
+      ...input("reference:deleted-user:1"),
+      requestedBy: { id: "deleted-user", kind: "user" },
+    });
+    const requestedBySystem = await runtime.enqueue(input("reference:system-kept:1"));
+
+    await expect(runtime.cancelByRequester("deleted-user", "deletion-receipt")).resolves.toBe(1);
+    expect(requestedByUser).toMatchObject({
+      envelope: {
+        payload: {},
+        requestedBy: { id: "deletion-receipt", kind: "system" },
+        subjectId: "deletion-receipt",
+      },
+      status: "cancelled",
+    });
+    expect(requestedBySystem.envelope.payload).toEqual({ effectKey: "fixture", revision: 1 });
+  });
+
   test("recovers an interrupted active job after a worker restart", async () => {
     const store = new MemoryJobStore();
     const effects = new MemoryReferenceEffectStore();

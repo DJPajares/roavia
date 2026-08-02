@@ -2,6 +2,7 @@ import { apiErrorResponseSchema, type ApiErrorCode, type AuthSession } from "@ro
 import type { Context } from "hono";
 
 type ApiVariables = {
+  accessToken: string;
   authSession: AuthSession;
   observabilityErrorCode: string | undefined;
   observabilityRecorded: boolean;

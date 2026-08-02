@@ -47,6 +47,9 @@ describeDatabase("database migration baseline", () => {
     `);
 
     expect(tables.rows.map(({ table_name }) => table_name)).toEqual([
+      "account_deletion_receipts",
+      "account_deletion_tombstones",
+      "account_exports",
       "ai_evaluation_case_results",
       "ai_evaluation_runs",
       "ai_telemetry_events",
@@ -83,7 +86,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(27);
+    expect(idDefaults.rows).toHaveLength(29);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -107,6 +110,13 @@ describeDatabase("database migration baseline", () => {
     const names = new Set(indexes.rows.map(({ indexname }) => indexname));
 
     for (const expected of [
+      "account_deletion_receipts_expiry_idx",
+      "account_deletion_receipts_status_confirmed_idx",
+      "account_deletion_tombstones_expiry_idx",
+      "account_deletion_tombstones_receipt_uidx",
+      "account_exports_expiry_idx",
+      "account_exports_grant_hash_uidx",
+      "account_exports_user_created_idx",
       "ai_evaluation_case_results_run_idx",
       "ai_evaluation_runs_prompt_model_idx",
       "ai_evaluation_runs_suite_created_idx",
@@ -160,6 +170,9 @@ describeDatabase("database migration baseline", () => {
 
   test("enables ownership RLS and revokes direct access to private tables", async () => {
     const protectedTables = [
+      "account_deletion_receipts",
+      "account_deletion_tombstones",
+      "account_exports",
       "ai_evaluation_case_results",
       "ai_evaluation_runs",
       "ai_telemetry_events",
