@@ -10,6 +10,10 @@ import {
   TripIntentExtractionService,
 } from "@roavia/ai";
 import {
+  destinationSeasonalInsightSchema,
+  type DestinationSeasonalityQuery,
+} from "@roavia/contracts";
+import {
   PostgresGroundingDataSource,
   PostgresItineraryGenerationStore,
   aiTokenPricingFromEnvironment,
@@ -24,6 +28,7 @@ import {
   createShareRepository,
   createTripRepository,
   getDestinationDetail,
+  listSeasonalInsights,
   searchDestinations,
 } from "@roavia/db";
 import {
@@ -31,6 +36,7 @@ import {
   createItineraryGenerationRequestService,
 } from "@roavia/jobs";
 import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
+import { computeSeasonalInsight } from "@roavia/travel-data";
 
 import { createApp } from "./app.js";
 import { createAssistantApiService } from "./assistant.js";
@@ -79,6 +85,25 @@ const destinationDetailResolver = database
       );
     }
   : undefined;
+const destinationSeasonalityResolver = database
+  ? async (placeId: string, priorities: DestinationSeasonalityQuery) => {
+      const stored = await listSeasonalInsights(database.db, placeId);
+      return {
+        insights: stored.map(({ computedInsight }) => {
+          const insight = destinationSeasonalInsightSchema.parse(computedInsight);
+          return destinationSeasonalInsightSchema.parse(
+            computeSeasonalInsight({
+              evidence: Object.values(insight.signals).flatMap(({ evidence }) => evidence),
+              period: insight.period,
+              placeId: insight.placeId,
+              priorities,
+              refreshedAt: insight.refreshedAt,
+            }),
+          );
+        }),
+      };
+    }
+  : undefined;
 const tripPlannerService =
   aiGateway && destinationResolver
     ? new TripIntentExtractionService(aiGateway, destinationResolver)
@@ -124,6 +149,7 @@ const app = createApp({
   verifyAccessToken: createAccessTokenVerifierFromEnvironment(process.env),
   searchDestinations: destinationResolver,
   getDestinationDetail: destinationDetailResolver,
+  getDestinationSeasonality: destinationSeasonalityResolver,
   profileRepository: database ? createProfileRepository(database.db) : undefined,
   offlinePackageRepository: database ? createOfflinePackageRepository(database.db) : undefined,
   shareRepository: database ? createShareRepository(database.db) : undefined,

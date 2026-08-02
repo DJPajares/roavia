@@ -41,6 +41,7 @@ export {
 } from "./destination-ingestion.js";
 export {
   getSeasonalInsight,
+  listSeasonalInsights,
   upsertSeasonalInsight,
   type PersistedSeasonalInsight,
   type SeasonalInsightRefreshResult,
