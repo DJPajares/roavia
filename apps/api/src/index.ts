@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import {
   GroundingRetriever,
+  GroundedDisruptionAlternativeService,
   GroundedAssistantService,
   ItineraryGenerationEngine,
   ItineraryGenerationService,
@@ -19,6 +20,7 @@ import {
   createAiTelemetryRepository,
   createDatabaseClient,
   createAssistantActionRepository,
+  createDisruptionRecommendationRepository,
   createProfileRepository,
   createOfflinePackageRepository,
   createShareRepository,
@@ -33,8 +35,9 @@ import {
 import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
 
 import { createApp } from "./app.js";
-import { createAssistantApiService } from "./assistant.js";
+import { createAssistantActionMutationService, createAssistantApiService } from "./assistant.js";
 import { createAccessTokenVerifierFromEnvironment } from "./auth.js";
+import { createDisruptionRecommendationApiService } from "./disruptions.js";
 
 try {
   loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
@@ -84,15 +87,39 @@ const tripPlannerService =
     ? new TripIntentExtractionService(aiGateway, destinationResolver)
     : undefined;
 const tripRepository = database ? createTripRepository(database.db) : undefined;
+const assistantActions = database ? createAssistantActionRepository(database.db) : undefined;
+const assistantMutations =
+  assistantActions && tripRepository
+    ? createAssistantActionMutationService({
+        actions: assistantActions,
+        telemetry: aiTelemetry,
+        trips: tripRepository,
+      })
+    : undefined;
 const assistantService =
-  aiGateway && database && tripRepository
+  aiGateway && database && tripRepository && assistantActions
     ? createAssistantApiService({
-        actions: createAssistantActionRepository(database.db),
+        actions: assistantActions,
         assistant: new GroundedAssistantService(
           aiGateway,
           new GroundingRetriever([new PostgresGroundingDataSource(database.db)]),
         ),
         telemetry: aiTelemetry,
+        trips: tripRepository,
+      })
+    : undefined;
+const disruptionRecommendationService =
+  database && tripRepository && assistantActions && assistantMutations
+    ? createDisruptionRecommendationApiService({
+        actions: assistantActions,
+        generator: aiGateway
+          ? new GroundedDisruptionAlternativeService(
+              aiGateway,
+              new GroundingRetriever([new PostgresGroundingDataSource(database.db)]),
+            )
+          : undefined,
+        mutations: assistantMutations,
+        recommendations: createDisruptionRecommendationRepository(database.db),
         trips: tripRepository,
       })
     : undefined;
@@ -129,6 +156,7 @@ const app = createApp({
   shareRepository: database ? createShareRepository(database.db) : undefined,
   tripRepository,
   assistantService,
+  disruptionRecommendationService,
   tripPlannerService,
   itineraryGenerationService:
     jobRuntime && generationStore

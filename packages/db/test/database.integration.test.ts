@@ -56,6 +56,7 @@ describeDatabase("database migration baseline", () => {
       "destination_content",
       "destination_content_sources",
       "destination_ingestion_quarantine",
+      "disruption_recommendations",
       "freshness_policies",
       "itinerary_days",
       "itinerary_generation_attempts",
@@ -82,7 +83,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(26);
+    expect(idDefaults.rows).toHaveLength(27);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -137,6 +138,9 @@ describeDatabase("database migration baseline", () => {
       "destination_content_quality_stale_idx",
       "destination_content_sources_source_id_idx",
       "destination_ingestion_quarantine_pending_seen_idx",
+      "disruption_recommendations_action_idx",
+      "disruption_recommendations_impact_uidx",
+      "disruption_recommendations_owner_trip_status_idx",
       "place_provider_ids_place_provider_idx",
       "places_parent_type_name_idx",
       "places_parent_place_id_idx",
@@ -161,6 +165,7 @@ describeDatabase("database migration baseline", () => {
       "ai_telemetry_events",
       "assistant_actions",
       "audit_events",
+      "disruption_recommendations",
       "itinerary_days",
       "itinerary_generation_attempts",
       "itinerary_generation_runs",

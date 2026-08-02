@@ -12,6 +12,13 @@ export {
   type PersistedLiveConditionImpactInput,
 } from "./live-condition-impact-repository.js";
 export {
+  createDisruptionRecommendationRepository,
+  DisruptionRecommendationConflictError,
+  type DisruptionGenerationState,
+  type DisruptionImpactCandidate,
+  type DisruptionRecommendationRepository,
+} from "./disruption-recommendation-repository.js";
+export {
   AuthorizedResourceNotFoundError,
   authorizeTripAccess,
   createShareLink,
