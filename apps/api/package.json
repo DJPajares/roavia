@@ -19,6 +19,7 @@
     "@roavia/db": "workspace:*",
     "@roavia/jobs": "workspace:*",
     "@roavia/observability": "workspace:*",
+    "@roavia/travel-data": "workspace:*",
     "hono": "4.13.0",
     "jose": "6.2.8"
   },
