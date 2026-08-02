@@ -1,0 +1,129 @@
+[
+  {
+    "id": "api-server-errors",
+    "description": "Five or more API 5xx responses in ten minutes indicate user-visible failures.",
+    "metric": "roavia_api_requests_total",
+    "labels": { "status_class": "5xx" },
+    "comparator": "gte",
+    "threshold": 5,
+    "windowMinutes": 10,
+    "severity": "critical",
+    "runbook": "docs/operations/observability.md#api-server-errors"
+  },
+  {
+    "id": "job-retry-storm",
+    "description": "Repeated retry scheduling indicates a dependency or deterministic job failure.",
+    "metric": "roavia_job_events_total",
+    "labels": { "event": "retry_scheduled" },
+    "comparator": "gte",
+    "threshold": 5,
+    "windowMinutes": 15,
+    "severity": "warning",
+    "runbook": "docs/operations/observability.md#job-retry-storm"
+  },
+  {
+    "id": "job-dead-letter",
+    "description": "Any current dead letter requires classification before redrive or discard.",
+    "metric": "roavia_job_dead_letters",
+    "comparator": "gt",
+    "threshold": 0,
+    "windowMinutes": 5,
+    "severity": "critical",
+    "runbook": "docs/operations/observability.md#job-dead-letter"
+  },
+  {
+    "id": "job-queue-age",
+    "description": "An inspectable job older than five minutes may indicate a stopped or saturated worker.",
+    "metric": "roavia_job_oldest_age_seconds",
+    "comparator": "gt",
+    "threshold": 300,
+    "windowMinutes": 5,
+    "severity": "critical",
+    "runbook": "docs/operations/observability.md#job-queue-age"
+  },
+  {
+    "id": "provider-unavailable",
+    "description": "Repeated provider-unavailable results may remove current travel guidance.",
+    "metric": "roavia_provider_events_total",
+    "labels": { "status": "unavailable" },
+    "comparator": "gte",
+    "threshold": 3,
+    "windowMinutes": 10,
+    "severity": "critical",
+    "runbook": "docs/operations/observability.md#provider-unavailable"
+  },
+  {
+    "id": "provider-quota",
+    "description": "A quota response can immediately remove a no-fallback provider capability.",
+    "metric": "roavia_provider_events_total",
+    "labels": { "status": "quota" },
+    "comparator": "gte",
+    "threshold": 1,
+    "windowMinutes": 10,
+    "severity": "critical",
+    "runbook": "docs/operations/observability.md#provider-quota"
+  },
+  {
+    "id": "stale-data-growth",
+    "description": "Repeated stale results indicate degraded source quality even when requests succeed.",
+    "metric": "roavia_data_freshness_events_total",
+    "labels": { "state": "stale" },
+    "comparator": "gte",
+    "threshold": 10,
+    "windowMinutes": 30,
+    "severity": "warning",
+    "runbook": "docs/operations/observability.md#stale-data-growth"
+  },
+  {
+    "id": "ai-generation-errors",
+    "description": "Repeated AI generation errors prevent planning or grounded assistant responses.",
+    "metric": "roavia_ai_generations_total",
+    "labels": { "outcome": "error" },
+    "comparator": "gte",
+    "threshold": 5,
+    "windowMinutes": 15,
+    "severity": "critical",
+    "runbook": "docs/operations/observability.md#ai-generation-errors"
+  },
+  {
+    "id": "ai-validation-failures",
+    "description": "A validation spike indicates prompt, model, grounding, or schema regression.",
+    "metric": "roavia_ai_validation_failures_total",
+    "comparator": "gte",
+    "threshold": 10,
+    "windowMinutes": 60,
+    "severity": "warning",
+    "runbook": "docs/operations/observability.md#ai-validation-failures"
+  },
+  {
+    "id": "ai-unpriced-generation",
+    "description": "Unpriced generations make the operational cost budget incomplete.",
+    "metric": "roavia_ai_unpriced_generations_total",
+    "comparator": "gte",
+    "threshold": 1,
+    "windowMinutes": 60,
+    "severity": "warning",
+    "runbook": "docs/operations/observability.md#ai-unpriced-generation"
+  },
+  {
+    "id": "ai-cost-budget",
+    "description": "Estimated AI cost exceeded the reviewed daily warning threshold.",
+    "metric": "roavia_ai_cost_micros_total",
+    "comparator": "gte",
+    "threshold": 1000000,
+    "windowMinutes": 1440,
+    "severity": "warning",
+    "runbook": "docs/operations/observability.md#ai-cost-budget"
+  },
+  {
+    "id": "offline-generation-errors",
+    "description": "Repeated offline package failures block a promised traveler recovery path.",
+    "metric": "roavia_offline_generations_total",
+    "labels": { "outcome": "error" },
+    "comparator": "gte",
+    "threshold": 3,
+    "windowMinutes": 30,
+    "severity": "warning",
+    "runbook": "docs/operations/observability.md#offline-generation-errors"
+  }
+]

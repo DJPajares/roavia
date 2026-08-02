@@ -27,12 +27,14 @@ import {
   createTripRepository,
   getDestinationDetail,
   searchDestinations,
+  type AiTelemetryRepository,
 } from "@roavia/db";
 import {
   createItineraryGenerationJob,
   createItineraryGenerationRequestService,
 } from "@roavia/jobs";
 import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
+import { RuntimeObservability, readObservabilityConfig } from "@roavia/observability";
 
 import { createApp } from "./app.js";
 import { createAssistantActionMutationService, createAssistantApiService } from "./assistant.js";
@@ -47,18 +49,76 @@ try {
   }
 }
 
+const observabilityConfig = readObservabilityConfig(process.env);
+const observability = new RuntimeObservability({
+  environment: observabilityConfig.environment,
+  releaseSha: observabilityConfig.releaseSha,
+  service: "roavia-api",
+});
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 const database = process.env.DATABASE_URL
   ? createDatabaseClient(process.env.DATABASE_URL)
   : undefined;
-const aiTelemetry = database ? createAiTelemetryRepository(database.db) : undefined;
+const persistentAiTelemetry = database ? createAiTelemetryRepository(database.db) : undefined;
+const aiTelemetry = persistentAiTelemetry
+  ? ({
+      aggregate: (query) => persistentAiTelemetry.aggregate(query),
+      pruneExpired: (now) => persistentAiTelemetry.pruneExpired(now),
+      async recordAssistantAction(input) {
+        observability.recordAiAction(input);
+        await persistentAiTelemetry.recordAssistantAction(input);
+      },
+      async recordGeneration(input) {
+        observability.recordAiGeneration({
+          costMicros: input.cost?.amountMicros,
+          durationMs: input.durationMs,
+          errorCode: input.errorCode,
+          inputTokens: input.usage?.inputTokens,
+          model: input.model,
+          operation: input.operation,
+          outcome: input.outcome,
+          outputTokens: input.usage?.outputTokens,
+          provider: input.provider,
+          requestId: input.requestId,
+        });
+        await persistentAiTelemetry.recordGeneration(input);
+      },
+      async recordQuality(input) {
+        observability.recordAiQuality({
+          correlationId: input.correlationId,
+          operation: "itinerary",
+          outcome: input.outcome,
+          repairCount: input.repairCount,
+          validationFailureCount: input.issueCodes.length,
+        });
+        await persistentAiTelemetry.recordQuality(input);
+      },
+    } satisfies AiTelemetryRepository)
+  : undefined;
+const recordAiGeneration = aiTelemetry
+  ? (event: Parameters<AiTelemetryRepository["recordGeneration"]>[0]) =>
+      aiTelemetry.recordGeneration(event)
+  : (event: Parameters<AiTelemetryRepository["recordGeneration"]>[0]) => {
+      observability.recordAiGeneration({
+        costMicros: event.cost?.amountMicros,
+        durationMs: event.durationMs,
+        errorCode: event.errorCode,
+        inputTokens: event.usage?.inputTokens,
+        model: event.model,
+        operation: event.operation,
+        outcome: event.outcome,
+        outputTokens: event.usage?.outputTokens,
+        provider: event.provider,
+        requestId: event.requestId,
+      });
+    };
 const aiGateway =
   process.env.AI_PROVIDER === "vercel-gateway" && process.env.AI_API_KEY && process.env.AI_MODEL
     ? createVercelGatewayAiGateway({
         apiKey: process.env.AI_API_KEY,
         model: process.env.AI_MODEL,
         pricing: aiTokenPricingFromEnvironment(process.env),
-        telemetry: aiTelemetry ? (event) => aiTelemetry.recordGeneration(event) : undefined,
+        telemetry: recordAiGeneration,
       })
     : undefined;
 const destinationResolver = database
@@ -131,7 +191,8 @@ const jobRuntime =
     ? new PgBossJobRuntime({
         applicationName: "roavia-api",
         connectionString: process.env.DATABASE_URL,
-        releaseSha: process.env.RENDER_GIT_COMMIT ?? "local",
+        releaseSha: observabilityConfig.releaseSha,
+        telemetry: (event) => observability.recordJob(event),
       })
     : undefined;
 if (jobRuntime && aiGateway && generationStore && database) {
@@ -162,6 +223,8 @@ const app = createApp({
     jobRuntime && generationStore
       ? createItineraryGenerationRequestService(jobRuntime, generationStore)
       : undefined,
+  metricsToken: observabilityConfig.metricsToken,
+  observability,
 });
 
 const server = serve(
@@ -169,15 +232,31 @@ const server = serve(
     fetch: app.fetch,
     port,
   },
-  (info) => {
-    console.log(`Roavia API listening on http://localhost:${info.port}`);
+  () => {
+    observability.logger.log({
+      event: "server_ready",
+      level: "info",
+      operation: "api.listen",
+      outcome: "ready",
+    });
   },
 );
 
 async function shutdown() {
+  observability.logger.log({
+    event: "shutdown_started",
+    level: "info",
+    operation: "api.shutdown",
+  });
   server.close();
   await jobRuntime?.shutdown();
   await database?.close();
+  observability.logger.log({
+    event: "shutdown_completed",
+    level: "info",
+    operation: "api.shutdown",
+    outcome: "completed",
+  });
 }
 
 process.once("SIGINT", () => void shutdown());

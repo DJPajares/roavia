@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "title": "Roavia operational health",
+  "refreshSeconds": 60,
+  "rawRetentionDays": 30,
+  "aggregatedRetentionDays": 395,
+  "panels": [
+    {
+      "id": "api-health",
+      "title": "API latency and errors",
+      "owner": "application",
+      "queries": [
+        "sum(rate(roavia_api_requests_total[5m])) by (route, status_class)",
+        "histogram_quantile(0.95, sum(rate(roavia_api_request_duration_ms_bucket[5m])) by (le, route))"
+      ]
+    },
+    {
+      "id": "job-health",
+      "title": "Jobs, retries, queue age, and dead letters",
+      "owner": "background-jobs",
+      "queries": [
+        "sum(roavia_job_queue_depth) by (type, status)",
+        "max(roavia_job_oldest_age_seconds) by (type, status)",
+        "sum(increase(roavia_job_events_total{event=\"retry_scheduled\"}[15m])) by (type)",
+        "sum(roavia_job_dead_letters) by (type)"
+      ]
+    },
+    {
+      "id": "provider-health",
+      "title": "Provider availability, quota, latency, and freshness",
+      "owner": "integrations",
+      "queries": [
+        "sum(rate(roavia_provider_events_total[10m])) by (provider, operation, status, error_code)",
+        "histogram_quantile(0.95, sum(rate(roavia_provider_duration_ms_bucket[10m])) by (le, provider, operation))",
+        "min(roavia_provider_quota_remaining) by (provider, operation)",
+        "sum(increase(roavia_provider_usage_cost_units_total[24h])) by (provider, operation)",
+        "sum(increase(roavia_data_freshness_events_total{state=\"stale\"}[30m])) by (data_class, operation)"
+      ]
+    },
+    {
+      "id": "ai-quality-cost",
+      "title": "AI quality, validation, latency, and cost",
+      "owner": "ai",
+      "queries": [
+        "sum(increase(roavia_ai_generations_total[1h])) by (operation, provider, outcome)",
+        "histogram_quantile(0.95, sum(rate(roavia_ai_duration_ms_bucket[1h])) by (le, operation, provider))",
+        "sum(increase(roavia_ai_validation_failures_total[1h])) by (operation, outcome)",
+        "sum(increase(roavia_ai_repairs_total[1h])) by (operation, outcome)",
+        "sum(increase(roavia_ai_cost_micros_total[24h])) by (operation, provider)",
+        "sum(increase(roavia_ai_unpriced_generations_total[1h])) by (operation, provider)"
+      ]
+    },
+    {
+      "id": "offline-health",
+      "title": "Offline package generation",
+      "owner": "offline",
+      "queries": [
+        "sum(increase(roavia_offline_generations_total[30m])) by (outcome, reused)",
+        "histogram_quantile(0.95, sum(rate(roavia_offline_generation_duration_ms_bucket[30m])) by (le, outcome))"
+      ]
+    }
+  ]
+}
