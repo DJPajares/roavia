@@ -12,12 +12,15 @@ type ApiVariables = {
 };
 
 export type ApiEnvironment = {
+  Bindings: {
+    incoming?: { socket?: { remoteAddress?: string } };
+  };
   Variables: ApiVariables;
 };
 
 export function errorResponse(
   context: Context<ApiEnvironment>,
-  status: 400 | 401 | 404 | 409 | 429 | 500 | 503,
+  status: 400 | 401 | 404 | 409 | 413 | 429 | 500 | 503,
   code: ApiErrorCode,
   message: string,
 ) {

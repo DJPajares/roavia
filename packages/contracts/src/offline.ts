@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { tripMoneySchema } from "./trips";
+import { httpsUrlSchema } from "./security";
 
 const jsonObjectSchema = z.record(z.string(), z.unknown());
 const apiMetaSchema = z.object({ requestId: z.string().uuid() });
@@ -8,11 +9,11 @@ const apiMetaSchema = z.object({ requestId: z.string().uuid() });
 export const offlinePackageSourceSchema = z.object({
   attribution: z.string().nullable(),
   license: z.string().nullable(),
-  licenseUrl: z.string().url().nullable(),
+  licenseUrl: httpsUrlSchema.nullable(),
   retrievedAt: z.string().datetime({ offset: true }),
   title: z.string().nullable(),
   trustTier: z.enum(["tier_1", "tier_2", "tier_3", "tier_4"]),
-  url: z.string().url(),
+  url: httpsUrlSchema,
 });
 
 export const offlinePackagePlaceSchema = z.object({

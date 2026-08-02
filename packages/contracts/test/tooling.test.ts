@@ -1,4 +1,4 @@
-import { apiErrorResponseSchema, healthResponseSchema } from "@roavia/contracts";
+import { apiErrorResponseSchema, healthResponseSchema, httpsUrlSchema } from "@roavia/contracts";
 import { describe, expect, it } from "vitest";
 
 describe("shared API contracts", () => {
@@ -27,5 +27,16 @@ describe("shared API contracts", () => {
         },
       }),
     ).toThrow("Invalid UUID");
+  });
+
+  it("accepts only HTTPS outbound links", () => {
+    expect(httpsUrlSchema.parse("https://official.example.test/source")).toBe(
+      "https://official.example.test/source",
+    );
+    expect(() => httpsUrlSchema.parse("http://official.example.test/source")).toThrow(/HTTPS/);
+    expect(() => httpsUrlSchema.parse("javascript:alert(1)")).toThrow(/HTTPS/);
+    expect(() => httpsUrlSchema.parse("https://user:password@official.example.test")).toThrow(
+      /credentials/,
+    );
   });
 });

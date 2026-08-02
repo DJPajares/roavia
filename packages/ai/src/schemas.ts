@@ -1,3 +1,4 @@
+import { httpsUrlSchema } from "@roavia/contracts";
 import { z } from "zod";
 
 const localDate = z
@@ -13,7 +14,7 @@ export const aiSourceReferenceSchema = z
   .object({
     sourceId: identifier,
     title: z.string().trim().min(1).max(240),
-    url: z.url(),
+    url: httpsUrlSchema,
     retrievedAt: z.iso.datetime({ offset: true }),
     validUntil: z.iso.datetime({ offset: true }).nullable(),
     official: z.boolean(),
@@ -39,7 +40,7 @@ const itineraryBookingSchema = z
   .object({
     required: z.boolean(),
     status: z.enum(["not_needed", "recommended", "required", "unknown"]),
-    url: z.url().nullable(),
+    url: httpsUrlSchema.nullable(),
   })
   .strict();
 

@@ -21,6 +21,7 @@ import {
   type TravelDataAdapter,
   providerError,
 } from "../contracts.js";
+import { normalizedProviderBaseUrl } from "./provider-http.js";
 
 const provider = "mapbox";
 const geocodingDocsUrl = "https://docs.mapbox.com/api/search/geocoding-v6/";
@@ -79,14 +80,6 @@ function requiredToken(value: string) {
     throw new Error("A non-empty server-side Mapbox access token is required.");
   }
   return value;
-}
-
-function normalizedBaseUrl(value = "https://api.mapbox.com") {
-  const url = new URL(value);
-  if (url.protocol !== "https:" && url.hostname !== "127.0.0.1" && url.hostname !== "localhost") {
-    throw new Error("Mapbox adapter endpoints must use HTTPS outside local fixtures.");
-  }
-  return url.toString().replace(/\/$/, "");
 }
 
 function source(
@@ -455,7 +448,11 @@ abstract class MapboxHttpAdapter {
 
   constructor(options: MapboxAdapterOptions) {
     this.#accessToken = requiredToken(options.accessToken);
-    this.baseUrl = normalizedBaseUrl(options.baseUrl);
+    this.baseUrl = normalizedProviderBaseUrl(
+      options.baseUrl ?? "https://api.mapbox.com",
+      "Mapbox adapter",
+      ["api.mapbox.com"],
+    );
     this.clock = options.clock ?? (() => new Date());
     this.fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
@@ -562,6 +559,7 @@ export class MapboxGeocodingAdapter
     try {
       response = await this.fetch(url, {
         headers: { accept: "application/geo+json" },
+        redirect: "error",
         signal: context.signal,
       });
     } catch (error) {
@@ -633,6 +631,7 @@ export class MapboxRoutingAdapter
     try {
       response = await this.fetch(url, {
         headers: { accept: "application/json" },
+        redirect: "error",
         signal: context.signal,
       });
     } catch (error) {

@@ -13,7 +13,7 @@ describe("Supabase account identity administration", () => {
     const admin = createSupabaseAccountIdentityAdmin({
       fetch: request,
       serviceRoleKey,
-      url: "https://auth.roavia.test",
+      url: "https://roavia.supabase.co",
     });
 
     await admin.revokeSessions("user-access-token");
@@ -21,7 +21,7 @@ describe("Supabase account identity administration", () => {
 
     expect(request).toHaveBeenNthCalledWith(
       1,
-      "https://auth.roavia.test/auth/v1/logout?scope=global",
+      "https://roavia.supabase.co/auth/v1/logout?scope=global",
       expect.objectContaining({
         headers: { apikey: serviceRoleKey, authorization: "Bearer user-access-token" },
         method: "POST",
@@ -29,7 +29,7 @@ describe("Supabase account identity administration", () => {
     );
     expect(request).toHaveBeenNthCalledWith(
       2,
-      "https://auth.roavia.test/auth/v1/admin/users/auth%2Fuser%20id",
+      "https://roavia.supabase.co/auth/v1/admin/users/auth%2Fuser%20id",
       expect.objectContaining({
         body: JSON.stringify({ should_soft_delete: false }),
         headers: expect.objectContaining({ authorization: `Bearer ${serviceRoleKey}` }),
@@ -46,7 +46,7 @@ describe("Supabase account identity administration", () => {
     const admin = createSupabaseAccountIdentityAdmin({
       fetch: request,
       serviceRoleKey,
-      url: "https://auth.roavia.test",
+      url: "https://roavia.supabase.co",
     });
 
     await expect(admin.deleteIdentity("already-deleted")).resolves.toBeUndefined();
@@ -65,8 +65,14 @@ describe("Supabase account identity administration", () => {
     expect(() =>
       createSupabaseAccountIdentityAdmin({
         serviceRoleKey: "short",
-        url: "https://auth.roavia.test",
+        url: "https://roavia.supabase.co",
       }),
     ).toThrow(/server secret/);
+    expect(() =>
+      createSupabaseAccountIdentityAdmin({
+        serviceRoleKey,
+        url: "https://metadata.internal.test",
+      }),
+    ).toThrow(/approved hosted Supabase/);
   });
 });

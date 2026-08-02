@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpsUrlSchema } from "./security";
+
 const destinationApiMetaSchema = z.object({ requestId: z.string().uuid() });
 
 export const destinationPlaceTypeSchema = z.enum([
@@ -62,7 +64,7 @@ export const destinationSearchResponseSchema = z.object({
 const destinationSourceSchema = z.object({
   id: z.string().uuid(),
   title: z.string().nullable(),
-  url: z.string().url(),
+  url: httpsUrlSchema,
   kind: z.enum([
     "official_authority",
     "official_operator",
@@ -71,7 +73,7 @@ const destinationSourceSchema = z.object({
   ]),
   attribution: z.string().nullable(),
   license: z.string().nullable(),
-  licenseUrl: z.string().url().nullable(),
+  licenseUrl: httpsUrlSchema.nullable(),
   retrievedAt: z.string().datetime(),
 });
 

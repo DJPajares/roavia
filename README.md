@@ -91,9 +91,14 @@ APP_BASE_URL
 API_BASE_URL
 NEXT_PUBLIC_API_BASE_URL
 CORS_ORIGINS
+TRUSTED_PROXY_HOPS
 ```
 
 Never expose secret values through client-prefixed environment variables.
+Set `TRUSTED_PROXY_HOPS=1` when the API is deployed behind Roavia's single
+Render edge proxy, and keep it `0` for direct local traffic. The API ignores
+forwarded client addresses unless this boundary is configured, preventing a
+caller from evading public rate limits with a spoofed header.
 
 Natural-language planning and itinerary generation use Vercel AI Gateway when
 `AI_PROVIDER=vercel-gateway`; set `AI_MODEL` to a Gateway model ID and keep

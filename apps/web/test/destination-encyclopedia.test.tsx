@@ -65,4 +65,49 @@ describe("DestinationEncyclopedia", () => {
       "/plan",
     );
   });
+
+  test("renders imported rich-content payloads as inert text", async () => {
+    getDestination.mockResolvedValue({
+      data: {
+        place: {
+          id: placeId,
+          canonicalName: "Singapore",
+          localizedNames: {},
+          placeType: "city",
+          countryCode: "SG",
+          timezone: "Asia/Singapore",
+          summary: "A source-aware guide.",
+          hierarchy: [],
+        },
+        content: [
+          {
+            id: "44444444-4444-4444-8444-444444444444",
+            type: "practical",
+            data: { advisory: '<img src=x onerror="globalThis.compromised=true">' },
+            freshness: "fresh",
+            refreshedAt: "2026-07-29T00:00:00.000Z",
+            sources: [
+              {
+                id: "55555555-5555-4555-8555-555555555555",
+                title: "Official source",
+                url: "https://official.example.test/",
+                kind: "official_authority",
+                attribution: null,
+                license: null,
+                licenseUrl: null,
+                retrievedAt: "2026-07-29T00:00:00.000Z",
+              },
+            ],
+          },
+        ],
+      },
+      meta: { requestId: "66666666-6666-4666-8666-666666666666" },
+    });
+
+    const { container } = render(createElement(DestinationEncyclopedia, { placeId }));
+
+    expect(await screen.findByText(/<img src=x onerror=/)).toBeDefined();
+    expect(container.querySelector("img")).toBeNull();
+    expect((globalThis as { compromised?: boolean }).compromised).toBeUndefined();
+  });
 });

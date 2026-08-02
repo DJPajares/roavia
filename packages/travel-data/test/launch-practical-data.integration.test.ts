@@ -91,13 +91,13 @@ describe("launch practical-data provider configuration", () => {
       WEATHER_PROVIDER: "open-meteo",
     });
     const bundle = createLaunchPracticalDataProviderBundle(config, {
-      calendarificBaseUrl: "https://calendarific.test/api/v2",
+      calendarificBaseUrl: "https://localhost/api/v2",
       clock: () => fixtureNow,
-      ecbBaseUrl: "https://ecb.test/service/data/EXR",
+      ecbBaseUrl: "https://localhost/service/data/EXR",
       fetch: fixtureFetch(() => jsonResponse({})),
-      govUkBaseUrl: "https://govuk.test/api/content",
-      openMeteoClimateBaseUrl: "https://climate.open-meteo.test",
-      openMeteoForecastBaseUrl: "https://forecast.open-meteo.test",
+      govUkBaseUrl: "https://localhost/api/content",
+      openMeteoClimateBaseUrl: "https://localhost/climate",
+      openMeteoForecastBaseUrl: "https://localhost/forecast",
     });
 
     expect(Object.keys(bundle.officialSources).toSorted()).toEqual([
@@ -140,14 +140,16 @@ describe("launch practical-data provider configuration", () => {
 describe("Open-Meteo launch adapters", () => {
   test("normalizes Singapore forecast units, freshness, source, and availability", async () => {
     const urls: URL[] = [];
+    let redirect: RequestRedirect | undefined;
     const adapter = new OpenMeteoForecastAdapter({
       apiKey: weatherKey,
       clock: () => fixtureNow,
-      fetch: fixtureFetch((url) => {
+      fetch: fixtureFetch((url, init) => {
         urls.push(url);
+        redirect = init?.redirect;
         return jsonResponse(forecastFixture);
       }),
-      forecastBaseUrl: "https://forecast.open-meteo.test",
+      forecastBaseUrl: "https://localhost/forecast",
     });
     const result = await new TravelDataCoordinator(
       weatherForecastOperation,
@@ -180,13 +182,14 @@ describe("Open-Meteo launch adapters", () => {
     });
     expect(urls[0]?.searchParams.get("temperature_unit")).toBe("celsius");
     expect(urls[0]?.searchParams.get("apikey")).toBe(weatherKey);
+    expect(redirect).toBe("error");
     expect(JSON.stringify(result)).not.toContain(weatherKey);
   });
 
   test("preserves conflicting Sydney climate models as separate uncertain series", async () => {
     const adapter = new OpenMeteoClimateAdapter({
       apiKey: weatherKey,
-      climateBaseUrl: "https://climate.open-meteo.test",
+      climateBaseUrl: "https://localhost/climate",
       clock: () => fixtureNow,
       fetch: fixtureFetch(() => jsonResponse(climateFixture)),
     });
@@ -216,7 +219,7 @@ describe("Open-Meteo launch adapters", () => {
       apiKey: weatherKey,
       clock: () => now,
       fetch: fixtureFetch(() => jsonResponse(forecastFixture)),
-      forecastBaseUrl: "https://forecast.open-meteo.test",
+      forecastBaseUrl: "https://localhost/forecast",
     });
     const coordinator = new TravelDataCoordinator(
       weatherForecastOperation,
@@ -240,7 +243,7 @@ describe("Open-Meteo launch adapters", () => {
       apiKey: weatherKey,
       clock: () => fixtureNow,
       fetch: fixtureFetch(() => jsonResponse({ reason: "customer-secret detail" }, 429)),
-      forecastBaseUrl: "https://forecast.open-meteo.test",
+      forecastBaseUrl: "https://localhost/forecast",
     }).execute(weatherInput, context());
     expect(quota).toMatchObject({ reason: "rate_limited", status: "quota" });
     expect(JSON.stringify(quota)).not.toContain("customer-secret detail");
@@ -249,7 +252,7 @@ describe("Open-Meteo launch adapters", () => {
       apiKey: weatherKey,
       clock: () => fixtureNow,
       fetch: fixtureFetch(() => jsonResponse({ hourly: { time: [] } })),
-      forecastBaseUrl: "https://forecast.open-meteo.test",
+      forecastBaseUrl: "https://localhost/forecast",
     }).execute(weatherInput, context());
     expect(invalid).toMatchObject({ error: { code: "invalid_response" }, status: "error" });
 
@@ -264,7 +267,7 @@ describe("Open-Meteo launch adapters", () => {
     };
     const timeoutAdapter = new OpenMeteoForecastAdapter({
       apiKey: weatherKey,
-      forecastBaseUrl: "https://forecast.open-meteo.test",
+      forecastBaseUrl: "https://localhost/forecast",
       fetch: fixtureFetch(
         (_url, init) =>
           new Promise<Response>((_resolve, reject) => {
@@ -288,7 +291,7 @@ describe("holiday, advisory, and official-source adapters", () => {
     const urls: URL[] = [];
     const adapter = new CalendarificHolidayAdapter({
       apiKey: holidayKey,
-      baseUrl: "https://calendarific.test/api/v2",
+      baseUrl: "https://localhost/api/v2",
       clock: () => fixtureNow,
       fetch: fixtureFetch((url) => {
         urls.push(url);
@@ -324,7 +327,7 @@ describe("holiday, advisory, and official-source adapters", () => {
   test("does not select an unapproved holiday fallback after quota exhaustion", async () => {
     const adapter = new CalendarificHolidayAdapter({
       apiKey: holidayKey,
-      baseUrl: "https://calendarific.test/api/v2",
+      baseUrl: "https://localhost/api/v2",
       clock: () => fixtureNow,
       fetch: fixtureFetch(() => jsonResponse({ meta: { code: 429 } }, 429)),
     });
@@ -348,7 +351,7 @@ describe("holiday, advisory, and official-source adapters", () => {
 
   test("ingests source-only GOV.UK advice for GB travelers and rejects nationality generalization", async () => {
     const adapter = new GovUkTravelAdvisoryAdapter({
-      baseUrl: "https://govuk.test/api/content",
+      baseUrl: "https://localhost/api/content",
       clock: () => fixtureNow,
       fetch: fixtureFetch(() => jsonResponse(advisoryFixture)),
     });
@@ -417,7 +420,7 @@ describe("ECB launch currency adapter", () => {
   test("normalizes dated cross-rates and deterministic half-up estimate conversion", async () => {
     const urls: URL[] = [];
     const adapter = new EcbCurrencyAdapter({
-      baseUrl: "https://ecb.test/service/data/EXR",
+      baseUrl: "https://localhost/service/data/EXR",
       clock: () => fixtureNow,
       fetch: fixtureFetch((url) => {
         urls.push(url);
@@ -461,7 +464,7 @@ describe("ECB launch currency adapter", () => {
 
   test("marks an old common rate set stale and rejects incomplete payloads", async () => {
     const staleAdapter = new EcbCurrencyAdapter({
-      baseUrl: "https://ecb.test/service/data/EXR",
+      baseUrl: "https://localhost/service/data/EXR",
       clock: () => new Date("2026-08-10T12:00:00.000Z"),
       fetch: fixtureFetch(() => textResponse(ecbFixture)),
     });
@@ -474,7 +477,7 @@ describe("ECB launch currency adapter", () => {
     expect(stale.status === "success" && stale.warnings?.[0]).toContain("older than");
 
     const incomplete = await new EcbCurrencyAdapter({
-      baseUrl: "https://ecb.test/service/data/EXR",
+      baseUrl: "https://localhost/service/data/EXR",
       clock: () => fixtureNow,
       fetch: fixtureFetch(() => textResponse(ecbFixture.replace(/^.*JPY.*\n/m, ""))),
     }).execute({ baseCurrency: "EUR", quoteCurrencies: ["JPY"] }, context());

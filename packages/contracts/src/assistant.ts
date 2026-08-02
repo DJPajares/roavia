@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpsUrlSchema } from "./security";
+
 const assistantMetaSchema = z.object({ requestId: z.string().uuid() });
 const identifierSchema = z.string().uuid();
 const shortTextSchema = z.string().trim().min(1).max(500);
@@ -31,7 +33,7 @@ export const assistantSourceSchema = z
     retrievedAt: z.string().datetime({ offset: true }),
     sourceId: z.string().trim().min(1).max(128),
     title: z.string().trim().min(1).max(240),
-    url: z.string().url(),
+    url: httpsUrlSchema,
     validUntil: z.string().datetime({ offset: true }).nullable(),
   })
   .strict();

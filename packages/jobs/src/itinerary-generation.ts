@@ -92,7 +92,7 @@ export async function enqueueItineraryGeneration(
     correlationId: input.correlationId,
     expectedTripRevision: input.expectedTripRevision,
     maxRepairAttempts: input.maxRepairAttempts ?? 2,
-    promptVersion: input.promptVersion ?? "itinerary-generation-v1",
+    promptVersion: input.promptVersion ?? "itinerary-generation-v2",
     tripId: input.tripId,
   });
   try {

@@ -12,6 +12,8 @@ import {
   type JSONWebKeySet,
 } from "jose";
 
+import { normalizeSupabaseUrl } from "./supabase-url.js";
+
 const DEFAULT_AUDIENCE = "authenticated";
 const SUPPORTED_ALGORITHMS = ["ES256", "RS256", "EdDSA"];
 
@@ -102,13 +104,9 @@ export function createAccessTokenVerifierFromEnvironment(
     throw new Error("SUPABASE_URL is required when AUTH_PROVIDER=supabase.");
   }
 
-  const url = new URL(projectUrl);
-  const localDevelopment = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  if (url.protocol !== "https:" && !(localDevelopment && url.protocol === "http:")) {
-    throw new Error("SUPABASE_URL must use HTTPS outside local development.");
-  }
+  const url = normalizeSupabaseUrl(projectUrl);
 
   return createSupabaseAccessTokenVerifier({
-    issuer: `${normalizedIssuer(url.toString())}/auth/v1`,
+    issuer: `${url}/auth/v1`,
   });
 }

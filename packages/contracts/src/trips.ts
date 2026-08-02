@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpsUrlSchema } from "./security";
+
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const LOCAL_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
@@ -67,13 +69,7 @@ export const itinerarySourceSchema = z.object({
   freshness: z.enum(["fresh", "stale"]),
   label: z.string().trim().min(1).max(200),
   retrievedAt: z.string().datetime({ offset: true }),
-  url: z
-    .string()
-    .url()
-    .refine((value) => value.startsWith("https://") || value.startsWith("http://"), {
-      message: "Source URL must use HTTP or HTTPS.",
-    })
-    .optional(),
+  url: httpsUrlSchema.optional(),
 });
 
 export const itineraryItemSourceSnapshotSchema = z.object({
@@ -413,7 +409,7 @@ export const itineraryGenerationSourceSchema = z.object({
   retrievedAt: z.string().datetime({ offset: true }),
   sourceId: z.string().trim().min(1).max(128),
   title: z.string().trim().min(1).max(240),
-  url: z.string().url(),
+  url: httpsUrlSchema,
   validUntil: z.string().datetime({ offset: true }).nullable(),
 });
 

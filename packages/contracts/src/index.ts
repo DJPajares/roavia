@@ -9,6 +9,7 @@ export * from "./assistant";
 export * from "./offline";
 export * from "./disruptions";
 export * from "./account";
+export * from "./security";
 
 export const API_CONTRACT_VERSION = "v1" as const;
 
@@ -36,6 +37,7 @@ export const apiErrorCodeSchema = z.enum([
   "planner_service_unavailable",
   "not_found",
   "offline_service_unavailable",
+  "payload_too_large",
   "profile_service_unavailable",
   "reauthentication_required",
   "rate_limited",

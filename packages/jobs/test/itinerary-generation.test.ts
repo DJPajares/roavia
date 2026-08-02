@@ -54,7 +54,7 @@ describe("itinerary generation job", () => {
       correlationId,
       expectedTripRevision: 3,
       maxRepairAttempts: 2,
-      promptVersion: "itinerary-generation-v1",
+      promptVersion: "itinerary-generation-v2",
       tripId,
     });
     expect(queued.job.envelope).toMatchObject({

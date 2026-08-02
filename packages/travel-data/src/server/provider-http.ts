@@ -13,10 +13,21 @@ export function requiredSecret(value: string, label: string) {
   return value;
 }
 
-export function normalizedProviderBaseUrl(value: string, label: string) {
+export function normalizedProviderBaseUrl(
+  value: string,
+  label: string,
+  allowedHosts: readonly string[],
+) {
   const url = new URL(value);
-  if (url.protocol !== "https:" && url.hostname !== "127.0.0.1" && url.hostname !== "localhost") {
+  const localFixture = url.hostname === "127.0.0.1" || url.hostname === "localhost";
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error(`${label} endpoints must be credential-free base URLs.`);
+  }
+  if (url.protocol !== "https:" && !(localFixture && url.protocol === "http:")) {
     throw new Error(`${label} endpoints must use HTTPS outside local fixtures.`);
+  }
+  if (!localFixture && (url.port || !allowedHosts.includes(url.hostname))) {
+    throw new Error(`${label} endpoints must use an approved provider host.`);
   }
   return url.toString().replace(/\/$/, "");
 }

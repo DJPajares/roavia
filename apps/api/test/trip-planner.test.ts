@@ -2,6 +2,7 @@ import type { TripIntentExtraction } from "@roavia/contracts";
 import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
+import { createFixedWindowRateLimiter, type RateLimiter } from "../src/rate-limit.js";
 import type { TripPlannerApiService } from "../src/trip-planner.js";
 
 const authUserId = "10000000-0000-4000-8000-000000000001";
@@ -47,8 +48,9 @@ const headers = {
   "x-request-id": requestId,
 };
 
-function app(service?: TripPlannerApiService) {
+function app(service?: TripPlannerApiService, plannerRateLimiter?: RateLimiter) {
   return createApp({
+    plannerRateLimiter,
     tripPlannerService: service,
     verifyAccessToken: async () => ({
       expiresAt: "2026-07-29T01:00:00.000Z",
@@ -105,5 +107,22 @@ describe("trip planner API", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "planner_extraction_failed" },
     });
+  });
+
+  test("rate limits AI-backed extraction by authenticated owner", async () => {
+    const extract = vi.fn<TripPlannerApiService["extract"]>().mockResolvedValue(extraction);
+    const api = app({ extract }, createFixedWindowRateLimiter({ limit: 1 }));
+    const request = () =>
+      api.request("/planner/extract", {
+        body: JSON.stringify({ prompt: "Plan a complete trip to Singapore next month." }),
+        headers,
+        method: "POST",
+      });
+
+    expect((await request()).status).toBe(200);
+    const limited = await request();
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBeTruthy();
+    expect(extract).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,4 @@
-import { destinationSearchResponseSchema } from "@roavia/contracts";
+import { destinationSearchResponseSchema, type DestinationSearchQuery } from "@roavia/contracts";
 import { describe, expect, test } from "vitest";
 
 import { createApp } from "../src/app.js";
@@ -9,6 +9,11 @@ const regionId = "22222222-2222-4222-8222-222222222222";
 const cityId = "33333333-3333-4333-8333-333333333333";
 const contentId = "44444444-4444-4444-8444-444444444444";
 const sourceId = "55555555-5555-4555-8555-555555555555";
+const emptySearch = async (query: DestinationSearchQuery) => ({
+  query: query.query,
+  results: [],
+  pagination: { page: query.page, limit: query.limit, total: 0, nextPage: null },
+});
 
 describe("destination search API", () => {
   test("returns only structured, source-aware destination detail", async () => {
@@ -147,6 +152,47 @@ describe("destination search API", () => {
     expect(limited.status).toBe(429);
     expect(limited.headers.get("retry-after")).toBeTruthy();
     await expect(limited.json()).resolves.toMatchObject({ error: { code: "rate_limited" } });
+  });
+
+  test("ignores spoofed forwarding headers unless a proxy boundary is trusted", async () => {
+    const direct = createApp({
+      searchDestinations: emptySearch,
+      searchRateLimiter: createFixedWindowRateLimiter({ limit: 1 }),
+    });
+    expect(
+      (
+        await direct.request("/destinations/search?q=Singapore", {
+          headers: { "x-forwarded-for": "198.51.100.10" },
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await direct.request("/destinations/search?q=Singapore", {
+          headers: { "x-forwarded-for": "203.0.113.20" },
+        })
+      ).status,
+    ).toBe(429);
+
+    const proxied = createApp({
+      searchDestinations: emptySearch,
+      searchRateLimiter: createFixedWindowRateLimiter({ limit: 1 }),
+      trustedProxyHops: 1,
+    });
+    expect(
+      (
+        await proxied.request("/destinations/search?q=Singapore", {
+          headers: { "x-forwarded-for": "198.51.100.10" },
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await proxied.request("/destinations/search?q=Singapore", {
+          headers: { "x-forwarded-for": "203.0.113.20" },
+        })
+      ).status,
+    ).toBe(200);
   });
 
   test("keeps health available when the catalogue connection is not configured", async () => {

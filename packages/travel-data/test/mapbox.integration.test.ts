@@ -25,7 +25,7 @@ import parisWalkingFixture from "./fixtures/mapbox/route-paris-walking.json";
 import unavailableRouteFixture from "./fixtures/mapbox/route-unavailable.json";
 
 const accessToken = "pk.fixture-mapbox-server-token";
-const baseUrl = "https://api.mapbox.test";
+const baseUrl = "https://localhost";
 const fixtureNow = new Date("2026-07-28T00:00:00.000Z");
 const parisRoute: RouteInput = {
   mode: "walking",

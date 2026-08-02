@@ -233,6 +233,7 @@ export class CalendarificHolidayAdapter implements TravelDataAdapter<HolidayInpu
     this.#baseUrl = normalizedProviderBaseUrl(
       options.baseUrl ?? "https://calendarific.com/api/v2",
       "Calendarific",
+      ["calendarific.com"],
     );
     this.#clock = options.clock ?? (() => new Date());
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
@@ -259,6 +260,7 @@ export class CalendarificHolidayAdapter implements TravelDataAdapter<HolidayInpu
     try {
       response = await this.#fetch(url, {
         headers: { accept: "application/json" },
+        redirect: "error",
         signal: context.signal,
       });
     } catch (error) {
