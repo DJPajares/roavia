@@ -42,6 +42,8 @@ export interface AssistantApiService {
   cancel(actionId: string, context: AssistantApiContext): Promise<AssistantActionMutation>;
 }
 
+export type AssistantActionMutationService = Pick<AssistantApiService, "cancel" | "confirm">;
+
 async function applyAction(
   tripRepository: TripRepository,
   authUserId: string,
@@ -123,42 +125,12 @@ async function applyAction(
   return result.tripRevision;
 }
 
-export function createAssistantApiService(dependencies: {
+export function createAssistantActionMutationService(dependencies: {
   actions: AssistantActionRepository;
-  assistant: AssistantDraftService;
   telemetry?: Pick<AiTelemetryRepository, "recordAssistantAction">;
   trips: TripRepository;
-}): AssistantApiService {
+}): AssistantActionMutationService {
   return {
-    async query(input, context) {
-      const trip =
-        input.context.type === "trip"
-          ? await dependencies.trips.getTrip(context.authUserId, input.context.tripId)
-          : undefined;
-      const draft = await dependencies.assistant.answer(input, {
-        requestId: context.requestId,
-        signal: context.signal,
-        trip,
-      });
-      if (!trip || draft.actionPayloads.length === 0) return draft.answer;
-      const actions = await dependencies.actions.createPreviews(
-        context.authUserId,
-        trip.id,
-        trip.revision,
-        draft.actionPayloads,
-        { correlationId: context.requestId },
-      );
-      await dependencies.telemetry
-        ?.recordAssistantAction({
-          actionCount: actions.length,
-          correlationId: context.requestId,
-          outcome: "offered",
-          timestamp: new Date().toISOString(),
-        })
-        .catch(() => undefined);
-      return { ...draft.answer, actions };
-    },
-
     async confirm(actionId, context) {
       const action = await dependencies.actions.claim(context.authUserId, actionId);
       let tripRevision: number;
@@ -204,6 +176,46 @@ export function createAssistantApiService(dependencies: {
         tripId: action.tripId,
         tripRevision: null,
       };
+    },
+  };
+}
+
+export function createAssistantApiService(dependencies: {
+  actions: AssistantActionRepository;
+  assistant: AssistantDraftService;
+  telemetry?: Pick<AiTelemetryRepository, "recordAssistantAction">;
+  trips: TripRepository;
+}): AssistantApiService {
+  const mutations = createAssistantActionMutationService(dependencies);
+  return {
+    ...mutations,
+    async query(input, context) {
+      const trip =
+        input.context.type === "trip"
+          ? await dependencies.trips.getTrip(context.authUserId, input.context.tripId)
+          : undefined;
+      const draft = await dependencies.assistant.answer(input, {
+        requestId: context.requestId,
+        signal: context.signal,
+        trip,
+      });
+      if (!trip || draft.actionPayloads.length === 0) return draft.answer;
+      const actions = await dependencies.actions.createPreviews(
+        context.authUserId,
+        trip.id,
+        trip.revision,
+        draft.actionPayloads,
+        { correlationId: context.requestId },
+      );
+      await dependencies.telemetry
+        ?.recordAssistantAction({
+          actionCount: actions.length,
+          correlationId: context.requestId,
+          outcome: "offered",
+          timestamp: new Date().toISOString(),
+        })
+        .catch(() => undefined);
+      return { ...draft.answer, actions };
     },
   };
 }

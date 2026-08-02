@@ -5,6 +5,8 @@ import {
   authSessionResponseSchema,
   destinationSearchResponseSchema,
   destinationDetailResponseSchema,
+  disruptionRecommendationListResponseSchema,
+  disruptionRecommendationMutationResponseSchema,
   healthResponseSchema,
   itineraryGenerationQueuedResponseSchema,
   itineraryGenerationCancelledResponseSchema,
@@ -31,6 +33,9 @@ import {
   type DestinationSearchQuery,
   type DestinationSearchResponse,
   type DestinationDetailResponse,
+  type DisruptionRecommendationDecisionInput,
+  type DisruptionRecommendationListResponse,
+  type DisruptionRecommendationMutationResponse,
   type HealthResponse,
   type ItineraryGenerationQueuedResponse,
   type ItineraryGenerationCancelInput,
@@ -68,6 +73,9 @@ export type {
   DestinationSearchQuery,
   DestinationSearchResponse,
   DestinationDetailResponse,
+  DisruptionRecommendationDecisionInput,
+  DisruptionRecommendationListResponse,
+  DisruptionRecommendationMutationResponse,
   HealthResponse,
   ItineraryGenerationQueuedResponse,
   ItineraryGenerationCancelInput,
@@ -180,6 +188,17 @@ export interface RoaviaApiClient {
   askAssistant(input: AssistantQueryInput): Promise<AssistantQueryResponse>;
   confirmAssistantAction(actionId: string): Promise<AssistantActionMutationResponse>;
   cancelAssistantAction(actionId: string): Promise<AssistantActionMutationResponse>;
+  listDisruptionRecommendations(tripId: string): Promise<DisruptionRecommendationListResponse>;
+  refreshDisruptionRecommendations(tripId: string): Promise<DisruptionRecommendationListResponse>;
+  decideDisruptionRecommendation(
+    tripId: string,
+    recommendationId: string,
+    input: DisruptionRecommendationDecisionInput,
+  ): Promise<DisruptionRecommendationMutationResponse>;
+  applyDisruptionRecommendation(
+    tripId: string,
+    recommendationId: string,
+  ): Promise<DisruptionRecommendationMutationResponse>;
 }
 
 export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClient {
@@ -433,6 +452,34 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
       return request(
         `/assistant/actions/${encodeURIComponent(actionId)}/cancel`,
         assistantActionMutationResponseSchema,
+        { authenticated: true, method: "POST" },
+      );
+    },
+    async listDisruptionRecommendations(tripId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/disruption-recommendations`,
+        disruptionRecommendationListResponseSchema,
+        { authenticated: true },
+      );
+    },
+    async refreshDisruptionRecommendations(tripId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/disruption-recommendations/refresh`,
+        disruptionRecommendationListResponseSchema,
+        { authenticated: true, method: "POST" },
+      );
+    },
+    async decideDisruptionRecommendation(tripId, recommendationId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/disruption-recommendations/${encodeURIComponent(recommendationId)}/decision`,
+        disruptionRecommendationMutationResponseSchema,
+        { authenticated: true, body: input, method: "POST" },
+      );
+    },
+    async applyDisruptionRecommendation(tripId, recommendationId) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/disruption-recommendations/${encodeURIComponent(recommendationId)}/apply`,
+        disruptionRecommendationMutationResponseSchema,
         { authenticated: true, method: "POST" },
       );
     },

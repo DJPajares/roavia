@@ -1,6 +1,6 @@
 import type { Buffer } from "node:buffer";
 
-import type { AssistantActionPayload } from "@roavia/contracts";
+import type { AssistantActionPayload, DisruptionRecommendationSnapshot } from "@roavia/contracts";
 
 import { sql } from "drizzle-orm";
 import {
@@ -1390,6 +1390,77 @@ export const assistantActions = pgTable(
   ],
 );
 
+export const disruptionRecommendations = pgTable(
+  "disruption_recommendations",
+  {
+    id: uuidPrimaryKey(),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tripId: uuid("trip_id").notNull(),
+    liveConditionImpactId: uuid("live_condition_impact_id")
+      .notNull()
+      .references(() => liveConditionImpacts.id, { onDelete: "cascade" }),
+    itineraryItemId: uuid("itinerary_item_id")
+      .notNull()
+      .references(() => itineraryItems.id, { onDelete: "cascade" }),
+    originalPlaceId: uuid("original_place_id")
+      .notNull()
+      .references(() => places.id, { onDelete: "restrict" }),
+    alternativePlaceId: uuid("alternative_place_id")
+      .notNull()
+      .references(() => places.id, { onDelete: "restrict" }),
+    snapshot: jsonb("snapshot_json").$type<DisruptionRecommendationSnapshot>().notNull(),
+    status: text("status", {
+      enum: ["pending", "applying", "kept", "dismissed", "applied", "failed"],
+    })
+      .notNull()
+      .default("pending"),
+    actionId: uuid("action_id").references(() => assistantActions.id, { onDelete: "set null" }),
+    failureCode: text("failure_code"),
+    decidedAt: timestamp("decided_at", { mode: "date", precision: 3, withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    foreignKey({
+      name: "disruption_recommendations_trip_owner_fk",
+      columns: [table.tripId, table.ownerUserId],
+      foreignColumns: [trips.id, trips.ownerUserId],
+    }).onDelete("cascade"),
+    uniqueIndex("disruption_recommendations_impact_uidx").on(table.liveConditionImpactId),
+    index("disruption_recommendations_owner_trip_status_idx").on(
+      table.ownerUserId,
+      table.tripId,
+      table.status,
+      table.createdAt.desc(),
+    ),
+    index("disruption_recommendations_action_idx").on(table.actionId),
+    check(
+      "disruption_recommendations_status_chk",
+      sql`${table.status} in ('pending', 'applying', 'kept', 'dismissed', 'applied', 'failed')`,
+    ),
+    check(
+      "disruption_recommendations_distinct_places_chk",
+      sql`${table.originalPlaceId} <> ${table.alternativePlaceId}`,
+    ),
+    check(
+      "disruption_recommendations_snapshot_object_chk",
+      sql`jsonb_typeof(${table.snapshot}) = 'object'`,
+    ),
+    check(
+      "disruption_recommendations_decision_chk",
+      sql`(${table.status} in ('pending', 'applying') and ${table.decidedAt} is null)
+        or (${table.status} in ('kept', 'dismissed', 'applied', 'failed') and ${table.decidedAt} is not null)`,
+    ),
+    check(
+      "disruption_recommendations_failure_chk",
+      sql`(${table.status} = 'failed' and ${table.failureCode} is not null)
+        or (${table.status} <> 'failed' and ${table.failureCode} is null)`,
+    ),
+  ],
+);
+
 export const shareLinks = pgTable(
   "share_links",
   {
@@ -1614,6 +1685,7 @@ export const coreTables = {
   destinationContent,
   destinationContentSources,
   destinationIngestionQuarantine,
+  disruptionRecommendations,
   freshnessPolicies,
   itineraryGenerationAttempts,
   itineraryGenerationRuns,

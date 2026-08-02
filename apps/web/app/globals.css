@@ -2761,6 +2761,142 @@ textarea:focus-visible {
 .shared-trip > .roavia-trust-notice {
   margin-top: 0.5rem;
 }
+.disruption-recommendations {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid color-mix(in srgb, var(--warning) 50%, var(--line));
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+  box-shadow: var(--shadow-raised);
+}
+.disruption-recommendations__heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.disruption-recommendations__heading h2,
+.disruption-recommendations__heading p {
+  margin: 0;
+}
+.disruption-recommendations__heading h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+.disruption-recommendations__heading p:not(.eyebrow) {
+  max-width: 62ch;
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+}
+.disruption-recommendations__notice {
+  padding: 0.75rem 0.9rem;
+  border-left: 3px solid var(--warning);
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+}
+.disruption-recommendations__list {
+  display: grid;
+  gap: 1rem;
+}
+.disruption-recommendation {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.35rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+.disruption-recommendation__heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.disruption-recommendation__heading h3,
+.disruption-recommendation__heading p {
+  margin: 0;
+}
+.disruption-recommendation__heading h3 {
+  font-size: 1.1rem;
+}
+.disruption-recommendation__confidence {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+.disruption-recommendation__confidence.is-high {
+  border-color: var(--moss);
+  color: var(--moss);
+}
+.disruption-recommendation__reason {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-left: 3px solid var(--warning);
+  background: var(--surface-muted);
+}
+.disruption-recommendation__reason p,
+.disruption-recommendation__reason span {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+.disruption-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.75rem;
+}
+.disruption-comparison__item {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+.disruption-comparison__item.is-alternative {
+  border-color: color-mix(in srgb, var(--moss) 65%, var(--line));
+  background: color-mix(in srgb, var(--moss) 6%, var(--surface));
+}
+.disruption-comparison__item > span,
+.disruption-comparison__item small {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.disruption-comparison__item p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+.disruption-comparison__arrow {
+  align-self: center;
+  color: var(--accent-strong);
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.disruption-recommendation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+.disruption-recommendation__failure {
+  color: var(--danger);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.disruption-confirmation {
+  max-width: 34rem;
+}
 @media (max-width: 35rem) {
   .offline-package-metadata,
   .offline-library__storage,
@@ -2794,6 +2930,25 @@ textarea:focus-visible {
   .itinerary-editor__actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .disruption-recommendations__heading,
+  .disruption-recommendation__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .disruption-comparison {
+    grid-template-columns: 1fr;
+  }
+  .disruption-comparison__arrow {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+  .disruption-recommendation__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .disruption-recommendation__actions .roavia-button {
+    width: 100%;
   }
 }
 

@@ -7,6 +7,7 @@ export * from "./destinations";
 export * from "./trip-planner";
 export * from "./assistant";
 export * from "./offline";
+export * from "./disruptions";
 
 export const API_CONTRACT_VERSION = "v1" as const;
 
@@ -21,6 +22,8 @@ export const apiErrorCodeSchema = z.enum([
   "assistant_action_conflict",
   "assistant_generation_failed",
   "assistant_service_unavailable",
+  "disruption_recommendation_conflict",
+  "disruption_service_unavailable",
   "bad_request",
   "conflict",
   "internal_error",

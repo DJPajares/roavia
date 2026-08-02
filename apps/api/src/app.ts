@@ -13,6 +13,7 @@ import {
 import {
   AssistantActionConflictError,
   AuthorizedResourceNotFoundError,
+  DisruptionRecommendationConflictError,
   TripConcurrencyError,
   TripDomainInputError,
   type ProfileRepository,
@@ -26,6 +27,10 @@ import { HTTPException } from "hono/http-exception";
 
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
 import { registerAssistantRoutes, type AssistantApiService } from "./assistant.js";
+import {
+  registerDisruptionRecommendationRoutes,
+  type DisruptionRecommendationApiService,
+} from "./disruptions.js";
 import { type ApiEnvironment, errorResponse } from "./http.js";
 import {
   registerItineraryGenerationRoutes,
@@ -58,6 +63,7 @@ export interface CreateAppOptions {
   itineraryGenerationService?: ItineraryGenerationApiService;
   tripPlannerService?: TripPlannerApiService;
   assistantService?: AssistantApiService;
+  disruptionRecommendationService?: DisruptionRecommendationApiService;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -235,6 +241,7 @@ export function createApp(options: CreateAppOptions = {}) {
   registerItineraryGenerationRoutes(app, options.itineraryGenerationService);
   registerTripPlannerRoutes(app, options.tripPlannerService);
   registerAssistantRoutes(app, options.assistantService, assistantRateLimiter);
+  registerDisruptionRecommendationRoutes(app, options.disruptionRecommendationService);
   registerShareRoutes(app, options.shareRepository);
   registerProfileRoutes(app, options.profileRepository);
 
@@ -251,6 +258,10 @@ export function createApp(options: CreateAppOptions = {}) {
 
     if (error instanceof AssistantActionConflictError) {
       return errorResponse(context, 409, "assistant_action_conflict", error.message);
+    }
+
+    if (error instanceof DisruptionRecommendationConflictError) {
+      return errorResponse(context, 409, error.code, error.message);
     }
 
     if (error instanceof TripDomainInputError) {

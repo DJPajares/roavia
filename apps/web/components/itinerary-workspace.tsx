@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "../lib/supabase/client";
+import { DisruptionRecommendations } from "./disruption-recommendations";
 import { ItineraryItemEditor, type ItemDraft, type ItemEditorMode } from "./itinerary-item-editor";
 import { OfflineItinerary } from "./offline-itinerary";
 import { OfflinePackageControls } from "./offline-package-controls";
@@ -1048,6 +1049,13 @@ export function ItineraryWorkspace({
           estimate.
         </output>
       ) : null}
+
+      <DisruptionRecommendations
+        api={api}
+        offline={offline}
+        onApplied={loadTrip}
+        tripId={trip.id}
+      />
 
       <DayTabs days={days} onSelect={setSelectedDayId} selectedDayId={selectedDay.id} />
 
