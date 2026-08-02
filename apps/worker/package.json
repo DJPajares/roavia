@@ -15,7 +15,8 @@
   "dependencies": {
     "@roavia/ai": "workspace:*",
     "@roavia/db": "workspace:*",
-    "@roavia/jobs": "workspace:*"
+    "@roavia/jobs": "workspace:*",
+    "@roavia/travel-data": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.13.2",

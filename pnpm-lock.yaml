@@ -133,6 +133,9 @@ importers:
       '@roavia/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@roavia/travel-data':
+        specifier: workspace:*
+        version: link:../../packages/travel-data
     devDependencies:
       '@types/node':
         specifier: 24.13.2
@@ -213,6 +216,9 @@ importers:
       '@roavia/db':
         specifier: workspace:*
         version: link:../db
+      '@roavia/travel-data':
+        specifier: workspace:*
+        version: link:../travel-data
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(@types/pg@8.20.0)(pg@8.22.0)

@@ -62,6 +62,7 @@ describeDatabase("database migration baseline", () => {
       "itinerary_generation_runs",
       "itinerary_items",
       "job_operator_actions",
+      "live_condition_impacts",
       "offline_packages",
       "place_provider_ids",
       "places",
@@ -81,7 +82,7 @@ describeDatabase("database migration baseline", () => {
       order by table_name
     `);
 
-    expect(idDefaults.rows).toHaveLength(25);
+    expect(idDefaults.rows).toHaveLength(26);
     expect(
       idDefaults.rows.every(({ column_default }) => column_default === "gen_random_uuid()"),
     ).toBe(true);
@@ -126,6 +127,9 @@ describeDatabase("database migration baseline", () => {
       "itinerary_generation_runs_trip_created_idx",
       "itinerary_items_day_order_unique",
       "itinerary_items_place_id_idx",
+      "live_condition_impacts_item_idx",
+      "live_condition_impacts_key_uidx",
+      "live_condition_impacts_trip_state_idx",
       "offline_packages_trip_id_idx",
       "offline_packages_user_generated_idx",
       "destination_content_expires_at_idx",
@@ -161,6 +165,7 @@ describeDatabase("database migration baseline", () => {
       "itinerary_generation_attempts",
       "itinerary_generation_runs",
       "itinerary_items",
+      "live_condition_impacts",
       "offline_packages",
       "seasonal_insights",
       "share_links",

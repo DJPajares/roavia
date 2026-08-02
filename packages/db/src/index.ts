@@ -1,5 +1,17 @@
 export { createDatabaseClient, type Database, type DatabaseClient } from "./client.js";
 export {
+  getUpcomingLiveConditionTargets,
+  listLiveConditionImpacts,
+  listUpcomingLiveConditionTripIds,
+  reconcileLiveConditionImpacts,
+  type LiveConditionImpactKind,
+  type LiveConditionImpactSeverity,
+  type LiveConditionObservationInput,
+  type LiveConditionPersistenceSummary,
+  type LiveConditionTargetRecord,
+  type PersistedLiveConditionImpactInput,
+} from "./live-condition-impact-repository.js";
+export {
   AuthorizedResourceNotFoundError,
   authorizeTripAccess,
   createShareLink,
