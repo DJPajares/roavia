@@ -32,9 +32,15 @@ export interface FixtureAiProviderCall {
   schemaName: string;
 }
 
+export interface FixtureAiProviderRequest {
+  prompt: string;
+  system: string;
+}
+
 /** Deterministic adapter for tests. It performs no network or quota-consuming calls. */
 export class FixtureAiProvider implements AiProviderAdapter {
   readonly calls: FixtureAiProviderCall[] = [];
+  readonly requests: FixtureAiProviderRequest[] = [];
   readonly model: string;
   readonly provider: string;
 
@@ -58,6 +64,7 @@ export class FixtureAiProvider implements AiProviderAdapter {
       promptVersion: request.promptVersion,
       schemaName: request.schemaName,
     });
+    this.requests.push({ prompt: request.prompt, system: request.system ?? "" });
     const step = this.steps[Math.min(this.cursor, this.steps.length - 1)]!;
     this.cursor += 1;
 

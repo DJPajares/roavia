@@ -12,7 +12,7 @@ import type { AiGateway } from "./gateway.js";
 import type { GroundingContext, GroundingKind, GroundingRetriever } from "./grounding.js";
 import type { AssistantOutputV1 } from "./schemas.js";
 
-const ASSISTANT_PROMPT_VERSION = "assistant-grounded-v1";
+const ASSISTANT_PROMPT_VERSION = "assistant-grounded-v2";
 const HIGH_STAKES_PATTERN =
   /\b(visa|passport|immigration|entry requirement|border|safe|safety|crime|emergency|hospital|doctor|medical|medicine|medication|vaccin|health advice|travel advisory)\b/i;
 const ROUTE_PATTERN = /\b(route|transport|train|bus|metro|mrt|walk|drive|transfer)\b/i;

@@ -134,5 +134,11 @@ describe("API authentication", () => {
         SUPABASE_URL: "http://auth.roavia.test",
       }),
     ).toThrow(/must use HTTPS/);
+    expect(() =>
+      createAccessTokenVerifierFromEnvironment({
+        AUTH_PROVIDER: "supabase",
+        SUPABASE_URL: "https://metadata.internal.test",
+      }),
+    ).toThrow(/approved hosted Supabase/);
   });
 });

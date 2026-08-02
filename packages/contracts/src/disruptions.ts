@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { httpsUrlSchema } from "./security";
+
 const identifierSchema = z.string().uuid();
 const shortTextSchema = z.string().trim().min(1).max(1_000);
 const sourceSchema = z
@@ -8,7 +10,7 @@ const sourceSchema = z
     sourceId: z.string().trim().min(1).max(128),
     title: z.string().trim().min(1).max(300),
     updatedAt: z.string().datetime({ offset: true }),
-    url: z.string().url(),
+    url: httpsUrlSchema,
   })
   .strict();
 

@@ -43,6 +43,7 @@ import { createAccountLifecycleService } from "./account-lifecycle.js";
 import { createAssistantActionMutationService, createAssistantApiService } from "./assistant.js";
 import { createAccessTokenVerifierFromEnvironment } from "./auth.js";
 import { createDisruptionRecommendationApiService } from "./disruptions.js";
+import { parseTrustedProxyHops } from "./rate-limit.js";
 
 try {
   loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
@@ -245,6 +246,7 @@ const app = createApp({
       : undefined,
   metricsToken: observabilityConfig.metricsToken,
   observability,
+  trustedProxyHops: parseTrustedProxyHops(process.env.TRUSTED_PROXY_HOPS),
 });
 
 const server = serve(

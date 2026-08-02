@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
 import type { ItineraryGenerationApiService } from "../src/itinerary-generation.js";
+import { createFixedWindowRateLimiter, type RateLimiter } from "../src/rate-limit.js";
 
 const authUserId = "10000000-0000-4000-8000-000000000001";
 const tripId = "20000000-0000-4000-8000-000000000001";
@@ -26,8 +27,9 @@ const summary: ItineraryGenerationSummary = {
   warnings: [],
 };
 
-function app(service?: ItineraryGenerationApiService) {
+function app(service?: ItineraryGenerationApiService, generationRateLimiter?: RateLimiter) {
   return createApp({
+    generationRateLimiter,
     itineraryGenerationService: service,
     verifyAccessToken: async () => ({
       expiresAt: "2026-07-29T01:00:00.000Z",
@@ -137,5 +139,25 @@ describe("itinerary generation API routes", () => {
       generationRunId: runId,
       jobId,
     });
+  });
+
+  test("rate limits generation by authenticated owner", async () => {
+    const generationService = generationServiceFixture();
+    const api = app(
+      generationService,
+      createFixedWindowRateLimiter({ limit: 1, windowMs: 60_000 }),
+    );
+    const request = (action: string) =>
+      api.request(`/trips/${tripId}/${action}`, {
+        body: JSON.stringify({ expectedTripRevision: 3 }),
+        headers,
+        method: "POST",
+      });
+
+    expect((await request("generate")).status).toBe(202);
+    const limited = await request("regenerate");
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBeTruthy();
+    expect(generationService.requestGeneration).toHaveBeenCalledTimes(1);
   });
 });

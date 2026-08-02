@@ -205,6 +205,7 @@ export class EcbCurrencyAdapter implements TravelDataAdapter<CurrencyRateInput, 
     this.#baseUrl = normalizedProviderBaseUrl(
       options.baseUrl ?? "https://data-api.ecb.europa.eu/service/data/EXR",
       "ECB data API",
+      ["data-api.ecb.europa.eu"],
     );
     this.#clock = options.clock ?? (() => new Date());
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
@@ -227,6 +228,7 @@ export class EcbCurrencyAdapter implements TravelDataAdapter<CurrencyRateInput, 
     try {
       response = await this.#fetch(url, {
         headers: { accept: "application/vnd.ecb.data+csv;version=1.0.0" },
+        redirect: "error",
         signal: context.signal,
       });
     } catch (error) {

@@ -1,7 +1,7 @@
 import { apiErrorResponseSchema, healthResponseSchema } from "@roavia/contracts";
 import { describe, expect, test } from "vitest";
 
-import { app } from "../src/app.js";
+import { app, createApp } from "../src/app.js";
 
 describe("Roavia API", () => {
   test("returns a typed health response and request ID", async () => {
@@ -12,6 +12,10 @@ describe("Roavia API", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("x-request-id")).toBe(requestId);
+    expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
 
     const body = healthResponseSchema.parse(await response.json());
     expect(body).toEqual({
@@ -31,5 +35,18 @@ describe("Roavia API", () => {
     const body = apiErrorResponseSchema.parse(await response.json());
     expect(body.error.code).toBe("not_found");
     expect(body.error.requestId).toBe(response.headers.get("x-request-id"));
+  });
+
+  test("rejects oversized request bodies before route parsing", async () => {
+    const limited = createApp({ maxRequestBodyBytes: 16 });
+    const response = await limited.request("/missing", {
+      body: JSON.stringify({ value: "payload larger than sixteen bytes" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(413);
+    const body = apiErrorResponseSchema.parse(await response.json());
+    expect(body.error.code).toBe("payload_too_large");
   });
 });

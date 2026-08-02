@@ -150,7 +150,7 @@ describeDatabase("PostgreSQL itinerary generation persistence", () => {
         correlationId: randomUUID(),
         expectedTripRevision: 1,
         maxRepairAttempts: 2,
-        promptVersion: "itinerary-generation-v1",
+        promptVersion: "itinerary-generation-v2",
         tripId,
       });
       const provider = new FixtureAiProvider({
@@ -222,7 +222,7 @@ describeDatabase("PostgreSQL itinerary generation persistence", () => {
         correlationId: randomUUID(),
         expectedTripRevision: 3,
         maxRepairAttempts: 2,
-        promptVersion: "itinerary-generation-v1",
+        promptVersion: "itinerary-generation-v2",
         tripId,
       });
       await tripRepository.updateTrip(authUserId, tripId, {
@@ -250,7 +250,7 @@ describeDatabase("PostgreSQL itinerary generation persistence", () => {
         correlationId: randomUUID(),
         expectedTripRevision: current.revision,
         maxRepairAttempts: 0,
-        promptVersion: "itinerary-generation-v1",
+        promptVersion: "itinerary-generation-v2",
         tripId,
       });
       const rejectedService = new ItineraryGenerationService({

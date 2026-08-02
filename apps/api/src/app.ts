@@ -27,8 +27,10 @@ import {
   createTraceContext,
 } from "@roavia/observability";
 import { Hono, type MiddlewareHandler } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
+import { secureHeaders } from "hono/secure-headers";
 
 import { AuthVerificationError, type AccessTokenVerifier } from "./auth.js";
 import { registerAccountRoutes } from "./accounts.js";
@@ -44,7 +46,11 @@ import {
   type ItineraryGenerationApiService,
 } from "./itinerary-generation.js";
 import { registerOfflinePackageRoutes } from "./offline.js";
-import { createFixedWindowRateLimiter, type RateLimiter } from "./rate-limit.js";
+import {
+  createFixedWindowRateLimiter,
+  rateLimitClientAddress,
+  type RateLimiter,
+} from "./rate-limit.js";
 import { registerProfileRoutes } from "./profiles.js";
 import { registerTripPlannerRoutes, type TripPlannerApiService } from "./trip-planner.js";
 import { registerShareRoutes } from "./sharing.js";
@@ -63,7 +69,11 @@ export interface CreateAppOptions {
   getDestinationDetail?: (placeId: string) => Promise<DestinationDetailResponse["data"] | null>;
   searchRateLimiter?: RateLimiter;
   assistantRateLimiter?: RateLimiter;
+  generationRateLimiter?: RateLimiter;
+  plannerRateLimiter?: RateLimiter;
   accountExportRateLimiter?: RateLimiter;
+  maxRequestBodyBytes?: number;
+  trustedProxyHops?: number;
   accountLifecycleService?: AccountLifecycleService;
   profileRepository?: ProfileRepository;
   offlinePackageRepository?: OfflinePackageRepository;
@@ -95,10 +105,37 @@ export function createApp(options: CreateAppOptions = {}) {
   const searchRateLimiter = options.searchRateLimiter ?? createFixedWindowRateLimiter();
   const assistantRateLimiter =
     options.assistantRateLimiter ?? createFixedWindowRateLimiter({ limit: 20 });
+  const generationRateLimiter =
+    options.generationRateLimiter ??
+    createFixedWindowRateLimiter({ limit: 5, windowMs: 60 * 60 * 1_000 });
+  const plannerRateLimiter =
+    options.plannerRateLimiter ??
+    createFixedWindowRateLimiter({ limit: 10, windowMs: 60 * 60 * 1_000 });
   const accountExportRateLimiter =
     options.accountExportRateLimiter ??
     createFixedWindowRateLimiter({ limit: 3, windowMs: 24 * 60 * 60 * 1_000 });
   const app = new Hono<ApiEnvironment>();
+
+  app.use(
+    "*",
+    secureHeaders({
+      contentSecurityPolicy: {
+        baseUri: ["'none'"],
+        defaultSrc: ["'none'"],
+        formAction: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+      crossOriginResourcePolicy: "cross-origin",
+      permissionsPolicy: {
+        camera: [],
+        geolocation: [],
+        microphone: [],
+        payment: [],
+      },
+      referrerPolicy: "no-referrer",
+      xFrameOptions: "DENY",
+    }),
+  );
 
   app.use(
     "*",
@@ -111,7 +148,15 @@ export function createApp(options: CreateAppOptions = {}) {
         "X-Roavia-Export-Grant",
       ],
       allowMethods: ["DELETE", "GET", "OPTIONS", "PATCH", "POST"],
-      exposeHeaders: ["Content-Disposition", "Traceparent", "X-Request-Id"],
+      exposeHeaders: [
+        "Content-Disposition",
+        "Retry-After",
+        "Traceparent",
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+        "X-Request-Id",
+      ],
       origin: (origin) => (corsOrigins.includes(origin) ? origin : ""),
     }),
   );
@@ -153,6 +198,20 @@ export function createApp(options: CreateAppOptions = {}) {
       }
     }
   });
+
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: options.maxRequestBodyBytes ?? 64 * 1_024,
+      onError: (context) =>
+        errorResponse(
+          context,
+          413,
+          "payload_too_large",
+          "The request body exceeds the configured API limit.",
+        ),
+    }),
+  );
 
   const metricsToken = options.metricsToken;
   const observability = options.observability;
@@ -203,7 +262,11 @@ export function createApp(options: CreateAppOptions = {}) {
       );
     }
 
-    const clientKey = context.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
+    const clientKey = rateLimitClientAddress({
+      forwardedFor: context.req.header("x-forwarded-for"),
+      remoteAddress: context.env?.incoming?.socket?.remoteAddress,
+      trustedProxyHops: options.trustedProxyHops ?? 0,
+    });
     const rateLimit = searchRateLimiter.consume(clientKey);
     context.header("x-ratelimit-limit", String(rateLimit.limit));
     context.header("x-ratelimit-remaining", String(rateLimit.remaining));
@@ -260,6 +323,7 @@ export function createApp(options: CreateAppOptions = {}) {
   });
 
   const requireAuthentication: MiddlewareHandler<ApiEnvironment> = async (context, next) => {
+    context.header("cache-control", "private, no-store");
     const authorization = context.req.header("authorization");
     const accessToken = bearerToken(authorization);
 
@@ -317,8 +381,8 @@ export function createApp(options: CreateAppOptions = {}) {
 
   registerTripRoutes(app, options.tripRepository);
   registerOfflinePackageRoutes(app, options.offlinePackageRepository, options.observability);
-  registerItineraryGenerationRoutes(app, options.itineraryGenerationService);
-  registerTripPlannerRoutes(app, options.tripPlannerService);
+  registerItineraryGenerationRoutes(app, options.itineraryGenerationService, generationRateLimiter);
+  registerTripPlannerRoutes(app, options.tripPlannerService, plannerRateLimiter);
   registerAssistantRoutes(app, options.assistantService, assistantRateLimiter);
   registerDisruptionRecommendationRoutes(app, options.disruptionRecommendationService);
   registerShareRoutes(app, options.shareRepository);

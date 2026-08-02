@@ -187,7 +187,7 @@ describe("grounded disruption alternatives", () => {
     expect(provider.calls).toEqual([
       expect.objectContaining({
         operation: "assistant",
-        promptVersion: "disruption-alternative-v1",
+        promptVersion: "disruption-alternative-v2",
       }),
     ]);
   });

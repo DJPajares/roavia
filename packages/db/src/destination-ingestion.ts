@@ -1,3 +1,4 @@
+import { httpsUrlSchema } from "@roavia/contracts";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -15,10 +16,6 @@ import {
 const recordKeySchema = z.string().regex(/^[a-z0-9][a-z0-9._-]{1,199}$/);
 const timestampSchema = z.iso.datetime({ offset: true });
 const jsonObjectSchema = z.record(z.string(), z.unknown());
-const httpUrlSchema = z.url().refine((value) => {
-  const protocol = new URL(value).protocol;
-  return protocol === "http:" || protocol === "https:";
-}, "Only HTTP and HTTPS URLs are supported.");
 
 const freshnessPolicyRecordSchema = z
   .object({
@@ -41,7 +38,7 @@ const sourceRecordSchema = z
     key: recordKeySchema,
     kind: z.literal("source"),
     license: z.string().min(1).max(300).optional(),
-    licenseUrl: httpUrlSchema.optional(),
+    licenseUrl: httpsUrlSchema.optional(),
     metadata: jsonObjectSchema.default({}),
     offlineUseAllowed: z.boolean(),
     provider: z.string().min(1).max(100),
@@ -54,7 +51,7 @@ const sourceRecordSchema = z
       "licensed_provider",
       "reviewed_editorial",
     ]),
-    sourceUrl: httpUrlSchema,
+    sourceUrl: httpsUrlSchema,
     title: z.string().min(1).max(300).optional(),
     trustTier: z.enum(["tier_1", "tier_2", "tier_3", "tier_4"]),
     validFrom: timestampSchema.optional(),

@@ -8,7 +8,7 @@ import type { DisruptionImpactCandidate } from "@roavia/db";
 import type { AiGateway } from "./gateway.js";
 import { GroundingRetriever, type GroundingContext } from "./grounding.js";
 
-const PROMPT_VERSION = "disruption-alternative-v1";
+const PROMPT_VERSION = "disruption-alternative-v2";
 const MINIMUM_CONFIDENCE = 0.75;
 
 export class DisruptionAlternativeGenerationError extends Error {

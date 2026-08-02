@@ -150,6 +150,7 @@ export class GovUkTravelAdvisoryAdapter implements TravelDataAdapter<
     this.#baseUrl = normalizedProviderBaseUrl(
       options.baseUrl ?? "https://www.gov.uk/api/content",
       "GOV.UK Content API",
+      ["www.gov.uk"],
     );
     this.#clock = options.clock ?? (() => new Date());
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
@@ -184,7 +185,7 @@ export class GovUkTravelAdvisoryAdapter implements TravelDataAdapter<
     try {
       response = await this.#fetch(url, {
         headers: { accept: "application/json" },
-        redirect: "follow",
+        redirect: "error",
         signal: context.signal,
       });
     } catch (error) {

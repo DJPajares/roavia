@@ -37,11 +37,10 @@ function isOptionalTimestamp(value: unknown): value is string | undefined {
   return value === undefined || isTimestamp(value);
 }
 
-function isHttpUrl(value: unknown): value is string {
+function isHttpsUrl(value: unknown): value is string {
   if (typeof value !== "string") return false;
   try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    return new URL(value).protocol === "https:";
   } catch {
     return false;
   }
@@ -52,7 +51,7 @@ function isSource(value: unknown): value is ProviderSource {
   if (
     typeof value.provider !== "string" ||
     value.provider.length === 0 ||
-    !isHttpUrl(value.sourceUrl) ||
+    !isHttpsUrl(value.sourceUrl) ||
     !isTimestamp(value.retrievedAt) ||
     !isOptionalTimestamp(value.publishedAt) ||
     !isOptionalTimestamp(value.validFrom) ||

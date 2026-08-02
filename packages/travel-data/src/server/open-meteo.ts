@@ -314,6 +314,7 @@ export class OpenMeteoForecastAdapter
     this.#baseUrl = normalizedProviderBaseUrl(
       options.forecastBaseUrl ?? "https://customer-api.open-meteo.com",
       "Open-Meteo forecast",
+      ["customer-api.open-meteo.com"],
     );
   }
 
@@ -337,6 +338,7 @@ export class OpenMeteoForecastAdapter
     try {
       response = await this.fetch(url, {
         headers: { accept: "application/json" },
+        redirect: "error",
         signal: context.signal,
       });
     } catch (error) {
@@ -395,6 +397,7 @@ export class OpenMeteoClimateAdapter
     this.#baseUrl = normalizedProviderBaseUrl(
       options.climateBaseUrl ?? "https://customer-climate-api.open-meteo.com",
       "Open-Meteo climate",
+      ["customer-climate-api.open-meteo.com"],
     );
   }
 
@@ -419,6 +422,7 @@ export class OpenMeteoClimateAdapter
     try {
       response = await this.fetch(url, {
         headers: { accept: "application/json" },
+        redirect: "error",
         signal: context.signal,
       });
     } catch (error) {

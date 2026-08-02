@@ -13,6 +13,7 @@ import {
 import type { Hono } from "hono";
 
 import { type ApiEnvironment, errorResponse } from "./http.js";
+import type { RateLimiter } from "./rate-limit.js";
 
 export interface ItineraryGenerationApiService {
   getGeneration(authUserId: string, tripId: string): Promise<ItineraryGenerationSummary | null>;
@@ -45,6 +46,7 @@ function routeId(candidate: string | undefined): string | undefined {
 export function registerItineraryGenerationRoutes(
   app: Hono<ApiEnvironment>,
   service: ItineraryGenerationApiService | undefined,
+  rateLimiter: RateLimiter,
 ) {
   const requestGeneration = async (context: Parameters<typeof errorResponse>[0]) => {
     if (!service) {
@@ -63,12 +65,26 @@ export function registerItineraryGenerationRoutes(
     if (!input.success) {
       return errorResponse(context, 400, "bad_request", "Generation request is invalid.");
     }
-    const data = await service.requestGeneration(
-      context.get("authSession").identity.userId,
-      tripId,
-      input.data,
-      { correlationId: context.get("requestId") },
-    );
+    const authUserId = context.get("authSession").identity.userId;
+    const rateLimit = rateLimiter.consume(authUserId);
+    context.header("x-ratelimit-limit", String(rateLimit.limit));
+    context.header("x-ratelimit-remaining", String(rateLimit.remaining));
+    context.header("x-ratelimit-reset", rateLimit.resetAt.toISOString());
+    if (!rateLimit.allowed) {
+      context.header(
+        "retry-after",
+        String(Math.max(1, Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1_000))),
+      );
+      return errorResponse(
+        context,
+        429,
+        "rate_limited",
+        "Too many itinerary generation requests. Please try again later.",
+      );
+    }
+    const data = await service.requestGeneration(authUserId, tripId, input.data, {
+      correlationId: context.get("requestId"),
+    });
     return context.json(
       itineraryGenerationQueuedResponseSchema.parse({
         data,
