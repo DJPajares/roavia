@@ -1227,6 +1227,94 @@ export const itineraryItems = pgTable(
   ],
 );
 
+export const liveConditionImpacts = pgTable(
+  "live_condition_impacts",
+  {
+    id: uuidPrimaryKey(),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    itineraryItemId: uuid("itinerary_item_id")
+      .notNull()
+      .references(() => itineraryItems.id, { onDelete: "cascade" }),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => places.id, { onDelete: "cascade" }),
+    impactKey: text("impact_key").notNull(),
+    kind: text("kind", { enum: ["closure", "weather"] }).notNull(),
+    provider: text("provider").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    state: text("state", { enum: ["active", "resolved"] })
+      .notNull()
+      .default("active"),
+    severity: text("severity", { enum: ["low", "moderate", "high", "critical"] }).notNull(),
+    confidence: numeric("confidence", { mode: "number", precision: 4, scale: 3 }).notNull(),
+    impactStart: date("impact_start", { mode: "string" }).notNull(),
+    impactEnd: date("impact_end", { mode: "string" }).notNull(),
+    summary: text("summary").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    sourceTitle: text("source_title"),
+    sourceRetrievedAt: timestamp("source_retrieved_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    firstObservedAt: timestamp("first_observed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    lastChangedAt: timestamp("last_changed_at", {
+      mode: "date",
+      precision: 3,
+      withTimezone: true,
+    }).notNull(),
+    resolvedAt: timestamp("resolved_at", { mode: "date", precision: 3, withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    uniqueIndex("live_condition_impacts_key_uidx").on(table.impactKey),
+    index("live_condition_impacts_trip_state_idx").on(
+      table.tripId,
+      table.state,
+      table.kind,
+      table.provider,
+    ),
+    index("live_condition_impacts_item_idx").on(table.itineraryItemId),
+    check("live_condition_impacts_kind_chk", sql`${table.kind} in ('closure', 'weather')`),
+    check("live_condition_impacts_state_chk", sql`${table.state} in ('active', 'resolved')`),
+    check(
+      "live_condition_impacts_severity_chk",
+      sql`${table.severity} in ('low', 'moderate', 'high', 'critical')`,
+    ),
+    check("live_condition_impacts_confidence_chk", sql`${table.confidence} between 0 and 1`),
+    check("live_condition_impacts_period_chk", sql`${table.impactEnd} >= ${table.impactStart}`),
+    check(
+      "live_condition_impacts_summary_length_chk",
+      sql`char_length(${table.summary}) between 1 and 1000`,
+    ),
+    check(
+      "live_condition_impacts_identity_length_chk",
+      sql`char_length(${table.impactKey}) between 3 and 1000
+        and char_length(${table.provider}) between 1 and 100
+        and char_length(${table.providerEventId}) between 1 and 500`,
+    ),
+    check("live_condition_impacts_hash_chk", sql`${table.payloadHash} ~ '^[a-f0-9]{64}$'`),
+    check(
+      "live_condition_impacts_resolution_chk",
+      sql`(${table.state} = 'active' and ${table.resolvedAt} is null)
+        or (${table.state} = 'resolved' and ${table.resolvedAt} is not null)`,
+    ),
+  ],
+);
+
 export const assistantActions = pgTable(
   "assistant_actions",
   {
@@ -1531,6 +1619,7 @@ export const coreTables = {
   itineraryGenerationRuns,
   itineraryDays,
   itineraryItems,
+  liveConditionImpacts,
   jobOperatorActions,
   offlinePackages,
   placeProviderIds,

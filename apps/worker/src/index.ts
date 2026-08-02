@@ -19,9 +19,13 @@ import {
   MemoryReferenceEffectStore,
   createDestinationCatalogIngestionJob,
   createItineraryGenerationJob,
+  createLiveConditionReconciliationJob,
+  createLiveConditionReconciliationService,
+  createPostgresLiveConditionStores,
   createReferenceJob,
 } from "@roavia/jobs";
 import { PgBossJobRuntime } from "@roavia/jobs/pg-boss";
+import { OpenMeteoForecastAdapter, OpenMeteoLiveConditionSource } from "@roavia/travel-data/server";
 
 import { formatJobTelemetry } from "./telemetry.js";
 
@@ -53,6 +57,24 @@ runtime.register(
     }),
   }),
 );
+if (
+  process.env.WEATHER_PROVIDER?.trim().toLowerCase() === "open-meteo" &&
+  process.env.WEATHER_API_KEY &&
+  process.env.WEATHER_API_KEY.trim().length >= 8 &&
+  !/\s/.test(process.env.WEATHER_API_KEY)
+) {
+  const stores = createPostgresLiveConditionStores(database.db);
+  runtime.register(
+    createLiveConditionReconciliationJob(
+      createLiveConditionReconciliationService({
+        ...stores,
+        source: new OpenMeteoLiveConditionSource(
+          new OpenMeteoForecastAdapter({ apiKey: process.env.WEATHER_API_KEY }),
+        ),
+      }),
+    ),
+  );
+}
 if (
   process.env.AI_PROVIDER === "vercel-gateway" &&
   process.env.AI_API_KEY &&

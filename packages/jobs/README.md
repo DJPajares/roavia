@@ -61,6 +61,21 @@ rechecked and replaced atomically at persistence time. A concrete AI adapter mus
 be injected at the worker composition root; provider credentials never belong in
 job definitions or API clients.
 
+## Live-condition reconciliation
+
+`live.conditions-reconcile.v1` carries only a trip ID and a bounded refresh key.
+The producer discovers active trips with itinerary items inside the next fifteen
+days, so coordinates and precise travel dates never enter the queue envelope or
+telemetry. The handler rechecks eligibility at execution time, evaluates fresh
+weather and closure events, and upserts advisory impact records without changing
+itinerary rows.
+
+Provider batches are scoped by kind, provider, and place. Stale or unavailable
+batches neither create nor resolve impacts. Repeated events are idempotent; a
+fresh observation can update, resolve, or reactivate the stable impact record.
+Low-confidence and low-severity events remain suppressed. Concrete closure feeds
+can be combined with the launch weather source at the worker composition root.
+
 ## Operator recovery
 
 `listJobs()` provides a bounded, status-filtered view of queued, running, retrying, and dead-lettered application records without exposing queue tables. `listDeadLetters()` returns terminal failure metadata. `redrive()` revalidates the current payload schema and creates a new job ID/idempotency key. `discard()` marks the application record terminal. Both recovery operations require an operator ID and reason and append an immutable `job_operator_actions` audit record.

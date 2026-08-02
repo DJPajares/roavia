@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@roavia/db": "workspace:*",
+    "@roavia/travel-data": "workspace:*",
     "drizzle-orm": "0.45.2",
     "pg-boss": "12.26.3",
     "zod": "4.4.3"
