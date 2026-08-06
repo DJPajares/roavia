@@ -16,9 +16,9 @@
     "@roavia/contracts": "workspace:*",
     "@roavia/offline": "workspace:*",
     "@roavia/ui": "workspace:*",
-    "@supabase/ssr": "0.12.3",
-    "@supabase/supabase-js": "2.110.9",
-    "next": "16.2.12",
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.112.0",
+    "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -26,12 +26,12 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/node": "24.13.2",
-    "@types/react": "19.2.17",
-    "@types/react-dom": "19.2.3",
+    "@testing-library/user-event": "^14.6.3",
+    "@types/node": "26.1.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "axe-core": "^4.12.1",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "tailwindcss": "^4.3.3"
   }
 }

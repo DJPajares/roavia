@@ -19,7 +19,7 @@
     "@roavia/contracts": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "24.13.2",
+    "@types/node": "26.1.2",
     "fake-indexeddb": "6.2.5"
   }
 }

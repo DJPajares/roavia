@@ -20,10 +20,10 @@
     "@roavia/db": "workspace:*",
     "@roavia/travel-data": "workspace:*",
     "drizzle-orm": "0.45.2",
-    "pg-boss": "12.26.3",
+    "pg-boss": "12.27.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/node": "24.13.2"
+    "@types/node": "26.1.2"
   }
 }
