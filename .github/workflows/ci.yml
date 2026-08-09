@@ -89,6 +89,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Test release tooling
+        run: pnpm release:test
+
   browser:
     name: Browser resilience
     runs-on: ubuntu-latest
@@ -139,3 +142,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Enforce production asset performance budget
+        run: pnpm release:performance

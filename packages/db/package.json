@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "db:bootstrap:production-roles": "node --import tsx scripts/bootstrap-production-roles.ts",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "node --import tsx scripts/migrate.ts",
     "db:reset:test": "node --import tsx scripts/reset-test.ts",

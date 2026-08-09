@@ -287,6 +287,11 @@ const app = createApp({
       : undefined,
   metricsToken: observabilityConfig.metricsToken,
   observability,
+  readiness: async () => {
+    if (!database || !jobRuntime) throw new Error("Database and queue runtime are required.");
+    await database.pool.query("select 1");
+    await database.pool.query("select version from jobs.version order by version desc limit 1");
+  },
   trustedProxyHops: parseTrustedProxyHops(process.env.TRUSTED_PROXY_HOPS),
 });
 

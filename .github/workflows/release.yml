@@ -1,0 +1,207 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full main-branch commit SHA to release
+        required: true
+        type: string
+      confirmation:
+        description: Confirm the protected production-like release
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - RELEASE
+      rollback_rehearsal:
+        description: Roll back to the supplied prior artifacts, smoke, then restore this release
+        required: true
+        default: false
+        type: boolean
+      previous_api_deploy_id:
+        description: Prior successful API deploy ID for rollback rehearsal
+        required: false
+        type: string
+      previous_worker_deploy_id:
+        description: Prior successful worker deploy ID for rollback rehearsal
+        required: false
+        type: string
+      previous_web_deploy_id:
+        description: Prior successful web deploy ID for rollback rehearsal
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+env:
+  RENDER_CLI_VERSION: v2.22.0
+
+jobs:
+  gates:
+    name: Verify release evidence
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.release_sha }}
+
+      - name: Validate release intent and ancestry
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          PREVIOUS_API_DEPLOY_ID: ${{ inputs.previous_api_deploy_id }}
+          PREVIOUS_WEB_DEPLOY_ID: ${{ inputs.previous_web_deploy_id }}
+          PREVIOUS_WORKER_DEPLOY_ID: ${{ inputs.previous_worker_deploy_id }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          ROLLBACK_REHEARSAL: ${{ inputs.rollback_rehearsal }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = RELEASE
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch origin main
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+          if [ "$ROLLBACK_REHEARSAL" = true ]; then
+            test -n "$PREVIOUS_API_DEPLOY_ID"
+            test -n "$PREVIOUS_WORKER_DEPLOY_ID"
+            test -n "$PREVIOUS_WEB_DEPLOY_ID"
+          fi
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          version: 11.20.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          cache: pnpm
+          node-version: 24
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release tooling
+        run: pnpm release:test
+
+      - name: Verify required GitHub checks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: pnpm release:gates
+
+  deploy:
+    name: Deploy and smoke production-like environment
+    needs: gates
+    runs-on: ubuntu-24.04
+    environment: production
+    env:
+      OBSERVABILITY_METRICS_TOKEN: ${{ secrets.OBSERVABILITY_METRICS_TOKEN }}
+      RELEASE_API_BASE_URL: ${{ vars.RELEASE_API_BASE_URL }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_WEB_BASE_URL: ${{ vars.RELEASE_WEB_BASE_URL }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_API_SERVICE_ID: ${{ secrets.RENDER_API_SERVICE_ID }}
+      RENDER_WEB_SERVICE_ID: ${{ secrets.RENDER_WEB_SERVICE_ID }}
+      RENDER_WORKER_SERVICE_ID: ${{ secrets.RENDER_WORKER_SERVICE_ID }}
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.release_sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          version: 11.20.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          cache: pnpm
+          node-version: 24
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate protected environment configuration
+        run: |
+          set -euo pipefail
+          : "${RENDER_API_KEY:?Configure RENDER_API_KEY in the production environment}"
+          : "${RENDER_API_SERVICE_ID:?Configure RENDER_API_SERVICE_ID}"
+          : "${RENDER_WORKER_SERVICE_ID:?Configure RENDER_WORKER_SERVICE_ID}"
+          : "${RENDER_WEB_SERVICE_ID:?Configure RENDER_WEB_SERVICE_ID}"
+          : "${RELEASE_API_BASE_URL:?Configure RELEASE_API_BASE_URL}"
+          : "${RELEASE_WEB_BASE_URL:?Configure RELEASE_WEB_BASE_URL}"
+          : "${OBSERVABILITY_METRICS_TOKEN:?Configure OBSERVABILITY_METRICS_TOKEN}"
+
+      - name: Install pinned Render CLI
+        run: |
+          set -euo pipefail
+          version="${RENDER_CLI_VERSION#v}"
+          curl -sSfL \
+            "https://github.com/render-oss/cli/releases/download/${RENDER_CLI_VERSION}/cli_${version}_linux_amd64.zip" \
+            -o /tmp/render.zip
+          unzip -q /tmp/render.zip -d /tmp/render
+          sudo mv "/tmp/render/cli_${RENDER_CLI_VERSION}" /usr/local/bin/render
+          render --version
+
+      - name: Deploy API and run the migration gate
+        run: render deploys create "$RENDER_API_SERVICE_ID" --commit "$RELEASE_SHA" --wait --confirm -o json
+
+      - name: Deploy worker
+        run: render deploys create "$RENDER_WORKER_SERVICE_ID" --commit "$RELEASE_SHA" --wait --confirm -o json
+
+      - name: Deploy web
+        run: render deploys create "$RENDER_WEB_SERVICE_ID" --commit "$RELEASE_SHA" --wait --confirm -o json
+
+      - name: Run production smoke
+        run: pnpm release:smoke
+
+      - name: Roll back to prior artifacts
+        if: inputs.rollback_rehearsal
+        env:
+          ROLLBACK_API_DEPLOY_ID: ${{ inputs.previous_api_deploy_id }}
+          ROLLBACK_WEB_DEPLOY_ID: ${{ inputs.previous_web_deploy_id }}
+          ROLLBACK_WORKER_DEPLOY_ID: ${{ inputs.previous_worker_deploy_id }}
+        run: pnpm release:rollback
+
+      - name: Smoke prior artifacts
+        if: inputs.rollback_rehearsal
+        run: pnpm release:smoke
+
+      - name: Restore API release candidate
+        if: inputs.rollback_rehearsal
+        run: render deploys create "$RENDER_API_SERVICE_ID" --commit "$RELEASE_SHA" --wait --confirm -o json
+
+      - name: Restore worker release candidate
+        if: inputs.rollback_rehearsal
+        run: render deploys create "$RENDER_WORKER_SERVICE_ID" --commit "$RELEASE_SHA" --wait --confirm -o json
+
+      - name: Restore web release candidate
+        if: inputs.rollback_rehearsal
+        run: render deploys create "$RENDER_WEB_SERVICE_ID" --commit "$RELEASE_SHA" --wait --confirm -o json
+
+      - name: Verify restored release candidate
+        if: inputs.rollback_rehearsal
+        run: pnpm release:smoke
+
+      - name: Record release evidence
+        run: |
+          {
+            echo "### Render release"
+            echo "- Commit: \`$RELEASE_SHA\`"
+            echo "- API: \`$RENDER_API_SERVICE_ID\`"
+            echo "- Worker: \`$RENDER_WORKER_SERVICE_ID\`"
+            echo "- Web: \`$RENDER_WEB_SERVICE_ID\`"
+            echo "- Smoke: passed"
+            echo "- Rollback rehearsal: \`${{ inputs.rollback_rehearsal }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
