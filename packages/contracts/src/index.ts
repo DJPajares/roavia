@@ -70,6 +70,19 @@ export const healthResponseSchema = z.object({
   meta: apiMetaSchema,
 });
 
+export const readinessResponseSchema = z.object({
+  data: z.object({
+    checks: z.object({
+      database: z.enum(["ok", "unavailable"]),
+      queue: z.enum(["ok", "unavailable"]),
+    }),
+    service: z.literal("api"),
+    status: z.enum(["ready", "unavailable"]),
+    version: z.literal(API_CONTRACT_VERSION),
+  }),
+  meta: apiMetaSchema,
+});
+
 export const authIdentitySchema = z.object({
   userId: z.string().uuid(),
   email: z.string().email().optional(),
@@ -98,4 +111,5 @@ export type AuthCredentials = z.infer<typeof authCredentialsSchema>;
 export type AuthSession = z.infer<typeof authSessionDataSchema>;
 export type AuthSessionResponse = z.infer<typeof authSessionResponseSchema>;
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
+export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;
 export type RequestId = z.infer<typeof requestIdSchema>;

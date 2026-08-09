@@ -1,4 +1,8 @@
-import { apiErrorResponseSchema, healthResponseSchema } from "@roavia/contracts";
+import {
+  apiErrorResponseSchema,
+  healthResponseSchema,
+  readinessResponseSchema,
+} from "@roavia/contracts";
 import { describe, expect, test } from "vitest";
 
 import { app, createApp } from "../src/app.js";
@@ -35,6 +39,28 @@ describe("Roavia API", () => {
     const body = apiErrorResponseSchema.parse(await response.json());
     expect(body.error.code).toBe("not_found");
     expect(body.error.requestId).toBe(response.headers.get("x-request-id"));
+  });
+
+  test("reports runtime readiness without exposing dependency details", async () => {
+    const ready = createApp({ readiness: () => Promise.resolve() });
+    const readyResponse = await ready.request("/ready");
+
+    expect(readyResponse.status).toBe(200);
+    expect(readinessResponseSchema.parse(await readyResponse.json()).data).toEqual({
+      checks: { database: "ok", queue: "ok" },
+      service: "api",
+      status: "ready",
+      version: "v1",
+    });
+
+    const unavailableResponse = await app.request("/ready");
+    expect(unavailableResponse.status).toBe(503);
+    expect(readinessResponseSchema.parse(await unavailableResponse.json()).data).toEqual({
+      checks: { database: "unavailable", queue: "unavailable" },
+      service: "api",
+      status: "unavailable",
+      version: "v1",
+    });
   });
 
   test("rejects oversized request bodies before route parsing", async () => {

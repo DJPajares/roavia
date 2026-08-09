@@ -8,6 +8,7 @@ import {
   destinationSearchResponseSchema,
   seasonalCollectionResponseSchema,
   healthResponseSchema,
+  readinessResponseSchema,
   requestIdSchema,
   type DestinationSearchQuery,
   type DestinationSearchResponse,
@@ -96,6 +97,7 @@ export interface CreateAppOptions {
   disruptionRecommendationService?: DisruptionRecommendationApiService;
   metricsToken?: string;
   observability?: RuntimeObservability;
+  readiness?: () => Promise<void>;
 }
 
 const unavailableVerifier: AccessTokenVerifier = () =>
@@ -253,6 +255,40 @@ export function createApp(options: CreateAppOptions = {}) {
       }),
     ),
   );
+
+  app.get("/ready", async (context) => {
+    const checks = { database: "unavailable", queue: "unavailable" } as const;
+
+    try {
+      if (!options.readiness) throw new Error("Runtime dependencies are not configured.");
+      await options.readiness();
+      return context.json(
+        readinessResponseSchema.parse({
+          data: {
+            checks: { database: "ok", queue: "ok" },
+            service: "api",
+            status: "ready",
+            version: API_CONTRACT_VERSION,
+          },
+          meta: { requestId: context.get("requestId") },
+        }),
+      );
+    } catch {
+      context.set("observabilityErrorCode", "runtime_not_ready");
+      return context.json(
+        readinessResponseSchema.parse({
+          data: {
+            checks,
+            service: "api",
+            status: "unavailable",
+            version: API_CONTRACT_VERSION,
+          },
+          meta: { requestId: context.get("requestId") },
+        }),
+        503,
+      );
+    }
+  });
 
   app.get("/destinations/search", async (context) => {
     const parsedQuery = destinationSearchQuerySchema.safeParse({

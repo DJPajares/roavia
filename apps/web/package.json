@@ -8,6 +8,7 @@
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "dev:auth-fixture": "node test/fixtures/supabase-auth.mjs",
     "lint": "oxlint app components e2e lib test next.config.ts playwright.config.ts proxy.ts --deny-warnings",
+    "start": "next start --hostname 0.0.0.0",
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"

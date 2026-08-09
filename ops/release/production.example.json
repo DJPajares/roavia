@@ -1,0 +1,35 @@
+{
+  "region": "APPROVAL_REQUIRED",
+  "workspacePlan": "APPROVAL_REQUIRED",
+  "servicePlan": "starter",
+  "databasePlan": "basic-256mb",
+  "databaseDiskSizeGB": 5,
+  "highAvailability": false,
+  "domains": {
+    "web": "app.example",
+    "api": "api.example"
+  },
+  "supabaseRegion": "APPROVAL_REQUIRED",
+  "monthlyBudgetUsd": 0,
+  "pricing": {
+    "checkedAt": "APPROVAL_REQUIRED",
+    "estimatedMonthlyUsd": 0,
+    "source": "https://render.com/pricing"
+  },
+  "recovery": {
+    "rpoMinutes": 0,
+    "rtoMinutes": 0
+  },
+  "retention": {
+    "rawDays": 30,
+    "aggregatedDays": 395
+  },
+  "alertDestinations": [],
+  "approvals": {
+    "budget": null,
+    "dataResidency": null,
+    "recovery": null,
+    "supabaseResidency": null,
+    "telemetry": null
+  }
+}

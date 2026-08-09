@@ -154,12 +154,16 @@ pnpm dev:api          # Start only the Hono API
 pnpm dev:worker       # Start the PostgreSQL-backed background worker
 pnpm ai:evaluate      # Run deterministic AI quality and cost release thresholds
 pnpm db:migrate       # Apply reviewed PostgreSQL migrations
+pnpm db:bootstrap:production-roles # Create or rotate bounded runtime roles
 pnpm db:seed:destinations # Idempotently import the curated destination fixture
 pnpm format:check     # Verify repository formatting
 pnpm lint             # Lint all workspaces
 pnpm typecheck        # Type-check all workspaces
 pnpm test             # Test all workspaces
 pnpm test:e2e         # Run deterministic Chromium resilience journeys
+pnpm release:test     # Test Blueprint, gate, smoke, and rollback tooling
+pnpm release:performance # Enforce production JS/CSS asset budgets after build
+pnpm release:smoke    # Smoke a configured deployed web/API stack
 pnpm build            # Build all workspaces
 pnpm check:affected   # Check changed workspaces and their dependents
 ```
@@ -217,7 +221,12 @@ The API and worker emit privacy-safe structured operational events through
 endpoint, and use the dashboard, alerts, retention rules, and first-response
 procedures in [the observability runbook](./docs/operations/observability.md).
 
-Production provisioning remains scoped to its dedicated Linear issue.
+Generate the approval-gated Render Blueprint and operate releases with the
+[production release runbook](./docs/operations/release.md). Database backup,
+forward migration, code rollback, and PITR procedures are in the
+[database recovery runbook](./docs/operations/database-recovery.md). Production
+provisioning fails closed until region/residency, budget, recovery, domain, and
+telemetry decisions are recorded.
 
 The worker uses the versioned internal contracts in `@roavia/jobs` and the `pg-boss` adapter only at its composition root. Run `pnpm db:migrate` before `pnpm dev:worker`; local execution needs PostgreSQL but no production queue or provider credentials.
 

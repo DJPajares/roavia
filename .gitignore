@@ -5,6 +5,7 @@ node_modules/
 dist/
 coverage/
 output/
+ops/release/production.json
 .husky/_/
 
 .env

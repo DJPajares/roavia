@@ -1,4 +1,9 @@
-import { apiErrorResponseSchema, healthResponseSchema, httpsUrlSchema } from "@roavia/contracts";
+import {
+  apiErrorResponseSchema,
+  healthResponseSchema,
+  httpsUrlSchema,
+  readinessResponseSchema,
+} from "@roavia/contracts";
 import { describe, expect, it } from "vitest";
 
 describe("shared API contracts", () => {
@@ -15,6 +20,20 @@ describe("shared API contracts", () => {
     });
 
     expect(response.data.status).toBe("ok");
+  });
+
+  it("validates dependency-safe readiness responses", () => {
+    expect(
+      readinessResponseSchema.parse({
+        data: {
+          checks: { database: "ok", queue: "ok" },
+          service: "api",
+          status: "ready",
+          version: "v1",
+        },
+        meta: { requestId: crypto.randomUUID() },
+      }).data.status,
+    ).toBe("ready");
   });
 
   it("rejects malformed error envelopes", () => {

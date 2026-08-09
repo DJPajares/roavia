@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "requiredChecks": [
+    {
+      "name": "Format, lint, and typecheck",
+      "evidence": ["formatting", "lint", "type safety"]
+    },
+    {
+      "name": "Test",
+      "evidence": ["AI evaluation", "accessibility", "data freshness", "database integration"]
+    },
+    {
+      "name": "Browser resilience",
+      "evidence": ["primary journey", "offline", "failure recovery", "cross-user isolation"]
+    },
+    {
+      "name": "Build",
+      "evidence": ["production compilation", "performance budget assertions"]
+    },
+    {
+      "name": "Dependency, secret, and config scan",
+      "evidence": ["dependencies", "secret scan", "infrastructure configuration"]
+    },
+    {
+      "name": "CodeQL",
+      "evidence": ["security analysis"]
+    }
+  ]
+}
