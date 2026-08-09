@@ -24,7 +24,7 @@ const generationStages = [
   ["persisting", "Saving the itinerary to your workspace"],
 ] as const;
 
-type PlannerMode = "natural" | "guided";
+type PlannerMode = "choice" | "natural" | "guided";
 type PlannerPhase =
   "prompt" | "extracting" | "review" | "saving" | "generating" | "failed" | "cancelled";
 
@@ -69,7 +69,7 @@ function errorMessage(error: unknown) {
     return "Your session expired. Sign in again, then retry without losing your request.";
   }
   if (error instanceof ApiClientError && error.code === "planner_service_unavailable") {
-    return "Natural-language planning is not configured on this API yet. Your request is still here.";
+    return "AI-assisted planning is not configured on this API yet. Your request is still here.";
   }
   return error instanceof Error
     ? error.message
@@ -120,19 +120,71 @@ function validateReview(values: ReviewValues, destinations: TripIntentDestinatio
 }
 
 export function TripPlanner({
-  initialMode = "natural",
+  initialMode = "choice",
   resumeTripId,
 }: Readonly<{ initialMode?: PlannerMode; resumeTripId?: string }>) {
   const [mode, setMode] = useState<PlannerMode>(initialMode);
 
+  if (mode === "choice") {
+    return (
+      <section aria-labelledby="trip-planning-choice-heading" className="trip-planner-choice">
+        <div className="trip-planner-choice__intro">
+          <p className="eyebrow">Start a new trip</p>
+          <h1 id="trip-planning-choice-heading">Create a trip your way.</h1>
+          <p>
+            Build the plan yourself, or choose AI-assisted planning for help turning a written
+            request into a reviewable draft. Both routes stay under your control.
+          </p>
+        </div>
+
+        <div className="trip-planner-choice__options">
+          <article className="trip-planner-choice__option is-manual">
+            <p className="eyebrow">Manual planning</p>
+            <h2>Build it yourself</h2>
+            <p>
+              Choose destinations, dates, and travelers, then start with a blank itinerary you can
+              edit at any time.
+            </p>
+            <p className="trip-planner-choice__boundary">No AI request is made on this route.</p>
+            <Button onClick={() => setMode("guided")}>Plan manually</Button>
+          </article>
+
+          <article className="trip-planner-choice__option">
+            <p className="eyebrow">AI-assisted planning</p>
+            <h2>Describe a starting point</h2>
+            <p>
+              Ask AI to help structure a trip request, then review every extracted detail before
+              Roavia saves or generates anything.
+            </p>
+            <Button onClick={() => setMode("natural")} tone="quiet">
+              Plan with AI
+            </Button>
+          </article>
+        </div>
+
+        <TrustNotice label="Your planning choice">
+          AI is optional. Choosing either route does not change an itinerary until you review and
+          confirm your own actions.
+        </TrustNotice>
+      </section>
+    );
+  }
+
   return (
     <div className="trip-planner-shell">
       <nav aria-label="Trip planning method" className="trip-planner-shell__modes">
-        <button aria-pressed={mode === "natural"} onClick={() => setMode("natural")} type="button">
-          Describe your trip
-        </button>
         <button aria-pressed={mode === "guided"} onClick={() => setMode("guided")} type="button">
           Plan manually
+        </button>
+        <button aria-pressed={mode === "natural"} onClick={() => setMode("natural")} type="button">
+          Plan with AI
+        </button>
+        <button
+          className="trip-planner-shell__change"
+          onClick={() => setMode("choice")}
+          type="button"
+        >
+          Change method
         </button>
       </nav>
       {mode === "natural" ? (
@@ -422,7 +474,7 @@ export function NaturalLanguageTripPlanner() {
         className="profile-preferences natural-planner"
       >
         <div className="profile-preferences__intro">
-          <p className="eyebrow">Natural-language planning</p>
+          <p className="eyebrow">AI-assisted planning</p>
           <h1 id="natural-planner-heading">Tell us the trip you have in mind.</h1>
           <p>
             Include destinations, dates, travelers, budget, pace, interests, and any accessibility
@@ -453,9 +505,9 @@ export function NaturalLanguageTripPlanner() {
           </div>
           <output aria-live="polite">{message}</output>
         </form>
-        <TrustNotice>
-          Roavia will show every extracted field and assumption before saving or generating
-          anything.
+        <TrustNotice label="AI planning boundary">
+          Roavia sends this request to AI only when you choose Review trip details. You will see
+          every extracted field and assumption before saving or generating anything.
         </TrustNotice>
       </section>
     );

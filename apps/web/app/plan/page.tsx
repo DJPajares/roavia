@@ -11,5 +11,5 @@ export default async function PlanPage({
   const session = await getAuthSession();
   if (!session) redirect("/auth/sign-in?next=%2Fplan&reason=missing");
   const { tripId } = await searchParams;
-  return <TripPlanner initialMode={tripId ? "guided" : "natural"} resumeTripId={tripId} />;
+  return <TripPlanner initialMode={tripId ? "guided" : "choice"} resumeTripId={tripId} />;
 }
