@@ -159,6 +159,7 @@ pnpm format:check     # Verify repository formatting
 pnpm lint             # Lint all workspaces
 pnpm typecheck        # Type-check all workspaces
 pnpm test             # Test all workspaces
+pnpm test:e2e         # Run deterministic Chromium resilience journeys
 pnpm build            # Build all workspaces
 pnpm check:affected   # Check changed workspaces and their dependents
 ```

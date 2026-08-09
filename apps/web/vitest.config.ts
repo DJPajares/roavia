@@ -5,4 +5,7 @@ export default defineConfig({
     jsx: "automatic",
   },
   oxc: false,
+  test: {
+    include: ["test/**/*.test.{ts,tsx}"],
+  },
 });

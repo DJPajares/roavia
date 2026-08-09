@@ -34,6 +34,7 @@
     "prepare": "husky",
     "test": "turbo run test",
     "test:affected": "turbo run test --affected",
+    "test:e2e": "pnpm --filter @roavia/web test:e2e",
     "typecheck": "turbo run typecheck",
     "typecheck:affected": "turbo run typecheck --affected"
   },
