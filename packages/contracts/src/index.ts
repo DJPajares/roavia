@@ -4,6 +4,7 @@ export * from "./trips";
 export * from "./profile";
 export * from "./sharing";
 export * from "./destinations";
+export * from "./explore";
 export * from "./trip-planner";
 export * from "./assistant";
 export * from "./offline";
@@ -42,6 +43,7 @@ export const apiErrorCodeSchema = z.enum([
   "reauthentication_required",
   "rate_limited",
   "search_unavailable",
+  "explore_unavailable",
   "session_expired",
   "share_service_unavailable",
   "trip_service_unavailable",

@@ -8,6 +8,7 @@ import {
   authSessionResponseSchema,
   destinationSearchResponseSchema,
   destinationDetailResponseSchema,
+  seasonalCollectionResponseSchema,
   disruptionRecommendationListResponseSchema,
   disruptionRecommendationMutationResponseSchema,
   healthResponseSchema,
@@ -40,6 +41,7 @@ import {
   type DestinationSearchQuery,
   type DestinationSearchResponse,
   type DestinationDetailResponse,
+  type SeasonalCollectionResponse,
   type DisruptionRecommendationDecisionInput,
   type DisruptionRecommendationListResponse,
   type DisruptionRecommendationMutationResponse,
@@ -161,6 +163,7 @@ export interface RoaviaApiClient {
   session(): Promise<AuthSessionResponse>;
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
   getDestination(placeId: string): Promise<DestinationDetailResponse>;
+  listSeasonalCollections(): Promise<SeasonalCollectionResponse>;
   listTrips(query: TripListQuery): Promise<TripListResponse>;
   createTrip(input: TripCreateInput): Promise<TripResponse>;
   updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
@@ -363,6 +366,9 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         `/destinations/${encodeURIComponent(placeId)}`,
         destinationDetailResponseSchema,
       );
+    },
+    async listSeasonalCollections(): Promise<SeasonalCollectionResponse> {
+      return request("/explore/seasonal", seasonalCollectionResponseSchema);
     },
     async listTrips(query: TripListQuery): Promise<TripListResponse> {
       const params = new URLSearchParams({ limit: String(query.limit) });

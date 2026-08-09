@@ -1,4 +1,8 @@
-import { destinationSearchResponseSchema, type DestinationSearchQuery } from "@roavia/contracts";
+import {
+  destinationSearchResponseSchema,
+  seasonalCollectionResponseSchema,
+  type DestinationSearchQuery,
+} from "@roavia/contracts";
 import { describe, expect, test } from "vitest";
 
 import { createApp } from "../src/app.js";
@@ -16,6 +20,49 @@ const emptySearch = async (query: DestinationSearchQuery) => ({
 });
 
 describe("destination search API", () => {
+  test("returns evidence-backed seasonal collections without ranking destinations", async () => {
+    const app = createApp({
+      listExploreSeasonalCollections: async () => [
+        {
+          destination: {
+            countryCode: "SG",
+            id: cityId,
+            name: "Singapore",
+            type: "city",
+          },
+          freshness: "fresh",
+          period: { endDate: "2026-09-30", startDate: "2026-09-01" },
+          rating: "favorable",
+          reason: "Weather is a relative strength.",
+          refreshedAt: "2026-08-09T00:00:00.000Z",
+          sources: [
+            {
+              id: sourceId,
+              retrievedAt: "2026-08-08T00:00:00.000Z",
+              title: "Visit Singapore",
+              url: "https://www.visitsingapore.com/",
+            },
+          ],
+          tradeoffs: ["Crowd level is mixed."],
+        },
+      ],
+    });
+
+    const response = await app.request("/explore/seasonal");
+    expect(response.status).toBe(200);
+    expect(seasonalCollectionResponseSchema.parse(await response.json())).toMatchObject({
+      data: { collections: [{ destination: { id: cityId }, sources: [{ id: sourceId }] }] },
+    });
+  });
+
+  test("makes the unavailable seasonal provider explicit", async () => {
+    const response = await createApp().request("/explore/seasonal");
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "explore_unavailable" },
+    });
+  });
+
   test("returns only structured, source-aware destination detail", async () => {
     const app = createApp({
       getDestinationDetail: async (placeId) => {
