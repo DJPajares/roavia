@@ -62,6 +62,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   devIndicators: false,
+  distDir: process.env.NEXT_DIST_DIR?.trim() || ".next",
   experimental: {
     useTypeScriptCli: true,
   },

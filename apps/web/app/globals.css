@@ -1648,6 +1648,117 @@ button.best-time-calendar__month[aria-pressed="true"] {
   background: var(--ink);
   color: var(--canvas);
 }
+.manual-planner .profile-preferences__form > dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+.manual-planner .profile-preferences__form > dl > div {
+  min-width: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+.manual-planner .profile-preferences__form dt {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.manual-planner .profile-preferences__form dd {
+  margin: 0.35rem 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 750;
+}
+.manual-destination-picker__search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.manual-destination-picker__results,
+.manual-destination-picker__selected ol {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.manual-destination-picker__results li,
+.manual-destination-picker__selected li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+}
+.manual-destination-picker__results li > div,
+.manual-destination-picker__selected li > div:first-child,
+.manual-destination-picker__selected li p {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  margin: 0;
+}
+.manual-destination-picker__results span,
+.manual-destination-picker__selected small {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.manual-destination-picker__selected {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.35rem;
+}
+.manual-destination-picker__selected h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+.manual-destination-picker__selected li > div:first-child {
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  align-items: center;
+}
+.manual-destination-picker__selected li > div:first-child > span {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.manual-destination-picker__route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+.manual-destination-picker__route-actions button {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.manual-destination-picker__route-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .natural-planner__notice {
   margin-top: 1.5rem;
   padding: 1rem 1.15rem;

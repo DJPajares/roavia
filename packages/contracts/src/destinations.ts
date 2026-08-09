@@ -195,6 +195,7 @@ export const destinationDetailResponseSchema = z.object({
 
 export type DestinationPlaceType = z.infer<typeof destinationPlaceTypeSchema>;
 export type DestinationSearchQuery = z.infer<typeof destinationSearchQuerySchema>;
+export type DestinationSearchResult = z.infer<typeof destinationSearchResultSchema>;
 export type DestinationSearchResponse = z.infer<typeof destinationSearchResponseSchema>;
 export type DestinationDetailResponse = z.infer<typeof destinationDetailResponseSchema>;
 export type DestinationSeasonalInsight = z.infer<typeof destinationSeasonalInsightSchema>;

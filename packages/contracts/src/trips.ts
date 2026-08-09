@@ -524,6 +524,7 @@ export type TripChildDeleteInput = z.infer<typeof tripChildDeleteInputSchema>;
 export type TripDay = z.infer<typeof tripDaySchema>;
 export type TripDayCreateInput = z.infer<typeof tripDayCreateInputSchema>;
 export type TripDayUpdateInput = z.infer<typeof tripDayUpdateInputSchema>;
+export type TripDayMutationResponse = z.infer<typeof tripDayMutationResponseSchema>;
 export type TripItem = z.infer<typeof tripItemSchema>;
 export type TripItemCreateInput = z.infer<typeof tripItemCreateInputSchema>;
 export type TripItemUpdateInput = z.infer<typeof tripItemUpdateInputSchema>;

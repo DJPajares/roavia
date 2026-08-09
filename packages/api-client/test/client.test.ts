@@ -689,6 +689,92 @@ describe("Roavia API client", () => {
     ).toBe(true);
   });
 
+  test("uses authenticated manual destination and itinerary-day mutation contracts", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const placeId = "22222222-2222-4222-8222-222222222222";
+    const destinationId = "33333333-3333-4333-8333-333333333333";
+    const dayId = "44444444-4444-4444-8444-444444444444";
+    const requests: Request[] = [];
+    const client = createRoaviaApiClient({
+      accessToken: () => "valid-access-token",
+      baseUrl: "https://api.roavia.test",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request.clone());
+        if (request.method === "DELETE") {
+          return Response.json({
+            data: { deletedId: destinationId, tripRevision: 5 },
+            meta: { requestId },
+          });
+        }
+        if (request.url.endsWith("/days")) {
+          return Response.json({
+            data: {
+              day: {
+                id: dayId,
+                items: [],
+                localDate: "2030-08-10",
+                notes: null,
+                orderIndex: 0,
+                timezone: "Asia/Singapore",
+                title: null,
+                tripId: trip.id,
+              },
+              tripRevision: 6,
+            },
+            meta: { requestId },
+          });
+        }
+        return Response.json({
+          data: {
+            destination: {
+              arrivalAt: null,
+              departureAt: null,
+              id: destinationId,
+              orderIndex: 1,
+              placeId,
+              tripId: trip.id,
+            },
+            tripRevision: 4,
+          },
+          meta: { requestId },
+        });
+      },
+      requestId: () => requestId,
+    });
+
+    await client.updateTripDestination(trip.id, destinationId, {
+      expectedTripRevision: 3,
+      orderIndex: 1,
+    });
+    await client.deleteTripDestination(trip.id, destinationId, { expectedTripRevision: 4 });
+    await client.createTripDay(trip.id, {
+      expectedTripRevision: 5,
+      localDate: "2030-08-10",
+      notes: null,
+      orderIndex: 0,
+      timezone: "Asia/Singapore",
+      title: null,
+    });
+
+    expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([
+      {
+        method: "PATCH",
+        url: `https://api.roavia.test/trips/${trip.id}/destinations/${destinationId}`,
+      },
+      {
+        method: "DELETE",
+        url: `https://api.roavia.test/trips/${trip.id}/destinations/${destinationId}`,
+      },
+      { method: "POST", url: `https://api.roavia.test/trips/${trip.id}/days` },
+    ]);
+    expect(
+      requests.every(
+        (request) => request.headers.get("authorization") === "Bearer valid-access-token",
+      ),
+    ).toBe(true);
+  });
+
   test("asks the assistant and sends separate explicit action decisions", async () => {
     const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
     const actionId = "88888888-8888-4888-8888-888888888888";
