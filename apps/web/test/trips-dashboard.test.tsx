@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import axe from "axe-core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
@@ -93,19 +94,37 @@ describe("TripsDashboard", () => {
   test("groups trips by lifecycle and keeps the list after a failed removal", async () => {
     api.deleteTrip.mockRejectedValue(new Error("The trip could not be removed."));
     const user = userEvent.setup();
-    render(createElement(TripsDashboard, { email: "traveler@roavia.test" }));
+    const rendered = render(createElement(TripsDashboard, { email: "traveler@roavia.test" }));
 
     expect(await screen.findByRole("heading", { name: "Drafts" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Upcoming" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Shared" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Completed" })).toBeDefined();
+    expect(
+      (
+        await axe.run(rendered.container, {
+          rules: { "color-contrast": { enabled: false } },
+        })
+      ).violations,
+    ).toEqual([]);
 
-    await user.click(screen.getByRole("tab", { name: /Drafts 1/ }));
+    screen.getByRole("tab", { name: /All trips 4/ }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: /Drafts 1/ }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+
     expect(screen.getByRole("button", { name: "Open Kyoto draft" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Open Osaka upcoming" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Open Kyoto draft" }));
     expect(screen.getByRole("dialog", { name: "Kyoto draft" })).toBeDefined();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Close trip preview" }));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Kyoto draft" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Kyoto draft" }));
+
+    await user.click(screen.getByRole("button", { name: "Open Kyoto draft" }));
     expect(screen.getByRole("link", { name: "Open itinerary" }).getAttribute("href")).toBe(
       `/trips/${trips[0].id}`,
     );

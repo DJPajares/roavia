@@ -12,6 +12,7 @@ describe("Roavia shared primitives", () => {
         <Button>Continue planning</Button>
         <ExperienceState
           detail="Reconnect to refresh your trip."
+          headingLevel={1}
           state="offline"
           title="You are offline"
         />
@@ -20,6 +21,7 @@ describe("Roavia shared primitives", () => {
     );
 
     expect(screen.getByRole("button", { name: "Continue planning" })).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "You are offline" })).toBeDefined();
     expect(screen.getByRole("status").textContent).toContain("You are offline");
     expect(screen.getByText("Trust note")).toBeDefined();
   });

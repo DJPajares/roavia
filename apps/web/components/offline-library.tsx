@@ -79,6 +79,7 @@ export function OfflineLibrary({
     return (
       <ExperienceState
         detail="Checking which itinerary packages are stored on this device."
+        headingLevel={1}
         state="loading"
         title="Loading offline downloads"
       />

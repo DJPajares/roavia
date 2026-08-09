@@ -76,6 +76,7 @@ export function SharedItinerary({ token }: Readonly<{ token: string }>) {
     return (
       <ExperienceState
         detail="Opening the approved itinerary details from this private link."
+        headingLevel={1}
         state="loading"
         title="Loading shared trip"
       />
@@ -91,6 +92,7 @@ export function SharedItinerary({ token }: Readonly<{ token: string }>) {
           </Button>
         }
         detail={message}
+        headingLevel={1}
         state="error"
         title="Shared trip unavailable"
       />

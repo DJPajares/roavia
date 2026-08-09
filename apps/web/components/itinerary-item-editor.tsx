@@ -207,9 +207,39 @@ export function ItineraryItemEditor({
     await onSubmit(toDraft(values, item));
   }
 
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDialogElement>) {
+    if (event.key === "Escape" && !busy) {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
     <div className="itinerary-editor-backdrop">
-      <dialog aria-labelledby={titleId} className="itinerary-editor" open>
+      <dialog
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="itinerary-editor"
+        onKeyDown={handleDialogKeyDown}
+        open
+      >
         <div className="itinerary-editor__heading">
           <div>
             <p className="eyebrow">Manual itinerary control</p>

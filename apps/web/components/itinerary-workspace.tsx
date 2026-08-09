@@ -285,6 +285,53 @@ function DayTabs({
   );
 }
 
+function WorkspaceViewTabs({
+  onSelect,
+  selectedView,
+}: Readonly<{ onSelect: (view: MobileView) => void; selectedView: MobileView }>) {
+  const views: Array<{ label: string; value: MobileView }> = [
+    { label: "Day plan", value: "plan" },
+    { label: "Route context", value: "route" },
+  ];
+
+  function selectFromKeyboard(index: number, event: React.KeyboardEvent<HTMLButtonElement>) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % views.length;
+    if (event.key === "ArrowLeft") nextIndex = (index - 1 + views.length) % views.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = views.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextView = views[nextIndex];
+    if (!nextView) return;
+    onSelect(nextView.value);
+    document.querySelector<HTMLButtonElement>(`[data-workspace-tab="${nextView.value}"]`)?.focus();
+  }
+
+  return (
+    <div aria-label="Workspace view" className="itinerary-mobile-view" role="tablist">
+      {views.map((view, index) => {
+        const selected = view.value === selectedView;
+        return (
+          <button
+            aria-controls={view.value === "plan" ? "itinerary-day-panel" : "itinerary-route-panel"}
+            aria-selected={selected}
+            data-workspace-tab={view.value}
+            key={view.value}
+            onClick={() => onSelect(view.value)}
+            onKeyDown={(event) => selectFromKeyboard(index, event)}
+            role="tab"
+            tabIndex={selected ? 0 : -1}
+            type="button"
+          >
+            {view.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ItemCard({
   busy,
   index,
@@ -665,6 +712,7 @@ export function ItineraryWorkspace({
   const [mutationMessage, setMutationMessage] = useState("");
   const [mutationBusy, setMutationBusy] = useState(false);
   const draggedItemId = useRef<string | null>(null);
+  const editorReturnFocus = useRef<HTMLElement | null>(null);
   const tripRef = useRef<TripDetail | null>(null);
   const api = useMemo(
     () =>
@@ -735,10 +783,15 @@ export function ItineraryWorkspace({
     };
   }, []);
 
+  useEffect(() => {
+    if (!editor) editorReturnFocus.current?.focus();
+  }, [editor]);
+
   if (state === "loading" && !trip) {
     return (
       <ExperienceState
         detail="Coordinating your itinerary days, saved context, and route estimates."
+        headingLevel={1}
         state="loading"
         title="Loading itinerary"
       />
@@ -767,6 +820,7 @@ export function ItineraryWorkspace({
           )
         }
         detail={message}
+        headingLevel={1}
         state={state === "permission" ? "permission" : "error"}
         title={state === "permission" ? "Itinerary access needed" : "Itinerary unavailable"}
       />
@@ -788,6 +842,7 @@ export function ItineraryWorkspace({
             </Link>
           }
           detail="Continue the guided plan to add the first day. Nothing has been changed here."
+          headingLevel={1}
           state="empty"
           title="This itinerary has no days yet"
         />
@@ -821,6 +876,17 @@ export function ItineraryWorkspace({
   function saveTrip(nextTrip: TripDetail) {
     tripRef.current = nextTrip;
     setTrip(nextTrip);
+  }
+
+  function openEditor(nextEditor: Exclude<EditorState, null>) {
+    if (document.activeElement instanceof HTMLElement) {
+      editorReturnFocus.current = document.activeElement;
+    }
+    setEditor(nextEditor);
+  }
+
+  function closeEditor() {
+    setEditor(null);
   }
 
   async function restoreAfterFailure(before: TripDetail, error: unknown) {
@@ -888,7 +954,7 @@ export function ItineraryWorkspace({
             response.data.tripRevision,
           ),
         );
-        setEditor(null);
+        closeEditor();
         setMutationMessage(
           editor.mode === "duplicate" ? "Item duplicated and saved." : "Item added and saved.",
         );
@@ -923,7 +989,7 @@ export function ItineraryWorkspace({
           response.data.tripRevision,
         ),
       );
-      setEditor(null);
+      closeEditor();
       setMutationMessage(editor.mode === "replace" ? "Item replaced and saved." : "Changes saved.");
     } catch (error) {
       await restoreAfterFailure(before, error);
@@ -1059,26 +1125,7 @@ export function ItineraryWorkspace({
 
       <DayTabs days={days} onSelect={setSelectedDayId} selectedDayId={selectedDay.id} />
 
-      <div aria-label="Workspace view" className="itinerary-mobile-view" role="tablist">
-        <button
-          aria-controls="itinerary-day-panel"
-          aria-selected={mobileView === "plan"}
-          onClick={() => setMobileView("plan")}
-          role="tab"
-          type="button"
-        >
-          Day plan
-        </button>
-        <button
-          aria-controls="itinerary-route-panel"
-          aria-selected={mobileView === "route"}
-          onClick={() => setMobileView("route")}
-          role="tab"
-          type="button"
-        >
-          Route context
-        </button>
-      </div>
+      <WorkspaceViewTabs onSelect={setMobileView} selectedView={mobileView} />
 
       <div className={`itinerary-workspace__layout show-${mobileView}`}>
         <section
@@ -1102,7 +1149,7 @@ export function ItineraryWorkspace({
             <button
               className="itinerary-timeline__add"
               disabled={mutationBusy || offline}
-              onClick={() => setEditor({ item: null, mode: "add" })}
+              onClick={() => openEditor({ item: null, mode: "add" })}
               type="button"
             >
               + Add item
@@ -1123,12 +1170,12 @@ export function ItineraryWorkspace({
                     const itemId = transferredItemId || draggedItemId.current;
                     if (itemId) void moveItem(itemId, targetIndex);
                   }}
-                  onDuplicate={(value) => setEditor({ item: value, mode: "duplicate" })}
-                  onEdit={(value) => setEditor({ item: value, mode: "edit" })}
+                  onDuplicate={(value) => openEditor({ item: value, mode: "duplicate" })}
+                  onEdit={(value) => openEditor({ item: value, mode: "edit" })}
                   onLocate={selectItem}
                   onMove={(itemId, targetIndex) => void moveItem(itemId, targetIndex)}
                   onRemove={setRemoveItem}
-                  onReplace={(value) => setEditor({ item: value, mode: "replace" })}
+                  onReplace={(value) => openEditor({ item: value, mode: "replace" })}
                   selected={selectedItemId === item.id}
                 />
               ))}
@@ -1157,7 +1204,7 @@ export function ItineraryWorkspace({
           item={editor.item}
           key={`${editor.mode}-${editor.item?.id ?? selectedDay.id}`}
           mode={editor.mode}
-          onCancel={() => setEditor(null)}
+          onCancel={closeEditor}
           onSubmit={submitEditor}
         />
       ) : null}

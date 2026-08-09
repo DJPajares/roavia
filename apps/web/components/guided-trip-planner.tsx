@@ -162,6 +162,7 @@ export function GuidedTripPlanner({ resumeTripId }: Readonly<{ resumeTripId?: st
     return (
       <ExperienceState
         detail="Loading the preferences you can choose to apply."
+        headingLevel={1}
         state="loading"
         title="Starting your plan"
       />
@@ -176,6 +177,7 @@ export function GuidedTripPlanner({ resumeTripId }: Readonly<{ resumeTripId?: st
           </Button>
         }
         detail={message}
+        headingLevel={1}
         state="error"
         title="Planning preferences are unavailable"
       />

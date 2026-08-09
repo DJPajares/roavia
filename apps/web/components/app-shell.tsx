@@ -55,7 +55,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         </Link>
         <ThemeToggle />
       </header>
-      <aside className="desktop-rail">
+      <aside aria-label="Application sidebar" className="desktop-rail">
         <Link aria-label="Roavia home" className="wordmark" href="/">
           Roavia
         </Link>

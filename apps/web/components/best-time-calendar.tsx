@@ -189,6 +189,16 @@ export function BestTimeCalendar({ placeId }: { placeId: string }) {
       ? insights.filter((insight) => isInRange(insight, rangeStart, rangeEnd))
       : [];
 
+  function selectViewFromKeyboard(event: React.KeyboardEvent<HTMLButtonElement>) {
+    let nextView: View | null = null;
+    if (event.key === "ArrowRight" || event.key === "End") nextView = "range";
+    if (event.key === "ArrowLeft" || event.key === "Home") nextView = "month";
+    if (nextView === null) return;
+    event.preventDefault();
+    setView(nextView);
+    document.querySelector<HTMLButtonElement>(`[data-seasonal-tab="${nextView}"]`)?.focus();
+  }
+
   if (state === "offline") {
     return (
       <section className="best-time-calendar">
@@ -291,9 +301,12 @@ export function BestTimeCalendar({ placeId }: { placeId: string }) {
         <button
           aria-controls="seasonal-month-panel"
           aria-selected={view === "month"}
+          data-seasonal-tab="month"
           id="seasonal-month-tab"
           onClick={() => setView("month")}
+          onKeyDown={selectViewFromKeyboard}
           role="tab"
+          tabIndex={view === "month" ? 0 : -1}
           type="button"
         >
           Months
@@ -301,9 +314,12 @@ export function BestTimeCalendar({ placeId }: { placeId: string }) {
         <button
           aria-controls="seasonal-range-panel"
           aria-selected={view === "range"}
+          data-seasonal-tab="range"
           id="seasonal-range-tab"
           onClick={() => setView("range")}
+          onKeyDown={selectViewFromKeyboard}
           role="tab"
+          tabIndex={view === "range" ? 0 : -1}
           type="button"
         >
           Flexible dates

@@ -112,6 +112,12 @@ describe("BestTimeCalendar", () => {
     expect(screen.getByText("Not available")).toBeDefined();
     expect(screen.getByText(/Qualitative price evidence indicates a tradeoff/i)).toBeDefined();
 
+    screen.getByRole("tab", { name: "Months" }).focus();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Months" }), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Flexible dates" }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+
     fireEvent.change(screen.getByRole("slider", { name: /Weather/i }), { target: { value: "5" } });
 
     await waitFor(() => {

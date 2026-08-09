@@ -43,6 +43,7 @@ export function DestinationEncyclopedia({ placeId }: { placeId: string }) {
     return (
       <ExperienceState
         detail="Loading curated destination guidance and its sources."
+        headingLevel={1}
         state="loading"
         title="Opening destination guide"
       />
@@ -51,6 +52,7 @@ export function DestinationEncyclopedia({ placeId }: { placeId: string }) {
     return (
       <ExperienceState
         detail="Reconnect to view this guide. Roavia will never substitute unsourced destination information."
+        headingLevel={1}
         state="offline"
         title="This guide needs a connection"
       />
@@ -59,6 +61,7 @@ export function DestinationEncyclopedia({ placeId }: { placeId: string }) {
     return (
       <ExperienceState
         detail="The guide is unavailable right now. Try returning to search or try again later."
+        headingLevel={1}
         state="error"
         title="We could not open this destination"
       />
