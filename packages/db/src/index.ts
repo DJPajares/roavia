@@ -60,7 +60,9 @@ export {
 } from "./destination-ingestion.js";
 export {
   getSeasonalInsight,
+  listExploreSeasonalCollections,
   upsertSeasonalInsight,
+  type ExploreSeasonalCollection,
   type PersistedSeasonalInsight,
   type SeasonalInsightRefreshResult,
 } from "./seasonal-insight-repository.js";

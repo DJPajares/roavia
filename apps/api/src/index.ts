@@ -27,6 +27,7 @@ import {
   createShareRepository,
   createTripRepository,
   getDestinationDetail,
+  listExploreSeasonalCollections,
   searchDestinations,
   type AiTelemetryRepository,
 } from "@roavia/db";
@@ -146,6 +147,19 @@ const destinationDetailResolver = database
       );
     }
   : undefined;
+const seasonalCollectionResolver = database
+  ? async () => {
+      const collections = await listExploreSeasonalCollections(database.db);
+      return collections.map((collection) => ({
+        ...collection,
+        refreshedAt: collection.refreshedAt.toISOString(),
+        sources: collection.sources.map((source) => ({
+          ...source,
+          retrievedAt: source.retrievedAt.toISOString(),
+        })),
+      }));
+    }
+  : undefined;
 const tripPlannerService =
   aiGateway && destinationResolver
     ? new TripIntentExtractionService(aiGateway, destinationResolver)
@@ -233,6 +247,7 @@ const app = createApp({
   verifyAccessToken: createAccessTokenVerifierFromEnvironment(process.env),
   searchDestinations: destinationResolver,
   getDestinationDetail: destinationDetailResolver,
+  listExploreSeasonalCollections: seasonalCollectionResolver,
   profileRepository: database ? createProfileRepository(database.db) : undefined,
   offlinePackageRepository: database ? createOfflinePackageRepository(database.db) : undefined,
   shareRepository: database ? createShareRepository(database.db) : undefined,

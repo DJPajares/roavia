@@ -1,15 +1,9 @@
-import { TrustNotice } from "@roavia/ui";
+import { ExploreHome } from "../components/explore-home";
+import { getAuthSession } from "../lib/auth/session";
 
-import { DestinationSearch } from "../components/destination-search";
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  return (
-    <>
-      <DestinationSearch />
-      <TrustNotice label="Designed for trust">
-        Destination results use Roavia’s normalized place hierarchy. Provider identifiers and raw
-        source records never leave the server.
-      </TrustNotice>
-    </>
-  );
+export default async function HomePage() {
+  const session = await getAuthSession();
+  return <ExploreHome isSignedIn={Boolean(session)} />;
 }

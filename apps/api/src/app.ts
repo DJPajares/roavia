@@ -4,11 +4,13 @@ import {
   destinationSearchQuerySchema,
   destinationDetailResponseSchema,
   destinationSearchResponseSchema,
+  seasonalCollectionResponseSchema,
   healthResponseSchema,
   requestIdSchema,
   type DestinationSearchQuery,
   type DestinationSearchResponse,
   type DestinationDetailResponse,
+  type SeasonalCollectionResponse,
 } from "@roavia/contracts";
 import {
   AssistantActionConflictError,
@@ -67,6 +69,7 @@ export interface CreateAppOptions {
     query: DestinationSearchQuery,
   ) => Promise<DestinationSearchResponse["data"]>;
   getDestinationDetail?: (placeId: string) => Promise<DestinationDetailResponse["data"] | null>;
+  listExploreSeasonalCollections?: () => Promise<SeasonalCollectionResponse["data"]["collections"]>;
   searchRateLimiter?: RateLimiter;
   assistantRateLimiter?: RateLimiter;
   generationRateLimiter?: RateLimiter;
@@ -317,6 +320,24 @@ export function createApp(options: CreateAppOptions = {}) {
     return context.json(
       destinationDetailResponseSchema.parse({
         data,
+        meta: { requestId: context.get("requestId") },
+      }),
+    );
+  });
+
+  app.get("/explore/seasonal", async (context) => {
+    if (!options.listExploreSeasonalCollections) {
+      return errorResponse(
+        context,
+        503,
+        "explore_unavailable",
+        "Seasonal collections are temporarily unavailable.",
+      );
+    }
+    const collections = await options.listExploreSeasonalCollections();
+    return context.json(
+      seasonalCollectionResponseSchema.parse({
+        data: { collections },
         meta: { requestId: context.get("requestId") },
       }),
     );

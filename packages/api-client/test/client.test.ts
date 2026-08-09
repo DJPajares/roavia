@@ -457,6 +457,50 @@ describe("Roavia API client", () => {
     ).resolves.toMatchObject({ data: { query: "Singapore" } });
   });
 
+  test("loads the public source-backed seasonal collection response", async () => {
+    const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
+    const cityId = "22222222-2222-4222-8222-222222222222";
+    const sourceId = "33333333-3333-4333-8333-333333333333";
+    const client = createRoaviaApiClient({
+      baseUrl: "https://api.roavia.test",
+      fetch: (input, init) => {
+        const request = new Request(input, init);
+        expect(request.url).toBe("https://api.roavia.test/explore/seasonal");
+        return Promise.resolve(
+          Response.json({
+            data: {
+              collections: [
+                {
+                  destination: { countryCode: "SG", id: cityId, name: "Singapore", type: "city" },
+                  freshness: "fresh",
+                  period: { endDate: "2026-09-30", startDate: "2026-09-01" },
+                  rating: "favorable",
+                  reason: "Weather is a relative strength.",
+                  refreshedAt: "2026-08-09T00:00:00.000Z",
+                  sources: [
+                    {
+                      id: sourceId,
+                      retrievedAt: "2026-08-08T00:00:00.000Z",
+                      title: "Visit Singapore",
+                      url: "https://www.visitsingapore.com/",
+                    },
+                  ],
+                  tradeoffs: [],
+                },
+              ],
+            },
+            meta: { requestId },
+          }),
+        );
+      },
+      requestId: () => requestId,
+    });
+
+    await expect(client.listSeasonalCollections()).resolves.toMatchObject({
+      data: { collections: [{ destination: { id: cityId } }] },
+    });
+  });
+
   test("uses authenticated owner sharing endpoints and an anonymous read endpoint", async () => {
     const requestId = "b3bb5b6d-5e99-410a-9e99-d297dd387263";
     const token = "A".repeat(43);
