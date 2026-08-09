@@ -76,6 +76,49 @@ test("recovers a generated trip through editing, sharing, and offline access", a
   expect(fixture.protectedRequestsWithoutAuth).toBe(0);
 });
 
+test("creates and edits a manual trip while every AI entry point stays unused", async ({
+  page,
+}) => {
+  const fixture = await installApiFixture(page);
+  await createAccount(page, "manual");
+
+  await page.goto("/plan");
+  await page.getByRole("button", { name: "Plan manually" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Choose the places. Shape every day." }),
+  ).toBeVisible();
+
+  await page.getByLabel("Trip name").fill("Kyoto by hand");
+  await page.getByLabel("Start date").fill("2099-10-10");
+  await page.getByLabel("End date").fill("2099-10-10");
+  await page.getByLabel("Search destinations").fill("Kyoto");
+  await page.getByRole("button", { name: "Search catalogue" }).click();
+  await page.getByRole("button", { name: "Add Kyoto" }).click();
+  await page.getByRole("button", { name: "Review manual trip" }).click();
+  await expect(
+    page.getByRole("heading", { name: "A blank itinerary, ready for your plans." }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save for later" }).click();
+  await expect(page).toHaveURL(new RegExp(`/plan\\?tripId=${tripId}$`));
+  await page.reload();
+  await expect(page.getByLabel("Trip name")).toHaveValue("Kyoto by hand");
+  await expect(page.getByText("Kyoto", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Review manual trip" }).click();
+  await page.getByRole("button", { name: "Create blank trip" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}$`));
+  await expect(page.getByRole("heading", { name: "Kyoto by hand" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No plans for this day" })).toBeVisible();
+  expect(fixture.aiRequests).toBe(0);
+
+  await page.getByRole("button", { name: "+ Add item", exact: true }).click();
+  await page.getByLabel("Place or item name").fill("Nishiki Market");
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Nishiki Market" })).toBeVisible();
+  expect(fixture.aiRequests).toBe(0);
+  expect(fixture.protectedRequestsWithoutAuth).toBe(0);
+});
+
 test("keeps requests actionable across quota and destination-provider failures", async ({
   page,
 }) => {

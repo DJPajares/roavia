@@ -390,6 +390,7 @@ function offlinePackage(trip: TripDetail): OfflinePackageRecord {
 type PlannerFailure = "none" | "quota";
 
 export interface ApiFixtureState {
+  aiRequests: number;
   delayOfflineDownload: boolean;
   destinationUnavailable: boolean;
   failGeneration: boolean;
@@ -413,6 +414,7 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
 
 export async function installApiFixture(page: Page): Promise<ApiFixtureState> {
   const state: ApiFixtureState = {
+    aiRequests: 0,
     delayOfflineDownload: false,
     destinationUnavailable: false,
     failGeneration: false,
@@ -427,6 +429,13 @@ export async function installApiFixture(page: Page): Promise<ApiFixtureState> {
     const url = new URL(request.url());
     const path = url.pathname;
     const method = request.method();
+    if (
+      path.startsWith("/planner/") ||
+      path.endsWith("/generate") ||
+      path.endsWith("/regenerate")
+    ) {
+      state.aiRequests += 1;
+    }
     const protectedPath =
       path === "/me" ||
       path.startsWith("/assistant/") ||
@@ -481,6 +490,8 @@ export async function installApiFixture(page: Page): Promise<ApiFixtureState> {
       state.trip = {
         ...state.trip,
         ...input,
+        days: [],
+        destinations: [],
         generation: null,
         generationState: "idle",
         revision: 1,
@@ -491,11 +502,40 @@ export async function installApiFixture(page: Page): Promise<ApiFixtureState> {
       return;
     }
     if (method === "POST" && path === `/trips/${tripId}/destinations`) {
-      state.trip.revision = 2;
+      const input = request.postDataJSON() as {
+        arrivalAt: string | null;
+        departureAt: string | null;
+        orderIndex: number;
+        placeId: string;
+      };
+      const tripDestination = {
+        arrivalAt: input.arrivalAt,
+        departureAt: input.departureAt,
+        id: destinationId,
+        orderIndex: input.orderIndex,
+        placeId: input.placeId,
+        tripId,
+      };
+      state.trip.destinations.push(tripDestination);
+      state.trip.revision += 1;
       await fulfillJson(
         route,
-        response({ destination: state.trip.destinations[0], tripRevision: state.trip.revision }),
+        response({ destination: tripDestination, tripRevision: state.trip.revision }),
       );
+      return;
+    }
+    if (method === "POST" && path === `/trips/${tripId}/days`) {
+      const input = request.postDataJSON() as {
+        localDate: string;
+        notes: string | null;
+        orderIndex: number;
+        timezone: string;
+        title: string | null;
+      };
+      const day = { ...input, id: crypto.randomUUID(), items: [], tripId };
+      state.trip.days.push(day);
+      state.trip.revision += 1;
+      await fulfillJson(route, response({ day, tripRevision: state.trip.revision }));
       return;
     }
     if (method === "POST" && path === `/trips/${tripId}/generate`) {
@@ -520,6 +560,9 @@ export async function installApiFixture(page: Page): Promise<ApiFixtureState> {
     if (method === "GET" && path === `/trips/${tripId}/generation`) {
       const failed = state.failGeneration;
       state.trip.generationState = failed ? "failed" : "ready";
+      if (!failed && state.trip.days.length === 0) {
+        state.trip.days = baseTrip().days;
+      }
       await fulfillJson(
         route,
         response({
@@ -542,6 +585,21 @@ export async function installApiFixture(page: Page): Promise<ApiFixtureState> {
     }
     if (method === "GET" && path === `/trips/${tripId}`) {
       await fulfillJson(route, response(state.trip));
+      return;
+    }
+    if (method === "PATCH" && path === `/trips/${tripId}`) {
+      const input = request.postDataJSON() as Partial<TripDetail> & { expectedRevision: number };
+      const { expectedRevision: _expectedRevision, ...updates } = input;
+      state.trip = { ...state.trip, ...updates, revision: state.trip.revision + 1, updatedAt: now };
+      await fulfillJson(route, response(state.trip));
+      return;
+    }
+    if (method === "POST" && path === `/trips/${tripId}/items`) {
+      const input = request.postDataJSON() as TripDetail["days"][number]["items"][number];
+      const item = { ...input, id: itemId };
+      state.trip.days[0]!.items.push(item);
+      state.trip.revision += 1;
+      await fulfillJson(route, response({ item, tripRevision: state.trip.revision }));
       return;
     }
     if (method === "PATCH" && path === `/trips/${tripId}/items/${itemId}`) {
@@ -583,6 +641,26 @@ export async function installApiFixture(page: Page): Promise<ApiFixtureState> {
         route,
         response({ package: offlinePackage(state.trip), reused: false }),
       ).catch(() => undefined);
+      return;
+    }
+    if (method === "GET" && path === "/destinations/search") {
+      await fulfillJson(
+        route,
+        response({
+          pagination: { limit: 8, nextPage: null, page: 1, total: 1 },
+          query: url.searchParams.get("q") ?? "",
+          results: [
+            {
+              canonicalName: "Kyoto",
+              countryCode: "JP",
+              hierarchy: [],
+              id: placeId,
+              localizedNames: { ja: "京都" },
+              placeType: "city",
+            },
+          ],
+        }),
+      );
       return;
     }
     if (method === "GET" && path === `/destinations/${placeId}`) {

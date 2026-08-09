@@ -24,6 +24,7 @@ import {
   shareLinkRevokeResponseSchema,
   sharedTripResponseSchema,
   tripDeleteResponseSchema,
+  tripDayMutationResponseSchema,
   tripDestinationMutationResponseSchema,
   tripIntentExtractionResponseSchema,
   tripChildDeleteResponseSchema,
@@ -68,7 +69,10 @@ import {
   type TripChildDeleteInput,
   type TripChildDeleteResponse,
   type TripCreateInput,
+  type TripDayCreateInput,
+  type TripDayMutationResponse,
   type TripDestinationCreateInput,
+  type TripDestinationUpdateInput,
   type TripIntentExtractionInput,
   type TripIntentExtractionResponse,
   type TripListQuery,
@@ -119,7 +123,10 @@ export type {
   TripChildDeleteInput,
   TripChildDeleteResponse,
   TripCreateInput,
+  TripDayCreateInput,
+  TripDayMutationResponse,
   TripDestinationCreateInput,
+  TripDestinationUpdateInput,
   TripIntentExtractionInput,
   TripIntentExtractionResponse,
   TripListQuery,
@@ -201,6 +208,17 @@ export interface RoaviaApiClient {
     tripId: string,
     input: TripDestinationCreateInput,
   ): Promise<import("@roavia/contracts").TripDestinationMutationResponse>;
+  updateTripDestination(
+    tripId: string,
+    destinationId: string,
+    input: TripDestinationUpdateInput,
+  ): Promise<import("@roavia/contracts").TripDestinationMutationResponse>;
+  deleteTripDestination(
+    tripId: string,
+    destinationId: string,
+    input: TripChildDeleteInput,
+  ): Promise<TripChildDeleteResponse>;
+  createTripDay(tripId: string, input: TripDayCreateInput): Promise<TripDayMutationResponse>;
   listShareLinks(tripId: string): Promise<ShareLinkListResponse>;
   createShareLink(tripId: string, input: ShareLinkCreateInput): Promise<ShareLinkCreateResponse>;
   revokeShareLink(tripId: string, shareLinkId: string): Promise<ShareLinkRevokeResponse>;
@@ -483,6 +501,27 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
         tripDestinationMutationResponseSchema,
         { authenticated: true, body: input, method: "POST" },
       );
+    },
+    async updateTripDestination(tripId, destinationId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/destinations/${encodeURIComponent(destinationId)}`,
+        tripDestinationMutationResponseSchema,
+        { authenticated: true, body: input, method: "PATCH" },
+      );
+    },
+    async deleteTripDestination(tripId, destinationId, input) {
+      return request(
+        `/trips/${encodeURIComponent(tripId)}/destinations/${encodeURIComponent(destinationId)}`,
+        tripChildDeleteResponseSchema,
+        { authenticated: true, body: input, method: "DELETE" },
+      );
+    },
+    async createTripDay(tripId, input) {
+      return request(`/trips/${encodeURIComponent(tripId)}/days`, tripDayMutationResponseSchema, {
+        authenticated: true,
+        body: input,
+        method: "POST",
+      });
     },
     async listShareLinks(tripId) {
       return request(

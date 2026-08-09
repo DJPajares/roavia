@@ -30,6 +30,7 @@ export default defineConfig({
     {
       command: "node_modules/.bin/next dev --hostname 0.0.0.0 --port 3100",
       env: {
+        NEXT_DIST_DIR: ".next-e2e",
         NEXT_PUBLIC_API_BASE_URL: apiURL,
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "roavia-browser-fixture",
         NEXT_PUBLIC_SUPABASE_URL: authURL,

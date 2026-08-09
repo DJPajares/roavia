@@ -132,7 +132,7 @@ export function TripPlanner({
           Describe your trip
         </button>
         <button aria-pressed={mode === "guided"} onClick={() => setMode("guided")} type="button">
-          Guided form
+          Plan manually
         </button>
       </nav>
       {mode === "natural" ? (
