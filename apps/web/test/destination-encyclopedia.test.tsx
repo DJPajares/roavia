@@ -4,11 +4,12 @@ import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { describe, expect, test, vi } from "vitest";
 
-const { getDestination } = vi.hoisted(() => ({
+const { getDestination, getDestinationSeasonality } = vi.hoisted(() => ({
   getDestination: vi.fn<() => Promise<unknown>>(),
+  getDestinationSeasonality: vi.fn<() => Promise<unknown>>(),
 }));
 
-vi.mock("../lib/api", () => ({ roaviaApi: { getDestination } }));
+vi.mock("../lib/api", () => ({ roaviaApi: { getDestination, getDestinationSeasonality } }));
 
 import { DestinationEncyclopedia } from "../components/destination-encyclopedia";
 
@@ -16,6 +17,10 @@ const placeId = "33333333-3333-4333-8333-333333333333";
 
 describe("DestinationEncyclopedia", () => {
   test("renders approved practical guidance with freshness and an official source", async () => {
+    getDestinationSeasonality.mockResolvedValue({
+      data: { insights: [] },
+      meta: { requestId: "66666666-6666-4666-8666-666666666666" },
+    });
     getDestination.mockResolvedValue({
       data: {
         place: {

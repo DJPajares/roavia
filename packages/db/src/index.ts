@@ -61,6 +61,7 @@ export {
 export {
   getSeasonalInsight,
   listExploreSeasonalCollections,
+  listSeasonalInsights,
   upsertSeasonalInsight,
   type ExploreSeasonalCollection,
   type PersistedSeasonalInsight,

@@ -1,6 +1,8 @@
 import {
   API_CONTRACT_VERSION,
   authSessionResponseSchema,
+  destinationSeasonalityQuerySchema,
+  destinationSeasonalityResponseSchema,
   destinationSearchQuerySchema,
   destinationDetailResponseSchema,
   destinationSearchResponseSchema,
@@ -11,6 +13,8 @@ import {
   type DestinationSearchResponse,
   type DestinationDetailResponse,
   type SeasonalCollectionResponse,
+  type DestinationSeasonalityQuery,
+  type DestinationSeasonalityResponse,
 } from "@roavia/contracts";
 import {
   AssistantActionConflictError,
@@ -70,6 +74,10 @@ export interface CreateAppOptions {
   ) => Promise<DestinationSearchResponse["data"]>;
   getDestinationDetail?: (placeId: string) => Promise<DestinationDetailResponse["data"] | null>;
   listExploreSeasonalCollections?: () => Promise<SeasonalCollectionResponse["data"]["collections"]>;
+  getDestinationSeasonality?: (
+    placeId: string,
+    priorities: DestinationSeasonalityQuery,
+  ) => Promise<DestinationSeasonalityResponse["data"] | null>;
   searchRateLimiter?: RateLimiter;
   assistantRateLimiter?: RateLimiter;
   generationRateLimiter?: RateLimiter;
@@ -319,6 +327,43 @@ export function createApp(options: CreateAppOptions = {}) {
     if (!data) return errorResponse(context, 404, "not_found", "Destination not found.");
     return context.json(
       destinationDetailResponseSchema.parse({
+        data,
+        meta: { requestId: context.get("requestId") },
+      }),
+    );
+  });
+
+  app.get("/destinations/:placeId/seasonality", async (context) => {
+    const priorities = destinationSeasonalityQuerySchema.safeParse({
+      budget: context.req.query("budget"),
+      closures: context.req.query("closures"),
+      crowds: context.req.query("crowds"),
+      festivals: context.req.query("festivals"),
+      weather: context.req.query("weather"),
+    });
+    if (!priorities.success) {
+      return errorResponse(
+        context,
+        400,
+        "bad_request",
+        "Seasonal priority parameters are invalid.",
+      );
+    }
+    if (!options.getDestinationSeasonality) {
+      return errorResponse(
+        context,
+        503,
+        "search_unavailable",
+        "Seasonal destination guidance is temporarily unavailable.",
+      );
+    }
+    const data = await options.getDestinationSeasonality(
+      context.req.param("placeId"),
+      priorities.data,
+    );
+    if (!data) return errorResponse(context, 404, "not_found", "Destination not found.");
+    return context.json(
+      destinationSeasonalityResponseSchema.parse({
         data,
         meta: { requestId: context.get("requestId") },
       }),

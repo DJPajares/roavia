@@ -6,6 +6,7 @@ import {
   assistantActionMutationResponseSchema,
   assistantQueryResponseSchema,
   authSessionResponseSchema,
+  destinationSeasonalityResponseSchema,
   destinationSearchResponseSchema,
   destinationDetailResponseSchema,
   seasonalCollectionResponseSchema,
@@ -45,6 +46,8 @@ import {
   type DisruptionRecommendationDecisionInput,
   type DisruptionRecommendationListResponse,
   type DisruptionRecommendationMutationResponse,
+  type DestinationSeasonalityQuery,
+  type DestinationSeasonalityResponse,
   type HealthResponse,
   type ItineraryGenerationQueuedResponse,
   type ItineraryGenerationCancelInput,
@@ -91,6 +94,8 @@ export type {
   DisruptionRecommendationDecisionInput,
   DisruptionRecommendationListResponse,
   DisruptionRecommendationMutationResponse,
+  DestinationSeasonalityQuery,
+  DestinationSeasonalityResponse,
   HealthResponse,
   ItineraryGenerationQueuedResponse,
   ItineraryGenerationCancelInput,
@@ -164,6 +169,10 @@ export interface RoaviaApiClient {
   searchDestinations(query: DestinationSearchQuery): Promise<DestinationSearchResponse>;
   getDestination(placeId: string): Promise<DestinationDetailResponse>;
   listSeasonalCollections(): Promise<SeasonalCollectionResponse>;
+  getDestinationSeasonality(
+    placeId: string,
+    priorities?: DestinationSeasonalityQuery,
+  ): Promise<DestinationSeasonalityResponse>;
   listTrips(query: TripListQuery): Promise<TripListResponse>;
   createTrip(input: TripCreateInput): Promise<TripResponse>;
   updateTrip(tripId: string, input: TripUpdateInput): Promise<TripResponse>;
@@ -369,6 +378,17 @@ export function createRoaviaApiClient(options: ApiClientOptions): RoaviaApiClien
     },
     async listSeasonalCollections(): Promise<SeasonalCollectionResponse> {
       return request("/explore/seasonal", seasonalCollectionResponseSchema);
+    },
+    async getDestinationSeasonality(placeId, priorities = {}) {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(priorities)) {
+        if (value !== undefined) params.set(key, String(value));
+      }
+      const query = params.size > 0 ? `?${params.toString()}` : "";
+      return request(
+        `/destinations/${encodeURIComponent(placeId)}/seasonality${query}`,
+        destinationSeasonalityResponseSchema,
+      );
     },
     async listTrips(query: TripListQuery): Promise<TripListResponse> {
       const params = new URLSearchParams({ limit: String(query.limit) });

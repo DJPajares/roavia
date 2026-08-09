@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { roaviaApi } from "../lib/api";
+import { BestTimeCalendar } from "./best-time-calendar";
 
 type State = "loading" | "offline" | "error" | "ready";
 
@@ -93,6 +94,7 @@ export function DestinationEncyclopedia({ placeId }: { placeId: string }) {
         {place.countryCode ? <span>Country: {place.countryCode}</span> : null}
         {place.timezone ? <span>Timezone: {place.timezone}</span> : null}
       </aside>
+      <BestTimeCalendar placeId={placeId} />
       {content.length === 0 ? (
         <ExperienceState
           detail="This place is in Roavia’s launch catalogue, but no approved practical guidance is available yet. We do not fill gaps with generated travel advice."
