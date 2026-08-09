@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import axe from "axe-core";
 import type { RoaviaApiClient } from "@roavia/api-client";
 import type { AssistantActionPreview, Trip } from "@roavia/contracts";
 import { render, screen } from "@testing-library/react";
@@ -135,7 +136,7 @@ describe("AssistantWorkspace", () => {
 
   test("supports asking, source review, confirmation, and cancellation", async () => {
     const user = userEvent.setup();
-    render(createElement(AssistantWorkspace, { email: "traveler@roavia.test" }));
+    const rendered = render(createElement(AssistantWorkspace, { email: "traveler@roavia.test" }));
 
     expect(await screen.findByRole("option", { name: "Singapore trip" })).toBeDefined();
     await user.type(
@@ -149,6 +150,13 @@ describe("AssistantWorkspace", () => {
     const source = screen.getByRole("link", { name: "Official destination guide" });
     expect(source.getAttribute("href")).toBe("https://example.gov.test/guide");
     expect(screen.getByText("Official source")).toBeDefined();
+    expect(
+      (
+        await axe.run(rendered.container, {
+          rules: { "color-contrast": { enabled: false } },
+        })
+      ).violations,
+    ).toEqual([]);
 
     await user.click(
       screen.getByRole("button", { name: "Confirm: Save an opening-hours reminder" }),

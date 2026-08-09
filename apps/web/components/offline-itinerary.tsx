@@ -160,6 +160,7 @@ export function OfflineItinerary({
           </Link>
         }
         detail="Reconnect to download this trip again. The online itinerary has not been removed."
+        headingLevel={1}
         state="offline"
         title="Offline package removed"
       />

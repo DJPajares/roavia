@@ -220,6 +220,7 @@ export function AssistantWorkspace({ email }: Readonly<{ email?: string }>) {
     return (
       <ExperienceState
         detail="Loading the trips available for grounded questions."
+        headingLevel={1}
         state="loading"
         title="Preparing the assistant"
       />
@@ -230,6 +231,7 @@ export function AssistantWorkspace({ email }: Readonly<{ email?: string }>) {
     return (
       <ExperienceState
         detail={message}
+        headingLevel={1}
         state={offline ? "offline" : "error"}
         title="The assistant is not available yet"
       />
@@ -245,6 +247,7 @@ export function AssistantWorkspace({ email }: Readonly<{ email?: string }>) {
           </Link>
         }
         detail="Create a trip with a destination so Roavia has approved context to retrieve."
+        headingLevel={1}
         state="empty"
         title="Add a trip before asking"
       />

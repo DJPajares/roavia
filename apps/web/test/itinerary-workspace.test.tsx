@@ -310,6 +310,12 @@ describe("ItineraryWorkspace", () => {
     expect(screen.getByRole("heading", { name: "Markets and makers" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Nishiki Market" })).toBeDefined();
     expect(screen.getByText(/Some route or place details are stale/)).toBeDefined();
+
+    screen.getByRole("tab", { name: "Day plan" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Route context" }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
   });
 
   test("keeps loaded details usable during offline and provider-unavailable states", async () => {
@@ -392,6 +398,11 @@ describe("ItineraryWorkspace", () => {
     const user = userEvent.setup();
     render(createElement(ItineraryWorkspace, { email: undefined, ownerId, tripId }));
     await screen.findByRole("heading", { name: "Kyoto slow days" });
+
+    await user.click(screen.getByRole("button", { name: "+ Add item" }));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Add itinerary item" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "+ Add item" }));
 
     await user.click(screen.getByRole("button", { name: "+ Add item" }));
     const dialog = screen.getByRole("dialog", { name: "Add itinerary item" });

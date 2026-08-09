@@ -64,6 +64,7 @@ export function ProfilePreferences({ email }: Readonly<{ email: string | undefin
     return (
       <ExperienceState
         detail="Loading the details Roavia can reuse when you plan."
+        headingLevel={1}
         state="loading"
         title="Getting your travel profile"
       />
@@ -78,6 +79,7 @@ export function ProfilePreferences({ email }: Readonly<{ email: string | undefin
           </Button>
         }
         detail={message}
+        headingLevel={1}
         state="error"
         title="Your profile is not available right now"
       />

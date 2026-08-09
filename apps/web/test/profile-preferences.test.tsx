@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import axe from "axe-core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
@@ -45,13 +46,20 @@ describe("ProfilePreferences", () => {
   test("renders labeled controls and preserves edits after a save error", async () => {
     api.updateProfile.mockRejectedValue(new Error("Preferences could not be saved."));
     const user = userEvent.setup();
-    render(createElement(ProfilePreferences, { email: profile.email }));
+    const rendered = render(createElement(ProfilePreferences, { email: profile.email }));
 
     const locale = await screen.findByLabelText("Locale");
     expect((screen.getByLabelText("Home country") as HTMLInputElement).value).toBe("SG");
     expect(
       screen.getByRole("heading", { name: "A profile that stays in your control." }),
     ).toBeDefined();
+    expect(
+      (
+        await axe.run(rendered.container, {
+          rules: { "color-contrast": { enabled: false } },
+        })
+      ).violations,
+    ).toEqual([]);
 
     await user.tab();
     expect(document.activeElement).toBe(locale);

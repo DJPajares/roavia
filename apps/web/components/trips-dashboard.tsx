@@ -23,6 +23,7 @@ const lifecycleLabels: Record<Lifecycle, string> = {
 };
 
 const lifecycleOrder: Lifecycle[] = ["draft", "upcoming", "shared", "completed"];
+const lifecycleFilters: LifecycleFilter[] = ["all", ...lifecycleOrder];
 
 function lifecycleFor(trip: Trip, today: string): Lifecycle {
   if (trip.status === "draft") {
@@ -113,11 +114,42 @@ function TripPreview({
   onDelete,
   trip,
 }: Readonly<TripPreviewProps>) {
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDialogElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
-    <dialog aria-labelledby="trip-preview-title" aria-modal="true" className="trip-preview" open>
+    <dialog
+      aria-labelledby="trip-preview-title"
+      aria-modal="true"
+      className="trip-preview"
+      onKeyDown={handleDialogKeyDown}
+      open
+    >
       <div className="trip-preview__sheet">
         <button
           aria-label="Close trip preview"
+          autoFocus
           className="trip-preview__close"
           onClick={onClose}
           type="button"
@@ -193,6 +225,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const dataRef = useRef<TripListData | null>(null);
+  const previewReturnFocus = useRef<HTMLElement | null>(null);
   const api = useMemo(
     () =>
       createRoaviaApiClient({
@@ -263,6 +296,10 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
     };
   }, []);
 
+  useEffect(() => {
+    if (!selectedTrip) previewReturnFocus.current?.focus();
+  }, [selectedTrip]);
+
   const today = new Date().toISOString().slice(0, 10);
   const groups = useMemo(() => {
     const result = new Map<Lifecycle, Trip[]>();
@@ -280,6 +317,34 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
   );
   const visibleTrips = visibleGroups.flatMap((lifecycle) => groups.get(lifecycle) ?? []);
 
+  function openPreview(trip: Trip) {
+    if (document.activeElement instanceof HTMLElement) {
+      previewReturnFocus.current = document.activeElement;
+    }
+    setSelectedTrip(trip);
+  }
+
+  function closePreview() {
+    setDeleteError("");
+    setSelectedTrip(null);
+  }
+
+  function selectFilterFromKeyboard(index: number, event: React.KeyboardEvent<HTMLButtonElement>) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % lifecycleFilters.length;
+    if (event.key === "ArrowLeft") {
+      nextIndex = (index - 1 + lifecycleFilters.length) % lifecycleFilters.length;
+    }
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = lifecycleFilters.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextFilter = lifecycleFilters[nextIndex];
+    if (!nextFilter) return;
+    setFilter(nextFilter);
+    document.querySelector<HTMLButtonElement>(`[data-trip-filter="${nextFilter}"]`)?.focus();
+  }
+
   async function deleteTrip(trip: Trip) {
     setDeleting(true);
     setDeleteError("");
@@ -288,7 +353,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
       setData((current) =>
         current ? { ...current, trips: current.trips.filter(({ id }) => id !== trip.id) } : current,
       );
-      setSelectedTrip(null);
+      closePreview();
       setMessage(`${trip.title} was removed from your saved trips.`);
     } catch (error) {
       setDeleteError(errorMessage(error));
@@ -301,6 +366,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
     return (
       <ExperienceState
         detail="Finding the trips you have saved and where each one stands."
+        headingLevel={1}
         state="loading"
         title="Loading your trips"
       />
@@ -315,6 +381,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
           </Button>
         }
         detail={message}
+        headingLevel={1}
         state="error"
         title="Your trips are not available right now"
       />
@@ -327,6 +394,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
     return (
       <ExperienceState
         detail="Reconnect to load your saved trips. Downloaded trip packages remain available from their offline area."
+        headingLevel={1}
         state="offline"
         title="You are offline"
       />
@@ -369,16 +437,19 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
       {message ? <output className="trips-dashboard__message">{message}</output> : null}
 
       <div aria-label="Trip lifecycle filters" className="trips-dashboard__filters" role="tablist">
-        {(["all", ...lifecycleOrder] as LifecycleFilter[]).map((option) => {
+        {lifecycleFilters.map((option, index) => {
           const count = option === "all" ? data.trips.length : (groups.get(option)?.length ?? 0);
           const label = option === "all" ? "All trips" : lifecycleLabels[option];
           return (
             <button
               aria-selected={filter === option}
               className={filter === option ? "is-selected" : undefined}
+              data-trip-filter={option}
               key={option}
               onClick={() => setFilter(option)}
+              onKeyDown={(event) => selectFilterFromKeyboard(index, event)}
               role="tab"
+              tabIndex={filter === option ? 0 : -1}
               type="button"
             >
               {label} <span>{count}</span>
@@ -422,7 +493,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
                     <TripCard
                       key={trip.id}
                       locale={preferences.locale}
-                      onOpen={setSelectedTrip}
+                      onOpen={openPreview}
                       trip={trip}
                     />
                   ))}
@@ -451,10 +522,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
           deleting={deleting}
           error={deleteError}
           locale={preferences.locale}
-          onClose={() => {
-            setDeleteError("");
-            setSelectedTrip(null);
-          }}
+          onClose={closePreview}
           onDelete={deleteTrip}
           trip={selectedTrip}
         />

@@ -41,6 +41,7 @@ const stateSymbols: Record<ExperienceState, string> = {
 export interface ExperienceStateProps extends HTMLAttributes<HTMLElement> {
   action?: ReactNode;
   detail: string;
+  headingLevel?: 1 | 2 | 3;
   state: ExperienceState;
   title: string;
 }
@@ -49,11 +50,13 @@ export function ExperienceState({
   action,
   className,
   detail,
+  headingLevel = 2,
   state,
   title,
   ...props
 }: ExperienceStateProps) {
   const role = state === "error" ? "alert" : "status";
+  const Heading = `h${headingLevel}` as "h1" | "h2" | "h3";
 
   return (
     <section
@@ -65,7 +68,7 @@ export function ExperienceState({
         {stateSymbols[state]}
       </span>
       <div>
-        <h2>{title}</h2>
+        <Heading>{title}</Heading>
         <p>{detail}</p>
         {action ? <div className="roavia-state__action">{action}</div> : null}
       </div>

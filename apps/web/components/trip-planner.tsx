@@ -152,7 +152,7 @@ export function NaturalLanguageTripPlanner() {
   const [values, setValues] = useState<ReviewValues | null>(null);
   const [destinations, setDestinations] = useState<TripIntentDestination[]>([]);
   const [message, setMessage] = useState("");
-  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  const [online, setOnline] = useState(true);
   const [tripId, setTripId] = useState<string | null>(null);
   const [revision, setRevision] = useState<number | null>(null);
   const [generation, setGeneration] = useState<GenerationReference | null>(null);
@@ -168,13 +168,13 @@ export function NaturalLanguageTripPlanner() {
   );
 
   useEffect(() => {
-    const markOnline = () => setOnline(true);
-    const markOffline = () => setOnline(false);
-    window.addEventListener("online", markOnline);
-    window.addEventListener("offline", markOffline);
+    const updateConnection = () => setOnline(navigator.onLine);
+    updateConnection();
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
     return () => {
-      window.removeEventListener("online", markOnline);
-      window.removeEventListener("offline", markOffline);
+      window.removeEventListener("online", updateConnection);
+      window.removeEventListener("offline", updateConnection);
     };
   }, []);
 

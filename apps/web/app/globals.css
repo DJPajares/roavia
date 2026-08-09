@@ -11,8 +11,11 @@
   --line: #c9cec1;
   --accent: #d55836;
   --accent-strong: #a83b23;
+  --action: #a83b23;
+  --action-hover: #87301d;
+  --action-ink: #fffaf3;
   --moss: #58805e;
-  --warning: #b27618;
+  --warning: #80510d;
   --danger: #ba4438;
   --nav-active: #163631;
   --nav-active-ink: #fbfaf5;
@@ -43,6 +46,9 @@
   --line: #466158;
   --accent: #f18761;
   --accent-strong: #ffa17b;
+  --action: #f18761;
+  --action-hover: #ffa17b;
+  --action-ink: #122421;
   --moss: #90b98e;
   --warning: #e6b44f;
   --danger: #f38d80;
@@ -70,6 +76,9 @@
     --line: #466158;
     --accent: #f18761;
     --accent-strong: #ffa17b;
+    --action: #f18761;
+    --action-hover: #ffa17b;
+    --action-ink: #122421;
     --moss: #90b98e;
     --warning: #e6b44f;
     --danger: #f38d80;
@@ -630,8 +639,8 @@ textarea:focus-visible {
   height: 1.5rem;
   place-items: center;
   border-radius: 999px;
-  background: var(--accent);
-  color: #fffaf3;
+  background: var(--action);
+  color: var(--action-ink);
   font-size: 0.74rem;
   font-weight: 800;
 }
@@ -1116,11 +1125,11 @@ button.best-time-calendar__month[aria-pressed="true"] {
   transform: translateY(-1px);
 }
 .roavia-button--accent {
-  background: var(--accent);
-  color: #fffaf3;
+  background: var(--action);
+  color: var(--action-ink);
 }
 .roavia-button--accent:hover {
-  background: var(--accent-strong);
+  background: var(--action-hover);
 }
 .roavia-button--quiet {
   border-color: var(--line);
@@ -2119,10 +2128,10 @@ button.best-time-calendar__month[aria-pressed="true"] {
 .itinerary-timeline__add {
   min-height: 2.6rem;
   padding: 0.6rem 0.9rem;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--action);
   border-radius: var(--radius-control);
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--action);
+  color: var(--action-ink);
   font-weight: 850;
   cursor: pointer;
 }
@@ -2166,7 +2175,8 @@ button.best-time-calendar__month[aria-pressed="true"] {
   cursor: grab;
 }
 .itinerary-item.is-selected .itinerary-item__sequence {
-  background: var(--accent);
+  background: var(--action);
+  color: var(--action-ink);
 }
 .itinerary-item__body {
   min-width: 0;
@@ -2489,9 +2499,9 @@ button.best-time-calendar__month[aria-pressed="true"] {
   cursor: pointer;
 }
 .itinerary-editor__actions button.is-primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--surface);
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--action-ink);
 }
 .itinerary-editor__actions button:disabled {
   opacity: 0.55;
@@ -2582,7 +2592,8 @@ button.best-time-calendar__month[aria-pressed="true"] {
 }
 .map-context__canvas button:hover,
 .map-context__canvas button.is-selected {
-  background: var(--accent);
+  background: var(--action);
+  color: var(--action-ink);
   transform: translate(-50%, -50%) scale(1.1);
 }
 .map-context__alternative {
@@ -3557,6 +3568,9 @@ button.best-time-calendar__month[aria-pressed="true"] {
   max-width: 34rem;
 }
 @media (max-width: 35rem) {
+  .itinerary-item__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .offline-package-metadata,
   .offline-library__storage,
   .offline-library-card dl {

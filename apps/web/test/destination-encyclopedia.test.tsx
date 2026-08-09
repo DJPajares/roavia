@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import axe from "axe-core";
 import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { describe, expect, test, vi } from "vitest";
@@ -58,7 +59,7 @@ describe("DestinationEncyclopedia", () => {
       meta: { requestId: "66666666-6666-4666-8666-666666666666" },
     });
 
-    render(createElement(DestinationEncyclopedia, { placeId }));
+    const rendered = render(createElement(DestinationEncyclopedia, { placeId }));
 
     expect(await screen.findByRole("heading", { name: "Singapore" })).toBeDefined();
     expect(screen.getByText("Currency:")).toBeDefined();
@@ -69,6 +70,13 @@ describe("DestinationEncyclopedia", () => {
     expect(screen.getByRole("link", { name: "Plan a trip here" }).getAttribute("href")).toBe(
       "/plan",
     );
+    expect(
+      (
+        await axe.run(rendered.container, {
+          rules: { "color-contrast": { enabled: false } },
+        })
+      ).violations,
+    ).toEqual([]);
   });
 
   test("renders imported rich-content payloads as inert text", async () => {

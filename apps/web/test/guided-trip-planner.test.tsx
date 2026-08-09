@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import axe from "axe-core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
@@ -49,11 +50,18 @@ describe("GuidedTripPlanner", () => {
   test("prefills visible preferences and preserves a draft after a save error", async () => {
     api.createTrip.mockRejectedValue(new Error("Draft could not be saved."));
     const user = userEvent.setup();
-    render(createElement(GuidedTripPlanner));
+    const rendered = render(createElement(GuidedTripPlanner));
 
     const title = await screen.findByLabelText("Trip name");
     expect((screen.getByLabelText("Currency") as HTMLInputElement).value).toBe("SGD");
     expect(screen.getByText(/Hawker food/)).toBeDefined();
+    expect(
+      (
+        await axe.run(rendered.container, {
+          rules: { "color-contrast": { enabled: false } },
+        })
+      ).violations,
+    ).toEqual([]);
     await user.type(title, "Kyoto food week");
     await user.type(screen.getByLabelText("Start date"), "2030-05-01");
     await user.type(screen.getByLabelText("End date"), "2030-05-06");

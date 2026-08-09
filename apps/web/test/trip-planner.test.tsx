@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import axe from "axe-core";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
@@ -111,7 +112,7 @@ describe("NaturalLanguageTripPlanner", () => {
 
   test("reviews editable intent and hands a standard trip to the workspace", async () => {
     const user = userEvent.setup();
-    render(createElement(NaturalLanguageTripPlanner));
+    const rendered = render(createElement(NaturalLanguageTripPlanner));
 
     await user.type(
       screen.getByLabelText("Trip request"),
@@ -122,6 +123,13 @@ describe("NaturalLanguageTripPlanner", () => {
       await screen.findByRole("heading", { name: "Correct what Roavia understood." }),
     ).toBeDefined();
     expect(screen.getByText("A balanced pace was inferred.")).toBeDefined();
+    expect(
+      (
+        await axe.run(rendered.container, {
+          rules: { "color-contrast": { enabled: false } },
+        })
+      ).violations,
+    ).toEqual([]);
 
     const title = screen.getByLabelText("Trip name");
     await user.clear(title);
