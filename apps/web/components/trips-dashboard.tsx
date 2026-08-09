@@ -467,7 +467,7 @@ export function TripsDashboard({ email }: Readonly<{ email: string | undefined }
           }
           detail={
             filter === "all"
-              ? "Start a guided plan when you are ready. Your saved trips will stay grouped here by their lifecycle."
+              ? "Start a trip your way when you are ready. Your saved trips will stay grouped here by their lifecycle."
               : `There are no ${filter === "draft" ? "drafts" : lifecycleLabels[filter].toLowerCase()} right now.`
           }
           state="empty"

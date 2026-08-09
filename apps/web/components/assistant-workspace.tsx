@@ -257,7 +257,7 @@ export function AssistantWorkspace({ email }: Readonly<{ email?: string }>) {
   return (
     <section aria-labelledby="assistant-heading" className="assistant-workspace">
       <header className="assistant-hero">
-        <p className="eyebrow">Grounded travel support</p>
+        <p className="eyebrow">AI-assisted travel support</p>
         <h1 id="assistant-heading">Ask clearly. Decide deliberately.</h1>
         <p>
           Roavia answers from approved trip and destination context, then keeps every proposed trip

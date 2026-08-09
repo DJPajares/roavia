@@ -25,8 +25,11 @@ vi.mock("@roavia/api-client", async (importOriginal) => ({
 vi.mock("../lib/supabase/client", () => ({
   createClient: () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }),
 }));
+vi.mock("../components/guided-trip-planner", () => ({
+  GuidedTripPlanner: () => "Manual planner loaded",
+}));
 
-import { NaturalLanguageTripPlanner } from "../components/trip-planner";
+import { NaturalLanguageTripPlanner, TripPlanner } from "../components/trip-planner";
 
 const tripId = "10000000-0000-4000-8000-000000000001";
 const placeId = "20000000-0000-4000-8000-000000000001";
@@ -85,6 +88,49 @@ const generationSummary = {
   tripRevision: 3,
   warnings: [],
 };
+
+describe("TripPlanner", () => {
+  beforeEach(() => {
+    for (const mock of Object.values(api)) mock.mockReset();
+  });
+
+  afterEach(() => cleanup());
+
+  test("starts with an accessible manual-or-AI choice and does not initialize AI planning", async () => {
+    const user = userEvent.setup();
+    const rendered = render(createElement(TripPlanner));
+
+    expect(screen.getByRole("heading", { name: "Create a trip your way." })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Plan manually" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Plan with AI" })).toBeDefined();
+    expect(screen.queryByLabelText("Trip request")).toBeNull();
+    expect(api.extractTripIntent).not.toHaveBeenCalled();
+    expect(
+      (
+        await axe.run(rendered.container, {
+          rules: { "color-contrast": { enabled: false } },
+        })
+      ).violations,
+    ).toEqual([]);
+
+    await user.click(screen.getByRole("button", { name: "Plan manually" }));
+    expect(screen.getByText("Manual planner loaded")).toBeDefined();
+    expect(api.extractTripIntent).not.toHaveBeenCalled();
+  });
+
+  test("only exposes the AI prompt after the traveler chooses AI planning", async () => {
+    const user = userEvent.setup();
+    render(createElement(TripPlanner));
+
+    await user.click(screen.getByRole("button", { name: "Plan with AI" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Tell us the trip you have in mind." }),
+    ).toBeDefined();
+    expect(screen.getByLabelText("Trip request")).toBeDefined();
+    expect(api.extractTripIntent).not.toHaveBeenCalled();
+  });
+});
 
 describe("NaturalLanguageTripPlanner", () => {
   beforeEach(() => {

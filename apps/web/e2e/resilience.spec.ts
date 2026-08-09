@@ -16,6 +16,9 @@ test("recovers a generated trip through editing, sharing, and offline access", a
   await createAccount(page, "critical");
 
   await page.goto("/plan");
+  await expect(page.getByRole("heading", { name: "Create a trip your way." })).toBeVisible();
+  expect(fixture.aiRequests).toBe(0);
+  await page.getByRole("button", { name: "Plan with AI" }).click();
   await page
     .getByLabel("Trip request")
     .fill("Plan a balanced Kyoto trip with vegetarian food, local markets, and step-free routes.");
@@ -83,6 +86,9 @@ test("creates and edits a manual trip while every AI entry point stays unused", 
   await createAccount(page, "manual");
 
   await page.goto("/plan");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("heading", { name: "Create a trip your way." })).toBeVisible();
+  expect(fixture.aiRequests).toBe(0);
   await page.getByRole("button", { name: "Plan manually" }).click();
   await expect(
     page.getByRole("heading", { name: "Choose the places. Shape every day." }),
@@ -126,6 +132,7 @@ test("keeps requests actionable across quota and destination-provider failures",
   await createAccount(page, "recovery");
 
   await page.goto("/plan");
+  await page.getByRole("button", { name: "Plan with AI" }).click();
   const prompt =
     "Plan a balanced Kyoto trip with vegetarian food, local markets, and step-free routes.";
   await page.getByLabel("Trip request").fill(prompt);
